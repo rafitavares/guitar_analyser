@@ -3,9 +3,9 @@ import { listSessions } from "../../db/storage.ts";
 import { drawRadarChart } from "../components/canvasChart.ts";
 import type { RadarSeries } from "../components/canvasChart.ts";
 import { downloadFile } from "../../db/exportImport.ts";
-import type { ComparisonWeights, Session, NoteMeasurement } from "../../types/index.ts";
+import type { ComparisonWeights, Session, StringSustainMeasurement } from "../../types/index.ts";
 
-function getMedianTake(m: NoteMeasurement) {
+function getMedianTake(m: StringSustainMeasurement) {
   return m.medianTakeIndex !== null ? m.takes[m.medianTakeIndex] : null;
 }
 
@@ -14,11 +14,10 @@ interface InstrumentMetrics {
   label: string;
   t60Graves: number | null;
   t60Agudos: number | null;
-  brightness: number | null;
   hnr: number | null;
-  inharmonicity: number | null; // |B| médio, menor é melhor
   uniformity: number | null; // 0-1, maior é melhor
-  wolfNoteCount: number | null;
+  clarity: number | null; // 0-1, maior é melhor (menos sobreposição harmônica)
+  overlapCount: number | null;
 }
 
 function computeMetrics(session: Session): InstrumentMetrics {
@@ -27,12 +26,13 @@ function computeMetrics(session: Session): InstrumentMetrics {
   let t60Graves: number | null = null;
   let t60Agudos: number | null = null;
   let uniformity: number | null = null;
+  let hnr: number | null = null;
 
   if (session.tests.sustain) {
-    const measurements = session.tests.sustain.measurements;
-    const maxString = Math.max(...measurements.map((m) => m.stringNumber));
+    const strings = session.tests.sustain.strings;
+    const maxString = Math.max(...strings.map((m) => m.stringNumber));
     const halfway = maxString / 2;
-    const t60ByString = measurements
+    const t60ByString = strings
       .map((m) => ({ stringNumber: m.stringNumber, t60: getMedianTake(m)?.sustain?.t60EstimatedSec ?? null }))
       .filter((x): x is { stringNumber: number; t60: number } => x.t60 != null);
 
@@ -48,46 +48,19 @@ function computeMetrics(session: Session): InstrumentMetrics {
       const cv = mean > 0 ? std / mean : 0;
       uniformity = 1 / (1 + cv);
     }
+
+    const hnrValues = strings.map((m) => getMedianTake(m)?.hnr?.hnrDb).filter((v): v is number => v != null);
+    hnr = hnrValues.length ? avg(hnrValues) : null;
   }
 
-  let brightness: number | null = null;
-  if (session.tests.harmonicPortrait) {
-    const values = session.tests.harmonicPortrait.measurements
-      .map((m) => getMedianTake(m)?.portrait?.spectralCentroidHz)
-      .filter((v): v is number => v != null);
-    brightness = values.length ? avg(values) : null;
+  let clarity: number | null = null;
+  let overlapCount: number | null = null;
+  if (session.tests.resonance) {
+    overlapCount = session.tests.resonance.overlaps.length;
+    clarity = 1 / (1 + overlapCount);
   }
 
-  let hnr: number | null = null;
-  if (session.tests.hnr) {
-    const values = session.tests.hnr.measurements
-      .map((m) => getMedianTake(m)?.hnr?.hnrDb)
-      .filter((v): v is number => v != null);
-    hnr = values.length ? avg(values) : null;
-  }
-
-  let inharmonicity: number | null = null;
-  if (session.tests.inharmonicity) {
-    const values = session.tests.inharmonicity.measurements
-      .map((m) => getMedianTake(m)?.inharmonicity?.bCoefficient)
-      .filter((v): v is number => v != null)
-      .map((v) => Math.abs(v));
-    inharmonicity = values.length ? avg(values) : null;
-  }
-
-  let wolfNoteCount: number | null = null;
-  if (session.tests.semitoneSweep) {
-    const values = session.tests.semitoneSweep.measurements
-      .map((m) => getMedianTake(m)?.sustain?.t60EstimatedSec)
-      .filter((v): v is number => v != null && v > 0);
-    if (values.length >= 3) {
-      const mean = avg(values);
-      const std = Math.sqrt(values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length);
-      wolfNoteCount = std > 0 ? values.filter((v) => (mean - v) / std > 1.2).length : 0;
-    }
-  }
-
-  return { session, label, t60Graves, t60Agudos, brightness, hnr, inharmonicity, uniformity, wolfNoteCount };
+  return { session, label, t60Graves, t60Agudos, hnr, uniformity, clarity, overlapCount };
 }
 
 function avg(arr: number[]): number {
@@ -109,12 +82,8 @@ function normalizeGroup(values: (number | null)[], higherIsBetter: boolean): num
 
 const DEFAULT_WEIGHTS: ComparisonWeights = {
   sustain: { weight: 3, direction: "more" },
-  brightness: { weight: 3, direction: "more" },
-  balance: { weight: 2, direction: "more" },
-  hnr: { weight: 3 },
-  inharmonicity: { weight: 3 },
   uniformity: { weight: 2 },
-  wolfNotes: { weight: 3 },
+  clarity: { weight: 3 },
 };
 
 export async function renderCompareB(): Promise<void> {
@@ -186,14 +155,10 @@ function renderPreferences(prefsArea: HTMLElement, resultArea: HTMLElement, sess
   prefsArea.innerHTML = `
     <div class="card">
       <h3>Preferências de comparação</h3>
-      <p>Sustain, brilho e balanço são preferência pessoal, não qualidade objetiva — ajuste o peso (0-5) e a direção. Os demais parâmetros têm direção objetiva fixa.</p>
+      <p>Sustain é preferência pessoal, não qualidade objetiva — ajuste o peso (0-5) e a direção. Os demais têm direção objetiva fixa.</p>
       ${weightRow("sustain", "Sustain (T60)", DEFAULT_WEIGHTS.sustain.weight, DEFAULT_WEIGHTS.sustain.direction)}
-      ${weightRow("brightness", "Brilho (centroide)", DEFAULT_WEIGHTS.brightness.weight, DEFAULT_WEIGHTS.brightness.direction)}
-      ${weightRow("balance", "Balanço grave/agudo", DEFAULT_WEIGHTS.balance.weight, DEFAULT_WEIGHTS.balance.direction)}
-      ${weightRow("hnr", "Limpeza (HNR) — maior é melhor", DEFAULT_WEIGHTS.hnr.weight)}
-      ${weightRow("inharmonicity", "Inarmonicidade — menor é melhor", DEFAULT_WEIGHTS.inharmonicity.weight)}
       ${weightRow("uniformity", "Uniformidade entre cordas — maior é melhor", DEFAULT_WEIGHTS.uniformity.weight)}
-      ${weightRow("wolfNotes", "Wolf notes — menos é melhor", DEFAULT_WEIGHTS.wolfNotes.weight)}
+      ${weightRow("clarity", "Clareza harmônica (menos sobreposição) — maior é melhor", DEFAULT_WEIGHTS.clarity.weight)}
       <button id="calc-btn" class="btn btn-primary" style="width:100%; margin-top:10px">Calcular comparação</button>
     </div>
   `;
@@ -203,12 +168,8 @@ function renderPreferences(prefsArea: HTMLElement, resultArea: HTMLElement, sess
     const getD = (id: string) => (prefsArea.querySelector(`#d-${id}`) as HTMLSelectElement).value as "more" | "less";
     const weights: ComparisonWeights = {
       sustain: { weight: getW("sustain"), direction: getD("sustain") },
-      brightness: { weight: getW("brightness"), direction: getD("brightness") },
-      balance: { weight: getW("balance"), direction: getD("balance") },
-      hnr: { weight: getW("hnr") },
-      inharmonicity: { weight: getW("inharmonicity") },
       uniformity: { weight: getW("uniformity") },
-      wolfNotes: { weight: getW("wolfNotes") },
+      clarity: { weight: getW("clarity") },
     };
     renderResults(resultArea, sessions, weights);
   });
@@ -222,24 +183,15 @@ function renderResults(resultArea: HTMLElement, sessions: Session[], weights: Co
     new Set(sessions.map((s) => s.instrumentSnapshot.a4ReferenceHz)).size > 1;
 
   const sustainAvg = metrics.map((m) => (m.t60Graves != null && m.t60Agudos != null ? (m.t60Graves + m.t60Agudos) / 2 : null));
-  const balanceRatio = metrics.map((m) => (m.t60Graves != null && m.t60Agudos && m.t60Agudos > 0 ? m.t60Graves / m.t60Agudos : null));
 
   const normSustain = normalizeGroup(sustainAvg, weights.sustain.direction === "more");
-  const normBrightness = normalizeGroup(metrics.map((m) => m.brightness), weights.brightness.direction === "more");
-  const normBalance = normalizeGroup(balanceRatio, weights.balance.direction === "more");
-  const normHnr = normalizeGroup(metrics.map((m) => m.hnr), true);
-  const normInharm = normalizeGroup(metrics.map((m) => m.inharmonicity), false);
   const normUniformity = normalizeGroup(metrics.map((m) => m.uniformity), true);
-  const normWolf = normalizeGroup(metrics.map((m) => m.wolfNoteCount), false);
+  const normClarity = normalizeGroup(metrics.map((m) => m.clarity), true);
 
   const axisData = [
     { key: "sustain", label: "Sustain", norm: normSustain, weight: weights.sustain.weight },
-    { key: "brightness", label: "Brilho", norm: normBrightness, weight: weights.brightness.weight },
-    { key: "balance", label: "Balanço grave/agudo", norm: normBalance, weight: weights.balance.weight },
-    { key: "hnr", label: "Limpeza (HNR)", norm: normHnr, weight: weights.hnr.weight },
-    { key: "inharmonicity", label: "Inarmonicidade", norm: normInharm, weight: weights.inharmonicity.weight },
     { key: "uniformity", label: "Uniformidade", norm: normUniformity, weight: weights.uniformity.weight },
-    { key: "wolfNotes", label: "Ausência de wolf notes", norm: normWolf, weight: weights.wolfNotes.weight },
+    { key: "clarity", label: "Clareza harmônica", norm: normClarity, weight: weights.clarity.weight },
   ];
 
   const totalWeight = axisData.reduce((a, ax) => a + ax.weight, 0) || 1;
@@ -248,9 +200,7 @@ function renderResults(resultArea: HTMLElement, sessions: Session[], weights: Co
     return weighted / totalWeight;
   });
 
-  const ranking = metrics
-    .map((m, i) => ({ m, score: scores[i]! }))
-    .sort((a, b) => b.score - a.score);
+  const ranking = metrics.map((m, i) => ({ m, score: scores[i]! })).sort((a, b) => b.score - a.score);
 
   function winsAndLoses(idx: number): { wins: string[]; loses: string[] } {
     const wins: string[] = [];
@@ -277,19 +227,17 @@ function renderResults(resultArea: HTMLElement, sessions: Session[], weights: Co
     <div class="card">
       <h3>Ranking (nota reflete os pesos/preferências configurados acima — não é qualidade absoluta)</h3>
       ${ranking
-        .map(
-          ({ m, score }, pos) => {
-            const idx = metrics.indexOf(m);
-            const { wins, loses } = winsAndLoses(idx);
-            return `<div style="margin-bottom:10px">
-              <strong>${pos + 1}º — ${m.label}</strong> · <span class="big-number" style="font-size:1.3rem">${score.toFixed(0)}</span>/100
-              <div style="font-size:0.8rem; color:var(--text-dim)">
-                ${wins.length ? `Vence em: ${wins.join(", ")}` : ""}
-                ${loses.length ? `<br/>Perde em: ${loses.join(", ")}` : ""}
-              </div>
-            </div>`;
-          }
-        )
+        .map(({ m, score }, pos) => {
+          const idx = metrics.indexOf(m);
+          const { wins, loses } = winsAndLoses(idx);
+          return `<div style="margin-bottom:10px">
+            <strong>${pos + 1}º — ${m.label}</strong> · <span class="big-number" style="font-size:1.3rem">${score.toFixed(0)}</span>/100
+            <div style="font-size:0.8rem; color:var(--text-dim)">
+              ${wins.length ? `Vence em: ${wins.join(", ")}` : ""}
+              ${loses.length ? `<br/>Perde em: ${loses.join(", ")}` : ""}
+            </div>
+          </div>`;
+        })
         .join("<hr/>")}
     </div>
 
@@ -305,11 +253,9 @@ function renderResults(resultArea: HTMLElement, sessions: Session[], weights: Co
         <tbody>
           <tr><td>T60 graves (s)</td>${metrics.map((m) => `<td>${m.t60Graves?.toFixed(2) ?? "—"}</td>`).join("")}</tr>
           <tr><td>T60 agudos (s)</td>${metrics.map((m) => `<td>${m.t60Agudos?.toFixed(2) ?? "—"}</td>`).join("")}</tr>
-          <tr><td>Centroide (Hz)</td>${metrics.map((m) => `<td>${m.brightness?.toFixed(0) ?? "—"}</td>`).join("")}</tr>
           <tr><td>HNR (dB)</td>${metrics.map((m) => `<td>${m.hnr?.toFixed(1) ?? "—"}</td>`).join("")}</tr>
-          <tr><td>|B| inarmonicidade</td>${metrics.map((m) => `<td>${m.inharmonicity != null ? m.inharmonicity.toExponential(1) : "—"}</td>`).join("")}</tr>
           <tr><td>Uniformidade (0-1)</td>${metrics.map((m) => `<td>${m.uniformity?.toFixed(2) ?? "—"}</td>`).join("")}</tr>
-          <tr><td>Wolf notes detectadas</td>${metrics.map((m) => `<td>${m.wolfNoteCount ?? "—"}</td>`).join("")}</tr>
+          <tr><td>Pares harmônicos sobrepostos</td>${metrics.map((m) => `<td>${m.overlapCount ?? "—"}</td>`).join("")}</tr>
         </tbody>
       </table>
     </div>

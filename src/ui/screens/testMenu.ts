@@ -3,15 +3,11 @@ import { setApp, renderHeader, attachHeaderEvents } from "../components/layout.t
 import { appState } from "../../state/appState.ts";
 import { generateId } from "../../db/storage.ts";
 import { PROTOCOL_VERSION } from "../../types/index.ts";
-import type { TestId, Session } from "../../types/index.ts";
+import type { Session } from "../../types/index.ts";
 
-const TESTS: { id: TestId; title: string; description: string }[] = [
-  { id: "sustain", title: "1. Sustentação (T60)", description: "Quanto tempo cada nota permanece soando" },
-  { id: "harmonicPortrait", title: "2. Retrato Harmônico", description: "Fundamental e harmônicos ativados" },
-  { id: "inharmonicity", title: "3. Inarmonicidade", description: "Desvio dos harmônicos em relação ao ideal" },
-  { id: "beating", title: "4. Batimento", description: "Notas 'brigando' (uáu-uáu)" },
-  { id: "hnr", title: "5. Limpeza / Ruído (HNR)", description: "Som limpo vs. buzz/trastejo" },
-  { id: "semitoneSweep", title: "6. Varredura por semitom", description: "Ressonâncias pontuais / wolf notes" },
+const TESTS: { id: "sustain" | "resonance"; title: string; description: string }[] = [
+  { id: "sustain", title: "🎵 Sustentação", description: "Quanto tempo cada corda permanece soando" },
+  { id: "resonance", title: "🎸 Ressonância harmônica", description: "Quais harmônicos se destacam e se estão colando" },
 ];
 
 export function renderTestMenu(): void {
@@ -43,7 +39,7 @@ export function renderTestMenu(): void {
     <div class="screen">
       <div class="card">
         <strong>${session.instrumentSnapshot.nickname}</strong>
-        <p style="margin-top:4px">Escolha um teste para executar. Você pode fazer quantos quiser antes de finalizar a sessão.</p>
+        <p style="margin-top:4px">Escolha um teste. Os dois são de escuta contínua — toque livremente, sem precisar apertar botão a cada nota.</p>
       </div>
 
       ${TESTS.map((t) => {

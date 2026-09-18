@@ -35,78 +35,37 @@ function csvEscape(value: string | number): string {
 }
 
 export function exportSessionCsv(session: Session): void {
-  const rows: string[][] = [
-    ["corda", "nota", "T60 (s)", "centroide (Hz)", "HNR (dB)", "inarmonicidade B", "batimento (Hz)"],
-  ];
+  const blocks: string[][][] = [];
 
-  const sustainByNote = new Map<string, number>();
-  session.tests.sustain?.measurements.forEach((m) => {
-    const take = m.takes[m.medianTakeIndex ?? -1];
-    if (take?.sustain) sustainByNote.set(`${m.stringNumber}-${m.fret}`, take.sustain.t60EstimatedSec);
-  });
-
-  const centroidByNote = new Map<string, number>();
-  session.tests.harmonicPortrait?.measurements.forEach((m) => {
-    const take = m.takes[m.medianTakeIndex ?? -1];
-    if (take?.portrait) centroidByNote.set(`${m.stringNumber}-${m.fret}`, take.portrait.spectralCentroidHz);
-  });
-
-  const hnrByNote = new Map<string, number>();
-  session.tests.hnr?.measurements.forEach((m) => {
-    const take = m.takes[m.medianTakeIndex ?? -1];
-    if (take?.hnr) hnrByNote.set(`${m.stringNumber}-${m.fret}`, take.hnr.hnrDb);
-  });
-
-  const inharmByNote = new Map<string, number | null>();
-  session.tests.inharmonicity?.measurements.forEach((m) => {
-    const take = m.takes[m.medianTakeIndex ?? -1];
-    if (take?.inharmonicity) inharmByNote.set(`${m.stringNumber}-${m.fret}`, take.inharmonicity.bCoefficient);
-  });
-
-  const beatingByNote = new Map<string, number | null>();
-  session.tests.beating?.measurements.forEach((m) => {
-    const take = m.takes[m.medianTakeIndex ?? -1];
-    if (take?.beating) beatingByNote.set(`${m.stringNumber}-${m.fret}`, take.beating.modulationFreqHz);
-  });
-
-  const allKeys = new Set<string>([
-    ...sustainByNote.keys(),
-    ...centroidByNote.keys(),
-    ...hnrByNote.keys(),
-    ...inharmByNote.keys(),
-    ...beatingByNote.keys(),
-  ]);
-
-  const measurementsIndex = new Map<string, { stringNumber: number; noteName: string }>();
-  for (const test of Object.values(session.tests)) {
-    test?.measurements.forEach((m) => {
-      measurementsIndex.set(`${m.stringNumber}-${m.fret}`, {
-        stringNumber: m.stringNumber,
-        noteName: m.noteName,
-      });
-    });
+  if (session.tests.sustain) {
+    const sustainRows: string[][] = [["corda", "nota", "T60 (s)", "HNR (dB)", "tomadas válidas"]];
+    for (const m of [...session.tests.sustain.strings].sort((a, b) => b.stringNumber - a.stringNumber)) {
+      const take = m.medianTakeIndex !== null ? m.takes[m.medianTakeIndex] : null;
+      sustainRows.push([
+        String(m.stringNumber),
+        m.noteName,
+        take?.sustain ? take.sustain.t60EstimatedSec.toFixed(2) : "",
+        take?.hnr ? take.hnr.hnrDb.toFixed(1) : "",
+        String(m.takes.filter((t) => t.valid).length),
+      ]);
+    }
+    blocks.push(sustainRows);
   }
 
-  const sortedKeys = Array.from(allKeys).sort((a, b) => {
-    const ma = measurementsIndex.get(a);
-    const mb = measurementsIndex.get(b);
-    return (ma?.stringNumber ?? 0) - (mb?.stringNumber ?? 0);
-  });
-
-  for (const key of sortedKeys) {
-    const info = measurementsIndex.get(key);
-    rows.push([
-      String(info?.stringNumber ?? ""),
-      info?.noteName ?? "",
-      sustainByNote.has(key) ? sustainByNote.get(key)!.toFixed(2) : "",
-      centroidByNote.has(key) ? centroidByNote.get(key)!.toFixed(0) : "",
-      hnrByNote.has(key) ? hnrByNote.get(key)!.toFixed(1) : "",
-      inharmByNote.get(key) != null ? inharmByNote.get(key)!.toExponential(2) : "",
-      beatingByNote.get(key) != null ? beatingByNote.get(key)!.toFixed(2) : "",
-    ]);
+  if (session.tests.resonance) {
+    const r = session.tests.resonance;
+    const resonanceRows: string[][] = [["harmônicos detectados (Hz)", "nota", "cents", "amplitude (dB)"]];
+    for (const p of r.peaks) {
+      resonanceRows.push([p.freqHz.toFixed(1), p.noteName, p.centsDeviation.toFixed(0), p.amplitudeDb.toFixed(1)]);
+    }
+    resonanceRows.push([]);
+    resonanceRows.push(["veredito", r.verdict === "sobreposto" ? "harmônicos se sobrepondo" : "harmônicos bem separados"]);
+    blocks.push(resonanceRows);
   }
 
-  const csv = rows.map((r) => r.map((c) => csvEscape(c)).join(",")).join("\n");
+  const csv = blocks
+    .map((rows) => rows.map((r) => r.map((c) => csvEscape(c)).join(",")).join("\n"))
+    .join("\n\n");
   const filename = `${session.instrumentSnapshot.nickname}_${session.createdAt.slice(0, 10)}.csv`;
   downloadFile(filename, csv, "text/csv");
 }

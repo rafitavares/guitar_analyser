@@ -2,7 +2,7 @@
 // Todas as sessões salvas devem incluir sampleRate e protocolVersion
 // para que comparações futuras permaneçam válidas.
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export type InstrumentType = "nylon" | "aco";
 
@@ -53,41 +53,12 @@ export interface NoiseFloorProfile {
   measuredAt: string;
 }
 
-export interface HarmonicPeak {
-  partialNumber: number;
-  expectedHz: number;
-  measuredHz: number;
-  amplitudeDb: number; // relativo à fundamental (0 = igual à fundamental)
-  noteName: string;
-  centsDeviation: number;
-  inharmonicityCents: number; // desvio do harmônico perfeito n*f0
-}
-
 export interface SustainResult {
   t60EstimatedSec: number;
   method: "T20" | "T30";
   decayCurve: { timeSec: number; db: number }[];
   noiseFloorDb: number;
   fitR2: number;
-}
-
-export interface HarmonicPortraitResult {
-  fundamentalHz: number;
-  spectralCentroidHz: number;
-  peaks: HarmonicPeak[];
-  spectrumSnapshot: { freqHz: number; db: number }[];
-}
-
-export interface InharmonicityResult {
-  peaks: HarmonicPeak[];
-  bCoefficient: number | null;
-}
-
-export interface BeatingResult {
-  detected: boolean;
-  modulationFreqHz: number | null;
-  depthDb: number | null;
-  involvedFreqsHz: [number, number] | null;
 }
 
 export interface HnrResult {
@@ -101,38 +72,47 @@ export interface NoteTakeResult {
   discardReason?: string;
   detectedFundamentalHz: number;
   peakAmplitude: number;
-  /** Envelope bruto (dB relativo ao pico) x tempo, sem integração de Schroeder — usado no gráfico de batimento. */
-  rawEnvelope?: { timeSec: number; db: number }[];
+  capturedAt: string;
   sustain?: SustainResult;
-  portrait?: HarmonicPortraitResult;
-  inharmonicity?: InharmonicityResult;
-  beating?: BeatingResult;
   hnr?: HnrResult;
 }
 
-export interface NoteMeasurement {
+export interface StringSustainMeasurement {
   stringNumber: number;
   noteName: string;
-  fret: number;
   expectedFrequencyHz: number;
   takes: NoteTakeResult[];
   /** Índice da tomada usada como mediana/representativa */
   medianTakeIndex: number | null;
 }
 
-export type TestId =
-  | "sustain"
-  | "harmonicPortrait"
-  | "inharmonicity"
-  | "beating"
-  | "hnr"
-  | "semitoneSweep";
-
-export interface TestRunResult {
-  testId: TestId;
-  measurements: NoteMeasurement[];
+export interface SustainSessionResult {
+  strings: StringSustainMeasurement[];
   completedAt: string;
 }
+
+export interface ResonancePeak {
+  freqHz: number;
+  noteName: string;
+  centsDeviation: number;
+  /** dB relativo ao pico mais forte detectado (0 = o mais forte) */
+  amplitudeDb: number;
+}
+
+export interface ResonanceOverlapPair {
+  peakAIndex: number;
+  peakBIndex: number;
+  centsApart: number;
+}
+
+export interface ResonanceResult {
+  capturedAt: string;
+  peaks: ResonancePeak[];
+  overlaps: ResonanceOverlapPair[];
+  verdict: "separado" | "sobreposto";
+}
+
+export type TestId = "sustain" | "resonance";
 
 export interface Session {
   id: string;
@@ -142,17 +122,16 @@ export interface Session {
   noiseFloor: NoiseFloorProfile | null;
   sampleRate: number;
   protocolVersion: number;
-  tests: Partial<Record<TestId, TestRunResult>>;
+  tests: {
+    sustain?: SustainSessionResult;
+    resonance?: ResonanceResult;
+  };
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ComparisonWeights {
   sustain: { weight: number; direction: "more" | "less" };
-  brightness: { weight: number; direction: "more" | "less" };
-  balance: { weight: number; direction: "more" | "less" };
-  hnr: { weight: number }; // sempre "mais é melhor"
-  inharmonicity: { weight: number }; // sempre "menos é melhor"
   uniformity: { weight: number }; // sempre "mais é melhor"
-  wolfNotes: { weight: number }; // sempre "menos é melhor"
+  clarity: { weight: number }; // separação harmônica na ressonância, sempre "mais é melhor"
 }

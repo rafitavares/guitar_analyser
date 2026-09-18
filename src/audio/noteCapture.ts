@@ -1,9 +1,12 @@
-// Orquestra a captura de "uma tocada" de uma corda/nota: espera o ataque
-// (via casamento com o pente harmônico esperado), rastreia o envelope de
-// decaimento, e captura um snapshot de alta resolução para análise espectral.
+// Orquestra a captura de "uma tocada": espera o ataque de QUALQUER uma das
+// cordas conhecidas do instrumento (casamento com pente harmônico), rastreia
+// o envelope de decaimento até o som realmente sumir, e captura um snapshot
+// de alta resolução para confirmar qual corda foi tocada. Feito para ser
+// chamado repetidamente em loop (sessão de escuta contínua) sem exigir um
+// botão por tomada — o usuário só toca livremente.
 
 import { computeSpectrum, parabolicPeakInterpolation } from "./fft.ts";
-import { buildHarmonicComb, energyInComb, energyInRange, energyOutsideComb } from "./harmonicComb.ts";
+import { buildHarmonicComb, energyInComb, energyOutsideComb } from "./harmonicComb.ts";
 import type { HarmonicBand } from "./harmonicComb.ts";
 import type { CaptureHandle } from "./capture.ts";
 import type { NoiseFloorProfile } from "../types/index.ts";
@@ -16,21 +19,32 @@ export interface EnvelopeFrame {
   outsideEnergyDb: number;
 }
 
+export interface CaptureTarget {
+  stringNumber: number;
+  noteName: string;
+  frequencyHz: number;
+}
+
+/** Token simples de cancelamento — setar `aborted = true` interrompe a escuta em andamento. */
+export interface CaptureCancelToken {
+  aborted: boolean;
+}
+
 export interface RawTakeCapture {
   valid: boolean;
+  aborted?: boolean;
   discardReason?: string;
+  matchedTarget: CaptureTarget | null;
   detectedFundamentalHz: number;
-  expectedFundamentalHz: number;
   peakAmplitudeLinear: number;
   envelope: EnvelopeFrame[];
   highResSpectrum: { freqHz: number; magnitude: number }[] | null;
   sampleRate: number;
-  comb: HarmonicBand[];
 }
 
 export interface NoteCaptureOptions {
-  expectedFundamentalHz: number;
-  a4Hz: number;
+  /** Cordas/notas candidatas — a primeira cujo pente harmônico "bater" é escolhida. */
+  targets: CaptureTarget[];
   sampleRate: number;
   capture: CaptureHandle;
   noiseFloor: NoiseFloorProfile;
@@ -38,10 +52,11 @@ export interface NoteCaptureOptions {
   onEnvelopeUpdate?: (frame: EnvelopeFrame) => void;
   /** Espectro ao vivo (resolução moderada) emitido durante espera/medição, para visualização. */
   onLiveSpectrum?: (spectrum: { freqHz: number; magnitude: number }[]) => void;
-  /** Timeout esperando o ataque, em ms */
+  /** Timeout esperando o ataque, em ms. Bem generoso por padrão — o usuário toca no próprio ritmo. */
   attackTimeoutMs?: number;
-  /** Duração máxima de rastreamento do decaimento, em ms */
+  /** Duração máxima de rastreamento do decaimento, em ms. */
   maxDecayMs?: number;
+  cancelToken?: CaptureCancelToken;
 }
 
 const ENVELOPE_FFT_SIZE = 8192;
@@ -50,25 +65,35 @@ const POLL_INTERVAL_MS = 45;
 const ATTACK_MARGIN_DB = 12; // margem acima do piso de ruído para considerar ataque
 const USEFUL_BAND_LOW_HZ = 60;
 const USEFUL_BAND_HIGH_HZ = 8000;
-// Razão mínima entre energia dentro do pente harmônico esperado e energia
-// fora dele para aceitar a tomada como "a corda certa foi tocada". Não
-// exige afinação exata (o pente já tem ±3% de tolerância por banda) —
-// só exige que a energia predominante esteja mesmo nos parciais da nota
-// esperada, não num pico isolado de ruído/ressonância.
+// Razão mínima entre energia dentro do pente harmônico e energia fora dele
+// para aceitar a tomada como "essa foi a corda tocada". Não exige afinação
+// exata (o pente já tem ±3% de tolerância por banda) — só exige que a
+// energia predominante esteja mesmo nos parciais daquela nota, não num
+// pico isolado de ruído/ressonância.
 const MIN_HARMONIC_MATCH_RATIO = 1.0;
 const CLIPPING_AMPLITUDE = 0.98;
 const MIN_VALID_PEAK_DB_ABOVE_FLOOR = 6;
+// Quão perto do piso de ruído a energia precisa chegar, e por quantos ciclos
+// consecutivos, antes de considerarmos que o som realmente sumiu. Mais
+// conservador que uma simples margem única evita cortar a medição enquanto
+// a nota ainda está audível (a prioridade aqui é medir até o fim de verdade,
+// mesmo que isso demore mais alguns segundos).
+const QUIET_ENERGY_MARGIN = 1.05;
+const QUIET_CONFIRM_CYCLES = 4;
+const MIN_DECAY_TRACK_SEC = 0.3;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function estimateNoiseFloorCombEnergy(
-  noiseFloor: NoiseFloorProfile,
-  comb: HarmonicBand[]
-): number {
-  // Reconstroi um "espectro" a partir do perfil de ruído salvo para medir
-  // a energia esperada de ruído dentro do pente harmônico daquela nota.
+interface TargetCombInfo {
+  target: CaptureTarget;
+  comb: HarmonicBand[];
+  noiseCombEnergy: number;
+  attackThresholdEnergy: number;
+}
+
+function estimateNoiseFloorCombEnergy(noiseFloor: NoiseFloorProfile, comb: HarmonicBand[]): number {
   const spectrum = {
     magnitudes: new Float64Array(noiseFloor.spectrum),
     binHz: noiseFloor.sampleRate / noiseFloor.fftSize,
@@ -78,16 +103,41 @@ function estimateNoiseFloorCombEnergy(
   return energyInComb(spectrum, comb);
 }
 
+function estimateNoiseFloorOutsideEnergy(noiseFloor: NoiseFloorProfile, comb: HarmonicBand[]): number {
+  const spectrum = {
+    magnitudes: new Float64Array(noiseFloor.spectrum),
+    binHz: noiseFloor.sampleRate / noiseFloor.fftSize,
+    sampleRate: noiseFloor.sampleRate,
+    fftSize: noiseFloor.fftSize,
+  };
+  return energyOutsideComb(spectrum, comb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ);
+}
+
+function emptyResult(sampleRate: number, discardReason?: string, aborted = false): RawTakeCapture {
+  return {
+    valid: false,
+    aborted,
+    discardReason,
+    matchedTarget: null,
+    detectedFundamentalHz: 0,
+    peakAmplitudeLinear: 0,
+    envelope: [],
+    highResSpectrum: null,
+    sampleRate,
+  };
+}
+
 export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawTakeCapture> {
   const {
-    expectedFundamentalHz,
+    targets,
     capture,
     noiseFloor,
     sampleRate,
     onStatusChange,
     onEnvelopeUpdate,
-    attackTimeoutMs = 8000,
-    maxDecayMs = 9000,
+    attackTimeoutMs = 300000,
+    maxDecayMs = 20000,
+    cancelToken,
   } = options;
 
   // O AudioContext pode ter sido suspenso pelo navegador desde a última
@@ -98,19 +148,27 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
 
   const nyquist = sampleRate / 2;
   const envelopeBinHz = sampleRate / ENVELOPE_FFT_SIZE;
-  const comb = buildHarmonicComb(expectedFundamentalHz, envelopeBinHz, nyquist);
 
-  const noiseCombEnergy = Math.max(estimateNoiseFloorCombEnergy(noiseFloor, comb), 1e-12);
-  const attackThresholdEnergy = noiseCombEnergy * Math.pow(10, ATTACK_MARGIN_DB / 10);
+  const targetInfos: TargetCombInfo[] = targets.map((target) => {
+    const comb = buildHarmonicComb(target.frequencyHz, envelopeBinHz, nyquist);
+    const noiseCombEnergy = Math.max(estimateNoiseFloorCombEnergy(noiseFloor, comb), 1e-12);
+    return {
+      target,
+      comb,
+      noiseCombEnergy,
+      attackThresholdEnergy: noiseCombEnergy * Math.pow(10, ATTACK_MARGIN_DB / 10),
+    };
+  });
 
   onStatusChange?.("aguardando");
 
-  // --- Fase 1: aguardar ataque ---
+  // --- Fase 1: aguardar ataque de QUALQUER uma das cordas candidatas ---
   const attackDeadline = performance.now() + attackTimeoutMs;
   let attackEnergy = -1;
   let attackSpectrumSamples: Float64Array | null = null;
+  let candidate: TargetCombInfo | null = null;
 
-  while (performance.now() < attackDeadline) {
+  while (!cancelToken?.aborted && performance.now() < attackDeadline) {
     const samples = capture.getLatestSamples(ENVELOPE_FFT_SIZE);
     const spectrum = computeSpectrum(samples, sampleRate);
     if (options.onLiveSpectrum) {
@@ -118,28 +176,36 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
         Array.from(spectrum.magnitudes).map((magnitude, i) => ({ freqHz: i * spectrum.binHz, magnitude }))
       );
     }
-    const combEnergy = energyInComb(spectrum, comb);
-    if (combEnergy > attackThresholdEnergy) {
-      attackEnergy = combEnergy;
+
+    let bestExcess = 0;
+    let bestInfo: TargetCombInfo | null = null;
+    let bestEnergy = 0;
+    for (const info of targetInfos) {
+      const combEnergy = energyInComb(spectrum, info.comb);
+      const excess = combEnergy / info.attackThresholdEnergy;
+      if (excess > 1 && excess > bestExcess) {
+        bestExcess = excess;
+        bestInfo = info;
+        bestEnergy = combEnergy;
+      }
+    }
+
+    if (bestInfo) {
+      attackEnergy = bestEnergy;
       attackSpectrumSamples = samples;
+      candidate = bestInfo;
       break;
     }
     await sleep(POLL_INTERVAL_MS);
   }
 
-  if (attackEnergy < 0 || !attackSpectrumSamples) {
+  if (cancelToken?.aborted) {
+    return emptyResult(sampleRate, undefined, true);
+  }
+
+  if (attackEnergy < 0 || !attackSpectrumSamples || !candidate) {
     onStatusChange?.("descartado");
-    return {
-      valid: false,
-      discardReason: "Nenhum ataque detectado. Toque a nota com mais firmeza.",
-      detectedFundamentalHz: 0,
-      expectedFundamentalHz,
-      peakAmplitudeLinear: 0,
-      envelope: [],
-      highResSpectrum: null,
-      sampleRate,
-      comb,
-    };
+    return emptyResult(sampleRate, "Nenhum ataque detectado.");
   }
 
   onStatusChange?.("detectado");
@@ -148,44 +214,23 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
 
   if (peakAmplitudeLinear >= CLIPPING_AMPLITUDE) {
     onStatusChange?.("descartado");
-    return {
-      valid: false,
-      discardReason: "Sinal saturado (muito alto/distorcido). Toque um pouco mais suave.",
-      detectedFundamentalHz: 0,
-      expectedFundamentalHz,
-      peakAmplitudeLinear,
-      envelope: [],
-      highResSpectrum: null,
-      sampleRate,
-      comb,
-    };
+    return emptyResult(sampleRate, "Sinal saturado (muito alto/distorcido). Toque um pouco mais suave.");
   }
 
-  const attackDbAboveFloor = 10 * Math.log10(attackEnergy / noiseCombEnergy);
+  const attackDbAboveFloor = 10 * Math.log10(attackEnergy / candidate.noiseCombEnergy);
   if (attackDbAboveFloor < MIN_VALID_PEAK_DB_ABOVE_FLOOR) {
     onStatusChange?.("descartado");
-    return {
-      valid: false,
-      discardReason: "Toque fraco demais para uma medição confiável. Toque com mais força.",
-      detectedFundamentalHz: 0,
-      expectedFundamentalHz,
-      peakAmplitudeLinear,
-      envelope: [],
-      highResSpectrum: null,
-      sampleRate,
-      comb,
-    };
+    return emptyResult(sampleRate, "Toque fraco demais para uma medição confiável.");
   }
 
   onStatusChange?.("medindo");
 
-  // --- Fase 2: capturar snapshot de alta resolução (~250ms após o ataque,
-  // trecho estável) para análise espectral detalhada (Testes 2 e 3) ---
+  // --- Fase 2: capturar snapshot de alta resolução (~220ms após o ataque,
+  // trecho já assentado, sem o transiente do toque) para confirmar qual
+  // corda foi tocada com muito mais precisão que no instante do ataque. ---
   await sleep(220);
   const highResSamples = capture.getLatestSamples(Math.min(HIGH_RES_FFT_SIZE, sampleRate * 2));
   const highResPadded = new Float64Array(nextPow2(highResSamples.length));
-  // Centraliza as amostras reais no buffer para que o pico da janela de Hann
-  // (que tapera para 0 nas bordas) recaia sobre o sinal real, não sobre zeros.
   const padOffset = Math.floor((highResPadded.length - highResSamples.length) / 2);
   highResPadded.set(highResSamples, padOffset);
   const highResSpectrumResult = computeSpectrum(highResPadded, sampleRate);
@@ -195,28 +240,41 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
   }));
   options.onLiveSpectrum?.(highResSpectrum);
 
-  // Valida se a corda certa foi tocada usando o MESMO mecanismo de pente
-  // harmônico que já rejeita ruído/voz, em vez de procurar "o pico mais
-  // alto numa janela larga" e comparar com a frequência esperada. Um
-  // único bin de ruído/ressonância isolado pode facilmente vencer essa
-  // busca ingênua (foi o que causava rejeições de tomadas boas) — mas
-  // ruído de banda estreita nunca tem energia concentrada simultaneamente
-  // em TODOS os parciais esperados (f0, 2·f0, 3·f0...) como uma nota real
-  // tem. Isso também não exige afinação perfeita: pequenos desvios não
-  // tiram a energia das bandas do pente (±3% por banda).
   const highResBinHz = highResSpectrumResult.binHz;
-  const highResComb = buildHarmonicComb(expectedFundamentalHz, highResBinHz, nyquist);
-  const expectedCombEnergy = energyInComb(highResSpectrumResult, highResComb);
-  const expectedOutsideEnergy = Math.max(
-    energyOutsideComb(highResSpectrumResult, highResComb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ),
-    1e-12
-  );
-  const harmonicMatchRatio = expectedCombEnergy / expectedOutsideEnergy;
 
-  // Pico refinado perto da fundamental esperada, só para exibição e para
-  // alimentar o retrato harmônico/inarmonicidade — não decide mais se a
-  // tomada é aceita.
-  const fundamentalBand = highResComb[0]!;
+  // Testa o pente harmônico de CADA corda candidata contra o espectro
+  // assentado e fica com a que teve a maior concentração de energia nos
+  // seus parciais — muito mais robusto que comparar um único pico com uma
+  // frequência esperada (um ruído pontual pode facilmente vencer essa
+  // busca ingênua mesmo com a nota certa tocada).
+  let bestMatch: { target: CaptureTarget; comb: HarmonicBand[]; ratio: number } | null = null;
+  for (const info of targetInfos) {
+    const highResComb = buildHarmonicComb(info.target.frequencyHz, highResBinHz, nyquist);
+    const combEnergy = energyInComb(highResSpectrumResult, highResComb);
+    const outsideEnergy = Math.max(
+      energyOutsideComb(highResSpectrumResult, highResComb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ),
+      1e-12
+    );
+    const ratio = combEnergy / outsideEnergy;
+    if (!bestMatch || ratio > bestMatch.ratio) {
+      bestMatch = { target: info.target, comb: highResComb, ratio };
+    }
+  }
+
+  if (!bestMatch || bestMatch.ratio < MIN_HARMONIC_MATCH_RATIO) {
+    onStatusChange?.("descartado");
+    return emptyResult(
+      sampleRate,
+      "Não encontrei energia harmônica concentrada em nenhuma corda conhecida. Verifique se o ambiente está muito ruidoso."
+    );
+  }
+
+  const matchedTarget = bestMatch.target;
+  const matchedComb = bestMatch.comb;
+
+  // Pico refinado perto da fundamental da corda identificada, só para
+  // exibição — não decide mais se a tomada é aceita.
+  const fundamentalBand = matchedComb[0]!;
   let bestBin = -1;
   let bestMag = -Infinity;
   const loSearch = Math.max(0, Math.floor((fundamentalBand.centerHz * 0.7) / highResBinHz));
@@ -234,36 +292,20 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
   const detectedFundamentalHz =
     bestBin >= 0
       ? parabolicPeakInterpolation(highResSpectrumResult.magnitudes, bestBin, highResBinHz).freqHz
-      : expectedFundamentalHz;
+      : matchedTarget.frequencyHz;
 
-  if (harmonicMatchRatio < MIN_HARMONIC_MATCH_RATIO) {
-    onStatusChange?.("descartado");
-    return {
-      valid: false,
-      discardReason: `Não encontrei energia harmônica concentrada na frequência esperada (${expectedFundamentalHz.toFixed(
-        1
-      )}Hz). Verifique se tocou a corda certa ou se há muito ruído no ambiente.`,
-      detectedFundamentalHz,
-      expectedFundamentalHz,
-      peakAmplitudeLinear,
-      envelope: [],
-      highResSpectrum: null,
-      sampleRate,
-      comb,
-    };
-  }
+  // --- Fase 3: rastrear envelope de decaimento até o som realmente sumir ---
+  // (ou até o tempo máximo de segurança, para violões com sustain muito longo)
+  const matchedNoiseCombEnergy = Math.max(estimateNoiseFloorCombEnergy(noiseFloor, matchedComb), 1e-12);
+  const usefulOutsideNoiseEnergy = Math.max(estimateNoiseFloorOutsideEnergy(noiseFloor, matchedComb), 1e-12);
 
-  // --- Fase 3: rastrear envelope de decaimento até atingir o piso de ruído ---
   const startTime = performance.now();
   const envelope: EnvelopeFrame[] = [];
   const peakRefEnergy = attackEnergy;
   const decayDeadline = startTime + maxDecayMs;
-  const usefulOutsideNoiseEnergy = Math.max(
-    estimateNoiseFloorOutsideEnergy(noiseFloor, comb),
-    1e-12
-  );
+  let quietStreak = 0;
 
-  while (performance.now() < decayDeadline) {
+  while (!cancelToken?.aborted && performance.now() < decayDeadline) {
     const samples = capture.getLatestSamples(ENVELOPE_FFT_SIZE);
     const spectrum = computeSpectrum(samples, sampleRate);
     if (options.onLiveSpectrum) {
@@ -271,9 +313,9 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
         Array.from(spectrum.magnitudes).map((magnitude, i) => ({ freqHz: i * spectrum.binHz, magnitude }))
       );
     }
-    const combEnergy = Math.max(energyInComb(spectrum, comb), 1e-12);
+    const combEnergy = Math.max(energyInComb(spectrum, matchedComb), 1e-12);
     const outsideEnergy = Math.max(
-      energyOutsideComb(spectrum, comb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ),
+      energyOutsideComb(spectrum, matchedComb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ),
       1e-12
     );
     const timeSec = (performance.now() - startTime) / 1000;
@@ -283,7 +325,12 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
     envelope.push(frame);
     onEnvelopeUpdate?.(frame);
 
-    if (combEnergy < noiseCombEnergy * 1.15 && timeSec > 0.3) {
+    if (combEnergy < matchedNoiseCombEnergy * QUIET_ENERGY_MARGIN) {
+      quietStreak++;
+    } else {
+      quietStreak = 0;
+    }
+    if (quietStreak >= QUIET_CONFIRM_CYCLES && timeSec > MIN_DECAY_TRACK_SEC) {
       break;
     }
     await sleep(POLL_INTERVAL_MS);
@@ -293,27 +340,13 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
 
   return {
     valid: true,
+    matchedTarget,
     detectedFundamentalHz,
-    expectedFundamentalHz,
     peakAmplitudeLinear,
     envelope,
     highResSpectrum,
     sampleRate,
-    comb,
   };
-}
-
-function estimateNoiseFloorOutsideEnergy(
-  noiseFloor: NoiseFloorProfile,
-  comb: HarmonicBand[]
-): number {
-  const spectrum = {
-    magnitudes: new Float64Array(noiseFloor.spectrum),
-    binHz: noiseFloor.sampleRate / noiseFloor.fftSize,
-    sampleRate: noiseFloor.sampleRate,
-    fftSize: noiseFloor.fftSize,
-  };
-  return energyOutsideComb(spectrum, comb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ);
 }
 
 function nextPow2(n: number): number {
@@ -321,5 +354,3 @@ function nextPow2(n: number): number {
   while (p < n) p *= 2;
   return p;
 }
-
-export { energyInRange };

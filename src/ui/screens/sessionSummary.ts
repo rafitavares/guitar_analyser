@@ -4,15 +4,6 @@ import { appState } from "../../state/appState.ts";
 import { saveInstrument, saveSession } from "../../db/storage.ts";
 import { exportSessionJson, exportSessionCsv } from "../../db/exportImport.ts";
 
-const TEST_LABELS: Record<string, string> = {
-  sustain: "Sustentação (T60)",
-  harmonicPortrait: "Retrato Harmônico",
-  inharmonicity: "Inarmonicidade",
-  beating: "Batimento",
-  hnr: "Limpeza (HNR)",
-  semitoneSweep: "Varredura por semitom",
-};
-
 export function renderSessionSummary(): void {
   const draft = appState.draft;
   if (!draft || !draft.session) {
@@ -20,7 +11,18 @@ export function renderSessionSummary(): void {
     return;
   }
   const session = draft.session;
-  const testsCompleted = Object.keys(session.tests);
+  const testsCompleted = Object.keys(session.tests).length;
+
+  const sustainRows = (session.tests.sustain?.strings ?? [])
+    .slice()
+    .sort((a, b) => b.stringNumber - a.stringNumber)
+    .map((m) => {
+      const take = m.medianTakeIndex !== null ? m.takes[m.medianTakeIndex] : null;
+      return `<tr><td>${m.stringNumber}</td><td>${m.noteName}</td><td>${take?.sustain ? take.sustain.t60EstimatedSec.toFixed(2) + "s" : "—"}</td></tr>`;
+    })
+    .join("");
+
+  const resonance = session.tests.resonance;
 
   const app = setApp(`
     ${renderHeader("Resumo da sessão", "/tests")}
@@ -33,13 +35,17 @@ export function renderSessionSummary(): void {
       </div>
 
       <div class="card">
-        <h3>Testes realizados (${testsCompleted.length}/6)</h3>
+        <h3>Testes realizados (${testsCompleted}/2)</h3>
+        ${testsCompleted === 0 ? "<p>Nenhum teste realizado ainda.</p>" : ""}
         ${
-          testsCompleted.length === 0
-            ? "<p>Nenhum teste realizado ainda.</p>"
-            : `<ul style="margin:0; padding-left:18px; color:var(--text-dim)">${testsCompleted
-                .map((t) => `<li>${TEST_LABELS[t] ?? t}</li>`)
-                .join("")}</ul>`
+          session.tests.sustain
+            ? `<h3 style="margin-top:10px">Sustentação</h3><table><thead><tr><th>Corda</th><th>Nota</th><th>T60</th></tr></thead><tbody>${sustainRows}</tbody></table>`
+            : ""
+        }
+        ${
+          resonance
+            ? `<h3 style="margin-top:10px">Ressonância</h3><p>${resonance.verdict === "sobreposto" ? "⚠ Harmônicos se sobrepondo" : "✓ Harmônicos bem separados"} (${resonance.peaks.length} picos detectados)</p>`
+            : ""
         }
       </div>
 

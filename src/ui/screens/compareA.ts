@@ -1,9 +1,9 @@
 import { setApp, renderHeader, attachHeaderEvents } from "../components/layout.ts";
 import { listInstruments, listSessionsForInstrument } from "../../db/storage.ts";
 import { drawChart } from "../components/canvasChart.ts";
-import type { Session, NoteMeasurement } from "../../types/index.ts";
+import type { Session, StringSustainMeasurement } from "../../types/index.ts";
 
-function getMedianTake(m: NoteMeasurement) {
+function getMedianTake(m: StringSustainMeasurement) {
   return m.medianTakeIndex !== null ? m.takes[m.medianTakeIndex] : null;
 }
 
@@ -91,14 +91,15 @@ function buildComparisonHtml(a: Session, b: Session): string {
   const conditionsMismatch =
     Math.abs(a.conditions.distanceCm - b.conditions.distanceCm) > 5 ||
     a.instrumentSnapshot.a4ReferenceHz !== b.instrumentSnapshot.a4ReferenceHz ||
-    a.sampleRate !== b.sampleRate;
+    a.sampleRate !== b.sampleRate ||
+    a.protocolVersion !== b.protocolVersion;
 
   let html = `
     <div class="card">
       <h3>${new Date(a.createdAt).toLocaleDateString("pt-BR")} → ${new Date(b.createdAt).toLocaleDateString("pt-BR")}</h3>
       ${
         conditionsMismatch
-          ? `<div class="notice notice-warn">Condições de captura diferentes entre as sessões (distância do mic, A4 de referência ou taxa de amostragem) — a comparação pode não ser justa.</div>`
+          ? `<div class="notice notice-warn">Condições de captura diferentes entre as sessões (distância do mic, A4 de referência, taxa de amostragem ou versão do protocolo) — a comparação pode não ser justa.</div>`
           : ""
       }
     </div>
@@ -106,32 +107,18 @@ function buildComparisonHtml(a: Session, b: Session): string {
 
   if (a.tests.sustain && b.tests.sustain) {
     html += `<div class="card"><h3>Sustentação (T60)</h3><table><thead><tr><th>Corda</th><th>Nota</th><th>A</th><th>B</th><th>Δ</th></tr></thead><tbody>`;
-    for (const mb of b.tests.sustain.measurements) {
-      const ma = a.tests.sustain.measurements.find((m) => m.stringNumber === mb.stringNumber);
+    for (const mb of b.tests.sustain.strings) {
+      const ma = a.tests.sustain.strings.find((m) => m.stringNumber === mb.stringNumber);
       const ta = ma ? getMedianTake(ma) : null;
       const tb = getMedianTake(mb);
       if (!ta?.sustain || !tb?.sustain) continue;
       html += `<tr><td>${mb.stringNumber}</td><td>${mb.noteName}</td><td>${ta.sustain.t60EstimatedSec.toFixed(2)}s</td><td>${tb.sustain.t60EstimatedSec.toFixed(2)}s</td><td>${deltaHtml(ta.sustain.t60EstimatedSec, tb.sustain.t60EstimatedSec, true, "s")}</td></tr>`;
     }
-    html += `</tbody></table></div>`;
-  }
-
-  if (a.tests.harmonicPortrait && b.tests.harmonicPortrait) {
-    html += `<div class="card"><h3>Centroide espectral (brilho)</h3><table><thead><tr><th>Corda</th><th>Nota</th><th>A</th><th>B</th><th>Δ</th></tr></thead><tbody>`;
-    for (const mb of b.tests.harmonicPortrait.measurements) {
-      const ma = a.tests.harmonicPortrait.measurements.find((m) => m.stringNumber === mb.stringNumber);
-      const ta = ma ? getMedianTake(ma) : null;
-      const tb = getMedianTake(mb);
-      if (!ta?.portrait || !tb?.portrait) continue;
-      html += `<tr><td>${mb.stringNumber}</td><td>${mb.noteName}</td><td>${ta.portrait.spectralCentroidHz.toFixed(0)}Hz</td><td>${tb.portrait.spectralCentroidHz.toFixed(0)}Hz</td><td>${deltaHtml(ta.portrait.spectralCentroidHz, tb.portrait.spectralCentroidHz, true, "Hz", 0)}</td></tr>`;
-    }
     html += `</tbody></table><canvas id="overlay-decay-canvas" height="200" style="margin-top:10px"></canvas></div>`;
-  }
 
-  if (a.tests.hnr && b.tests.hnr) {
     html += `<div class="card"><h3>Limpeza (HNR)</h3><table><thead><tr><th>Corda</th><th>Nota</th><th>A</th><th>B</th><th>Δ</th></tr></thead><tbody>`;
-    for (const mb of b.tests.hnr.measurements) {
-      const ma = a.tests.hnr.measurements.find((m) => m.stringNumber === mb.stringNumber);
+    for (const mb of b.tests.sustain.strings) {
+      const ma = a.tests.sustain.strings.find((m) => m.stringNumber === mb.stringNumber);
       const ta = ma ? getMedianTake(ma) : null;
       const tb = getMedianTake(mb);
       if (!ta?.hnr || !tb?.hnr) continue;
@@ -140,7 +127,23 @@ function buildComparisonHtml(a: Session, b: Session): string {
     html += `</tbody></table></div>`;
   }
 
-  if (!a.tests.sustain && !a.tests.harmonicPortrait && !a.tests.hnr) {
+  if (a.tests.resonance && b.tests.resonance) {
+    const ra = a.tests.resonance;
+    const rb = b.tests.resonance;
+    html += `<div class="card">
+      <h3>Ressonância harmônica</h3>
+      <table>
+        <thead><tr><th></th><th>A</th><th>B</th></tr></thead>
+        <tbody>
+          <tr><td>Veredito</td><td>${ra.verdict === "sobreposto" ? "sobrepondo" : "separado"}</td><td>${rb.verdict === "sobreposto" ? "sobrepondo" : "separado"}</td></tr>
+          <tr><td>Harmônicos detectados</td><td>${ra.peaks.length}</td><td>${rb.peaks.length}</td></tr>
+          <tr><td>Pares se sobrepondo</td><td>${ra.overlaps.length}</td><td>${rb.overlaps.length}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  if (!a.tests.sustain && !a.tests.resonance) {
     html += `<div class="card"><p>Nenhum teste em comum entre as duas sessões para comparar.</p></div>`;
   }
 
@@ -151,11 +154,11 @@ function drawOverlayCharts(container: HTMLElement, a: Session, b: Session): void
   const canvas = container.querySelector<HTMLCanvasElement>("#overlay-decay-canvas");
   if (!canvas || !a.tests.sustain || !b.tests.sustain) return;
 
-  const commonString = b.tests.sustain.measurements.find((mb) =>
-    a.tests.sustain!.measurements.some((ma) => ma.stringNumber === mb.stringNumber)
+  const commonString = b.tests.sustain.strings.find((mb) =>
+    a.tests.sustain!.strings.some((ma) => ma.stringNumber === mb.stringNumber)
   );
   if (!commonString) return;
-  const ma = a.tests.sustain.measurements.find((m) => m.stringNumber === commonString.stringNumber)!;
+  const ma = a.tests.sustain.strings.find((m) => m.stringNumber === commonString.stringNumber)!;
   const ta = getMedianTake(ma);
   const tb = getMedianTake(commonString);
   if (!ta?.sustain || !tb?.sustain) return;
