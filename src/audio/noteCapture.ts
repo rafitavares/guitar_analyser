@@ -133,65 +133,14 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
 
   onStatusChange?.("detectado");
 
-  // Detecta a fundamental real perto do primeiro parcial esperado, para
-  // validar se a corda certa foi tocada.
-  const attackSpectrum = computeSpectrum(attackSpectrumSamples, sampleRate);
-  const fundamentalBand = comb[0]!;
-  let bestBin = -1;
-  let bestMag = -Infinity;
-  const loSearch = Math.max(0, Math.floor((fundamentalBand.centerHz * 0.7) / envelopeBinHz));
-  const hiSearch = Math.min(
-    attackSpectrum.magnitudes.length - 1,
-    Math.ceil((fundamentalBand.centerHz * 1.4) / envelopeBinHz)
-  );
-  for (let bin = loSearch; bin <= hiSearch; bin++) {
-    const m = attackSpectrum.magnitudes[bin]!;
-    if (m > bestMag) {
-      bestMag = m;
-      bestBin = bin;
-    }
-  }
-  // Interpolação parabólica é essencial aqui: com ENVELOPE_FFT_SIZE=8192 a
-  // resolução bruta é de ~5-6Hz por bin, o que para uma fundamental grave
-  // (ex.: E2 ~82Hz) representa ~6-7% de erro possível só por quantização —
-  // o suficiente para a frequência detectada "pular" entre tomadas mesmo
-  // tocando a mesma corda. Refinamos com o pico ajustado em escala log.
-  const detectedFundamentalHz =
-    bestBin >= 0
-      ? parabolicPeakInterpolation(attackSpectrum.magnitudes, bestBin, envelopeBinHz).freqHz
-      : 0;
   const peakAmplitudeLinear = Math.max(...attackSpectrumSamples.map((v) => Math.abs(v)));
-
-  const deviation =
-    detectedFundamentalHz > 0
-      ? Math.abs(detectedFundamentalHz - expectedFundamentalHz) / expectedFundamentalHz
-      : 1;
-
-  if (deviation > MAX_FUNDAMENTAL_DEVIATION) {
-    onStatusChange?.("descartado");
-    return {
-      valid: false,
-      discardReason: `Frequência detectada (${detectedFundamentalHz.toFixed(
-        1
-      )}Hz) diverge muito da esperada (${expectedFundamentalHz.toFixed(
-        1
-      )}Hz). Verifique se tocou a corda certa.`,
-      detectedFundamentalHz,
-      expectedFundamentalHz,
-      peakAmplitudeLinear,
-      envelope: [],
-      highResSpectrum: null,
-      sampleRate,
-      comb,
-    };
-  }
 
   if (peakAmplitudeLinear >= CLIPPING_AMPLITUDE) {
     onStatusChange?.("descartado");
     return {
       valid: false,
       discardReason: "Sinal saturado (muito alto/distorcido). Toque um pouco mais suave.",
-      detectedFundamentalHz,
+      detectedFundamentalHz: 0,
       expectedFundamentalHz,
       peakAmplitudeLinear,
       envelope: [],
@@ -207,7 +156,7 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
     return {
       valid: false,
       discardReason: "Toque fraco demais para uma medição confiável. Toque com mais força.",
-      detectedFundamentalHz,
+      detectedFundamentalHz: 0,
       expectedFundamentalHz,
       peakAmplitudeLinear,
       envelope: [],
@@ -234,6 +183,60 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
     magnitude,
   }));
   options.onLiveSpectrum?.(highResSpectrum);
+
+  // Detecta a fundamental real perto do primeiro parcial esperado, para
+  // validar se a corda certa foi tocada. Isso é feito no snapshot de alta
+  // resolução (assentado, ~220ms após o ataque) em vez do instante do
+  // próprio ataque: no momento do toque, ruído de unha/palheta e o
+  // transiente inicial da corda costumam ter energia forte e de banda
+  // larga que pode se destacar por alguns milissegundos e ofuscar a
+  // fundamental real, levando a detecção a travar numa frequência errada.
+  // Usar o trecho já estabilizado, com resolução ~4x melhor
+  // (HIGH_RES_FFT_SIZE vs ENVELOPE_FFT_SIZE), evita esse problema.
+  const fundamentalBand = comb[0]!;
+  let bestBin = -1;
+  let bestMag = -Infinity;
+  const highResBinHz = highResSpectrumResult.binHz;
+  const loSearch = Math.max(0, Math.floor((fundamentalBand.centerHz * 0.7) / highResBinHz));
+  const hiSearch = Math.min(
+    highResSpectrumResult.magnitudes.length - 1,
+    Math.ceil((fundamentalBand.centerHz * 1.4) / highResBinHz)
+  );
+  for (let bin = loSearch; bin <= hiSearch; bin++) {
+    const m = highResSpectrumResult.magnitudes[bin]!;
+    if (m > bestMag) {
+      bestMag = m;
+      bestBin = bin;
+    }
+  }
+  const detectedFundamentalHz =
+    bestBin >= 0
+      ? parabolicPeakInterpolation(highResSpectrumResult.magnitudes, bestBin, highResBinHz).freqHz
+      : 0;
+
+  const deviation =
+    detectedFundamentalHz > 0
+      ? Math.abs(detectedFundamentalHz - expectedFundamentalHz) / expectedFundamentalHz
+      : 1;
+
+  if (deviation > MAX_FUNDAMENTAL_DEVIATION) {
+    onStatusChange?.("descartado");
+    return {
+      valid: false,
+      discardReason: `Frequência detectada (${detectedFundamentalHz.toFixed(
+        1
+      )}Hz) diverge muito da esperada (${expectedFundamentalHz.toFixed(
+        1
+      )}Hz). Verifique se tocou a corda certa.`,
+      detectedFundamentalHz,
+      expectedFundamentalHz,
+      peakAmplitudeLinear,
+      envelope: [],
+      highResSpectrum: null,
+      sampleRate,
+      comb,
+    };
+  }
 
   // --- Fase 3: rastrear envelope de decaimento até atingir o piso de ruído ---
   const startTime = performance.now();
