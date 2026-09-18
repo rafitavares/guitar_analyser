@@ -8,6 +8,7 @@
 import { computeSpectrum, parabolicPeakInterpolation } from "./fft.ts";
 import { buildHarmonicComb, energyInComb, energyOutsideComb } from "./harmonicComb.ts";
 import type { HarmonicBand } from "./harmonicComb.ts";
+import { isAboveLoudnessGate } from "./loudnessGate.ts";
 import type { CaptureHandle } from "./capture.ts";
 import type { NoiseFloorProfile } from "../types/index.ts";
 
@@ -62,7 +63,7 @@ export interface NoteCaptureOptions {
 const ENVELOPE_FFT_SIZE = 8192;
 const HIGH_RES_FFT_SIZE = 32768;
 const POLL_INTERVAL_MS = 45;
-const ATTACK_MARGIN_DB = 12; // margem acima do piso de ruído para considerar ataque
+const ATTACK_MARGIN_DB = 12; // margem acima do piso de ruído (no pente harmônico) para considerar ataque
 const USEFUL_BAND_LOW_HZ = 60;
 const USEFUL_BAND_HIGH_HZ = 8000;
 // Razão mínima entre energia dentro do pente harmônico e energia fora dele
@@ -170,6 +171,15 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
 
   while (!cancelToken?.aborted && performance.now() < attackDeadline) {
     const samples = capture.getLatestSamples(ENVELOPE_FFT_SIZE);
+
+    // Filtro rápido: nem olha para o pente harmônico se o som ainda não
+    // está claramente acima do piso de ruído calibrado (+5dB). Evita que
+    // ruído ambiente fraco dispare o estado de "detectado".
+    if (!isAboveLoudnessGate(samples, noiseFloor)) {
+      await sleep(POLL_INTERVAL_MS);
+      continue;
+    }
+
     const spectrum = computeSpectrum(samples, sampleRate);
     if (options.onLiveSpectrum) {
       options.onLiveSpectrum(

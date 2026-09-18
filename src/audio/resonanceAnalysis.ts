@@ -7,8 +7,9 @@
 
 import { computeSpectrum, parabolicPeakInterpolation } from "./fft.ts";
 import { frequencyToNote } from "./noteUtils.ts";
+import { waitForLoudOnset } from "./loudnessGate.ts";
 import type { CaptureHandle } from "./capture.ts";
-import type { ResonanceOverlapPair, ResonancePeak } from "../types/index.ts";
+import type { NoiseFloorProfile, ResonanceOverlapPair, ResonancePeak } from "../types/index.ts";
 
 /** Pico com o dB bruto (não normalizado) também disponível, útil só para
  * posicionar o marcador no gráfico ao vivo — o que é salvo na sessão usa
@@ -26,10 +27,14 @@ export interface ResonanceSnapshot {
   displaySpectrum: { freqHz: number; db: number }[];
 }
 
+export type ResonanceState = "aguardando" | "capturando" | "congelado";
+
 export interface ResonanceListenOptions {
   a4Hz: number;
   sampleRate: number;
   capture: CaptureHandle;
+  noiseFloor: NoiseFloorProfile;
+  onStateChange?: (state: ResonanceState) => void;
   onUpdate?: (snapshot: ResonanceSnapshot) => void;
 }
 
@@ -40,6 +45,9 @@ export interface ResonanceController {
 
 const FFT_SIZE = 32768;
 const POLL_INTERVAL_MS = 200;
+const ONSET_WINDOW_SIZE = 4096;
+/** Cada medição dura 3s e depois congela na tela, até o próximo toque acima do piso de volume. */
+const CAPTURE_DURATION_MS = 3000;
 const MAX_PEAKS = 10;
 const MIN_FREQ_HZ = 70;
 const MAX_FREQ_HZ = 4000;
@@ -132,23 +140,47 @@ export function extractResonanceSnapshot(
   };
 }
 
+/**
+ * Ciclo automático: espera o som ficar claramente acima do piso de ruído
+ * (+5dB), captura e analisa por 3 segundos, depois CONGELA o resultado na
+ * tela — e assim que o usuário tocar de novo acima do piso, inicia sozinho
+ * uma nova medição, substituindo a anterior. Nenhum botão precisa ser
+ * apertado entre medições.
+ */
 export function startResonanceListening(options: ResonanceListenOptions): ResonanceController {
-  const { a4Hz, sampleRate, capture, onUpdate } = options;
+  const { a4Hz, sampleRate, capture, noiseFloor, onStateChange, onUpdate } = options;
   let aborted = false;
-  let bestSnapshot: ResonanceSnapshot | null = null;
+  let lastSnapshot: ResonanceSnapshot | null = null;
 
   async function loop() {
     await capture.ensureRunning();
     while (!aborted) {
-      await capture.ensureRunning();
-      const samples = capture.getLatestSamples(FFT_SIZE);
-      const spectrum = computeSpectrum(samples, sampleRate);
-      const snapshot = extractResonanceSnapshot(spectrum.magnitudes, spectrum.binHz, a4Hz);
-      onUpdate?.(snapshot);
-      if (snapshot.peaks.length > 0 && (!bestSnapshot || snapshot.totalEnergy > bestSnapshot.totalEnergy)) {
-        bestSnapshot = snapshot;
+      onStateChange?.("aguardando");
+      const onsetDetected = await waitForLoudOnset(capture, noiseFloor, ONSET_WINDOW_SIZE, () => aborted);
+      if (aborted || !onsetDetected) break;
+
+      onStateChange?.("capturando");
+      const deadline = performance.now() + CAPTURE_DURATION_MS;
+      let windowBest: ResonanceSnapshot | null = null;
+
+      while (!aborted && performance.now() < deadline) {
+        const samples = capture.getLatestSamples(FFT_SIZE);
+        const spectrum = computeSpectrum(samples, sampleRate);
+        const snapshot = extractResonanceSnapshot(spectrum.magnitudes, spectrum.binHz, a4Hz);
+        onUpdate?.(snapshot);
+        if (snapshot.peaks.length > 0 && (!windowBest || snapshot.totalEnergy > windowBest.totalEnergy)) {
+          windowBest = snapshot;
+        }
+        await sleep(POLL_INTERVAL_MS);
       }
-      await sleep(POLL_INTERVAL_MS);
+      if (aborted) break;
+
+      if (windowBest) {
+        lastSnapshot = windowBest;
+        onUpdate?.(windowBest);
+      }
+      onStateChange?.("congelado");
+      // Volta ao topo do laço e espera o próximo toque — sem exigir clique.
     }
   }
 
@@ -158,6 +190,6 @@ export function startResonanceListening(options: ResonanceListenOptions): Resona
     stop: () => {
       aborted = true;
     },
-    getBestSnapshot: () => bestSnapshot,
+    getBestSnapshot: () => lastSnapshot,
   };
 }

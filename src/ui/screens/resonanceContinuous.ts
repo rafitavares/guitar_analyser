@@ -2,8 +2,14 @@ import { navigate } from "../../state/router.ts";
 import { setApp, renderHeader, attachHeaderEvents } from "../components/layout.ts";
 import { appState } from "../../state/appState.ts";
 import { startResonanceListening } from "../../audio/resonanceAnalysis.ts";
-import type { ResonanceController, ResonanceSnapshot } from "../../audio/resonanceAnalysis.ts";
+import type { ResonanceController, ResonanceSnapshot, ResonanceState } from "../../audio/resonanceAnalysis.ts";
 import { drawChart } from "../components/canvasChart.ts";
+
+const STATE_LABELS: Record<ResonanceState, string> = {
+  aguardando: "Aguardando som (toque uma nota ou arpejo)…",
+  capturando: "Capturando (3s)…",
+  congelado: "Congelado — toque novamente para nova medição",
+};
 
 export async function renderResonanceContinuous(): Promise<void> {
   if (!appState.draft?.session) {
@@ -26,7 +32,8 @@ export async function renderResonanceContinuous(): Promise<void> {
 
       <div id="live-area" style="display:none; flex-direction:column; gap:16px;">
         <div class="card">
-          <canvas id="live-canvas" height="200"></canvas>
+          <div id="state-area" class="status-pill waiting">${STATE_LABELS.aguardando}</div>
+          <canvas id="live-canvas" height="200" style="margin-top:8px"></canvas>
         </div>
         <div class="card">
           <div id="verdict-area"></div>
@@ -44,6 +51,7 @@ export async function renderResonanceContinuous(): Promise<void> {
   const startCard = app.querySelector<HTMLDivElement>("#start-card")!;
   const startBtn = app.querySelector<HTMLButtonElement>("#start-btn")!;
   const liveArea = app.querySelector<HTMLDivElement>("#live-area")!;
+  const stateArea = app.querySelector<HTMLDivElement>("#state-area")!;
   const liveCanvas = app.querySelector<HTMLCanvasElement>("#live-canvas")!;
   const verdictArea = app.querySelector<HTMLDivElement>("#verdict-area")!;
   const peaksTable = app.querySelector<HTMLDivElement>("#peaks-table")!;
@@ -113,6 +121,11 @@ export async function renderResonanceContinuous(): Promise<void> {
       a4Hz: session.instrumentSnapshot.a4ReferenceHz,
       sampleRate: capture.sampleRate,
       capture,
+      noiseFloor: session.noiseFloor!,
+      onStateChange: (state) => {
+        stateArea.textContent = STATE_LABELS[state];
+        stateArea.className = `status-pill ${state === "capturando" ? "measuring" : state === "congelado" ? "valid" : "waiting"}`;
+      },
       onUpdate: renderSnapshot,
     });
   });
