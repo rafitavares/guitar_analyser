@@ -50,7 +50,12 @@ const POLL_INTERVAL_MS = 45;
 const ATTACK_MARGIN_DB = 12; // margem acima do piso de ruído para considerar ataque
 const USEFUL_BAND_LOW_HZ = 60;
 const USEFUL_BAND_HIGH_HZ = 8000;
-const MAX_FUNDAMENTAL_DEVIATION = 0.06; // 6% - tolerância antes de considerar "corda errada"
+// Razão mínima entre energia dentro do pente harmônico esperado e energia
+// fora dele para aceitar a tomada como "a corda certa foi tocada". Não
+// exige afinação exata (o pente já tem ±3% de tolerância por banda) —
+// só exige que a energia predominante esteja mesmo nos parciais da nota
+// esperada, não num pico isolado de ruído/ressonância.
+const MIN_HARMONIC_MATCH_RATIO = 1.0;
 const CLIPPING_AMPLITUDE = 0.98;
 const MIN_VALID_PEAK_DB_ABOVE_FLOOR = 6;
 
@@ -184,19 +189,30 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
   }));
   options.onLiveSpectrum?.(highResSpectrum);
 
-  // Detecta a fundamental real perto do primeiro parcial esperado, para
-  // validar se a corda certa foi tocada. Isso é feito no snapshot de alta
-  // resolução (assentado, ~220ms após o ataque) em vez do instante do
-  // próprio ataque: no momento do toque, ruído de unha/palheta e o
-  // transiente inicial da corda costumam ter energia forte e de banda
-  // larga que pode se destacar por alguns milissegundos e ofuscar a
-  // fundamental real, levando a detecção a travar numa frequência errada.
-  // Usar o trecho já estabilizado, com resolução ~4x melhor
-  // (HIGH_RES_FFT_SIZE vs ENVELOPE_FFT_SIZE), evita esse problema.
-  const fundamentalBand = comb[0]!;
+  // Valida se a corda certa foi tocada usando o MESMO mecanismo de pente
+  // harmônico que já rejeita ruído/voz, em vez de procurar "o pico mais
+  // alto numa janela larga" e comparar com a frequência esperada. Um
+  // único bin de ruído/ressonância isolado pode facilmente vencer essa
+  // busca ingênua (foi o que causava rejeições de tomadas boas) — mas
+  // ruído de banda estreita nunca tem energia concentrada simultaneamente
+  // em TODOS os parciais esperados (f0, 2·f0, 3·f0...) como uma nota real
+  // tem. Isso também não exige afinação perfeita: pequenos desvios não
+  // tiram a energia das bandas do pente (±3% por banda).
+  const highResBinHz = highResSpectrumResult.binHz;
+  const highResComb = buildHarmonicComb(expectedFundamentalHz, highResBinHz, nyquist);
+  const expectedCombEnergy = energyInComb(highResSpectrumResult, highResComb);
+  const expectedOutsideEnergy = Math.max(
+    energyOutsideComb(highResSpectrumResult, highResComb, USEFUL_BAND_LOW_HZ, USEFUL_BAND_HIGH_HZ),
+    1e-12
+  );
+  const harmonicMatchRatio = expectedCombEnergy / expectedOutsideEnergy;
+
+  // Pico refinado perto da fundamental esperada, só para exibição e para
+  // alimentar o retrato harmônico/inarmonicidade — não decide mais se a
+  // tomada é aceita.
+  const fundamentalBand = highResComb[0]!;
   let bestBin = -1;
   let bestMag = -Infinity;
-  const highResBinHz = highResSpectrumResult.binHz;
   const loSearch = Math.max(0, Math.floor((fundamentalBand.centerHz * 0.7) / highResBinHz));
   const hiSearch = Math.min(
     highResSpectrumResult.magnitudes.length - 1,
@@ -212,22 +228,15 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
   const detectedFundamentalHz =
     bestBin >= 0
       ? parabolicPeakInterpolation(highResSpectrumResult.magnitudes, bestBin, highResBinHz).freqHz
-      : 0;
+      : expectedFundamentalHz;
 
-  const deviation =
-    detectedFundamentalHz > 0
-      ? Math.abs(detectedFundamentalHz - expectedFundamentalHz) / expectedFundamentalHz
-      : 1;
-
-  if (deviation > MAX_FUNDAMENTAL_DEVIATION) {
+  if (harmonicMatchRatio < MIN_HARMONIC_MATCH_RATIO) {
     onStatusChange?.("descartado");
     return {
       valid: false,
-      discardReason: `Frequência detectada (${detectedFundamentalHz.toFixed(
+      discardReason: `Não encontrei energia harmônica concentrada na frequência esperada (${expectedFundamentalHz.toFixed(
         1
-      )}Hz) diverge muito da esperada (${expectedFundamentalHz.toFixed(
-        1
-      )}Hz). Verifique se tocou a corda certa.`,
+      )}Hz). Verifique se tocou a corda certa ou se há muito ruído no ambiente.`,
       detectedFundamentalHz,
       expectedFundamentalHz,
       peakAmplitudeLinear,
