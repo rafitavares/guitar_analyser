@@ -2,7 +2,7 @@
 // (via casamento com o pente harmônico esperado), rastreia o envelope de
 // decaimento, e captura um snapshot de alta resolução para análise espectral.
 
-import { computeSpectrum } from "./fft.ts";
+import { computeSpectrum, parabolicPeakInterpolation } from "./fft.ts";
 import { buildHarmonicComb, energyInComb, energyInRange, energyOutsideComb } from "./harmonicComb.ts";
 import type { HarmonicBand } from "./harmonicComb.ts";
 import type { CaptureHandle } from "./capture.ts";
@@ -151,7 +151,15 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
       bestBin = bin;
     }
   }
-  const detectedFundamentalHz = bestBin >= 0 ? bestBin * envelopeBinHz : 0;
+  // Interpolação parabólica é essencial aqui: com ENVELOPE_FFT_SIZE=8192 a
+  // resolução bruta é de ~5-6Hz por bin, o que para uma fundamental grave
+  // (ex.: E2 ~82Hz) representa ~6-7% de erro possível só por quantização —
+  // o suficiente para a frequência detectada "pular" entre tomadas mesmo
+  // tocando a mesma corda. Refinamos com o pico ajustado em escala log.
+  const detectedFundamentalHz =
+    bestBin >= 0
+      ? parabolicPeakInterpolation(attackSpectrum.magnitudes, bestBin, envelopeBinHz).freqHz
+      : 0;
   const peakAmplitudeLinear = Math.max(...attackSpectrumSamples.map((v) => Math.abs(v)));
 
   const deviation =
