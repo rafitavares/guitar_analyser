@@ -11,6 +11,7 @@ export async function measureNoiseFloor(capture: CaptureHandle): Promise<NoiseFl
   const { sampleRate } = capture;
   const sampleCount = Math.round(sampleRate * CALIBRATION_SECONDS);
 
+  await capture.ensureRunning();
   await new Promise((resolve) => setTimeout(resolve, CALIBRATION_SECONDS * 1000 + 100));
 
   const samples = capture.getLatestSamples(sampleCount);

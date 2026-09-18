@@ -90,6 +90,12 @@ export async function captureNoteTake(options: NoteCaptureOptions): Promise<RawT
     maxDecayMs = 9000,
   } = options;
 
+  // O AudioContext pode ter sido suspenso pelo navegador desde a última
+  // tomada (comum em mobile ao trocar de tela, bloquear e desbloquear o
+  // aparelho, etc.). Sem isso, o processamento fica silenciosamente parado
+  // e nenhum ataque jamais é detectado, mesmo tocando normalmente.
+  await capture.ensureRunning();
+
   const nyquist = sampleRate / 2;
   const envelopeBinHz = sampleRate / ENVELOPE_FFT_SIZE;
   const comb = buildHarmonicComb(expectedFundamentalHz, envelopeBinHz, nyquist);

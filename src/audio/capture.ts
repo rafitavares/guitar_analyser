@@ -12,6 +12,8 @@ export interface CaptureHandle {
   sourceNode: MediaStreamAudioSourceNode;
   /** Lê os N amostras mais recentes do buffer circular (janela de análise). */
   getLatestSamples: (windowSizeSamples: number) => Float64Array;
+  /** Garante que o AudioContext esteja rodando (retoma se estiver suspenso). */
+  ensureRunning: () => Promise<void>;
   stop: () => void;
 }
 
@@ -28,6 +30,15 @@ export async function startCapture(): Promise<CaptureHandle> {
   });
 
   const audioContext = new AudioContext();
+  // Em vários navegadores móveis (especialmente iOS Safari) o AudioContext
+  // pode nascer suspenso, ou ser suspenso automaticamente pelo sistema.
+  // Enquanto suspenso, nenhum callback de processamento roda — o buffer
+  // fica sempre zerado e nenhuma nota é detectada, sem erro nenhum
+  // aparecer. Resume explícito aqui e a cada nova tomada evita esse
+  // travamento silencioso.
+  if (audioContext.state !== "running") {
+    await audioContext.resume();
+  }
   const sampleRate = audioContext.sampleRate;
   const sourceNode = audioContext.createMediaStreamSource(stream);
 
@@ -73,6 +84,12 @@ export async function startCapture(): Promise<CaptureHandle> {
     return out;
   }
 
+  async function ensureRunning(): Promise<void> {
+    if (audioContext.state !== "running") {
+      await audioContext.resume();
+    }
+  }
+
   function stop() {
     try {
       processor.disconnect();
@@ -86,7 +103,7 @@ export async function startCapture(): Promise<CaptureHandle> {
     void audioContext.close();
   }
 
-  return { audioContext, sampleRate, stream, analyserNode, sourceNode, getLatestSamples, stop };
+  return { audioContext, sampleRate, stream, analyserNode, sourceNode, getLatestSamples, ensureRunning, stop };
 }
 
 /** Calcula o RMS linear de um buffer de amostras. */
