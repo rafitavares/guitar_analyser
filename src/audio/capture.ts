@@ -1,6 +1,9 @@
 // Captura de áudio via getUserMedia com todos os processamentos do navegador
 // desligados (CRÍTICO: echoCancellation/noiseSuppression/autoGainControl
-// distorcem a medição acústica).
+// distorcem a medição acústica). Mantém um ring buffer por canal — a
+// maioria dos celulares só tem microfone mono (os dois canais vêm
+// idênticos), mas alguns aparelhos/microfones externos fornecem estéreo
+// de verdade, então expomos o que o hardware realmente entregar.
 
 import { nextPowerOfTwo } from "./fft.ts";
 
@@ -8,10 +11,9 @@ export interface CaptureHandle {
   audioContext: AudioContext;
   sampleRate: number;
   stream: MediaStream;
-  analyserNode: AnalyserNode;
-  sourceNode: MediaStreamAudioSourceNode;
-  /** Lê os N amostras mais recentes do buffer circular (janela de análise). */
-  getLatestSamples: (windowSizeSamples: number) => Float64Array;
+  channelCount: number;
+  /** Lê as N amostras mais recentes do canal indicado (0 = esquerdo/único, 1 = direito). */
+  getLatestSamples: (windowSizeSamples: number, channel?: number) => Float64Array;
   /** Garante que o AudioContext esteja rodando (retoma se estiver suspenso). */
   ensureRunning: () => Promise<void>;
   stop: () => void;
@@ -25,7 +27,7 @@ export async function startCapture(): Promise<CaptureHandle> {
       echoCancellation: false,
       noiseSuppression: false,
       autoGainControl: false,
-      channelCount: 1,
+      channelCount: { ideal: 2 },
     },
   });
 
@@ -42,29 +44,35 @@ export async function startCapture(): Promise<CaptureHandle> {
   const sampleRate = audioContext.sampleRate;
   const sourceNode = audioContext.createMediaStreamSource(stream);
 
-  const analyserNode = audioContext.createAnalyser();
-  analyserNode.fftSize = 32768;
-  analyserNode.smoothingTimeConstant = 0;
+  const track = stream.getAudioTracks()[0];
+  const settings = track?.getSettings?.();
+  const channelCount = Math.max(1, Math.min(2, settings?.channelCount ?? sourceNode.channelCount ?? 1));
 
-  // Buffer circular alimentado por um ScriptProcessor/AudioWorklet-like via
-  // captura periódica do analyser não é suficiente para janelas longas
-  // contínuas; usamos um ScriptProcessorNode simples (amplamente suportado)
-  // para acumular amostras cruas em um ring buffer.
   const ringSize = nextPowerOfTwo(sampleRate * RING_BUFFER_SECONDS);
-  const ringBuffer = new Float64Array(ringSize);
+  const ringBuffers = Array.from({ length: channelCount }, () => new Float64Array(ringSize));
   let writeIndex = 0;
 
   const bufferSize = 4096;
-  const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+  const processor = audioContext.createScriptProcessor(bufferSize, channelCount, channelCount);
   processor.onaudioprocess = (event) => {
-    const input = event.inputBuffer.getChannelData(0);
-    for (let i = 0; i < input.length; i++) {
-      ringBuffer[writeIndex] = input[i]!;
-      writeIndex = (writeIndex + 1) % ringSize;
+    const inputBuffer = event.inputBuffer;
+    const availableChannels = Math.min(channelCount, inputBuffer.numberOfChannels);
+    const channelData: Float32Array[] = [];
+    for (let c = 0; c < availableChannels; c++) {
+      channelData.push(inputBuffer.getChannelData(c));
     }
+    const frameLength = channelData[0]?.length ?? 0;
+    let localWrite = writeIndex;
+    for (let i = 0; i < frameLength; i++) {
+      for (let c = 0; c < channelCount; c++) {
+        const source = channelData[c] ?? channelData[0]!;
+        ringBuffers[c]![localWrite] = source[i]!;
+      }
+      localWrite = (localWrite + 1) % ringSize;
+    }
+    writeIndex = localWrite;
   };
 
-  sourceNode.connect(analyserNode);
   sourceNode.connect(processor);
   // Nó de destino silencioso é necessário para o ScriptProcessor rodar em
   // alguns navegadores, sem produzir áudio audível.
@@ -73,12 +81,13 @@ export async function startCapture(): Promise<CaptureHandle> {
   processor.connect(silentGain);
   silentGain.connect(audioContext.destination);
 
-  function getLatestSamples(windowSizeSamples: number): Float64Array {
+  function getLatestSamples(windowSizeSamples: number, channel = 0): Float64Array {
+    const buffer = ringBuffers[Math.min(channel, ringBuffers.length - 1)]!;
     const size = Math.min(windowSizeSamples, ringSize);
     const out = new Float64Array(size);
     let readIndex = (writeIndex - size + ringSize) % ringSize;
     for (let i = 0; i < size; i++) {
-      out[i] = ringBuffer[readIndex]!;
+      out[i] = buffer[readIndex]!;
       readIndex = (readIndex + 1) % ringSize;
     }
     return out;
@@ -94,16 +103,15 @@ export async function startCapture(): Promise<CaptureHandle> {
     try {
       processor.disconnect();
       sourceNode.disconnect();
-      analyserNode.disconnect();
       silentGain.disconnect();
     } catch {
       // ignore
     }
-    for (const track of stream.getTracks()) track.stop();
+    for (const t of stream.getTracks()) t.stop();
     void audioContext.close();
   }
 
-  return { audioContext, sampleRate, stream, analyserNode, sourceNode, getLatestSamples, ensureRunning, stop };
+  return { audioContext, sampleRate, stream, channelCount, getLatestSamples, ensureRunning, stop };
 }
 
 /** Calcula o RMS linear de um buffer de amostras. */
@@ -113,4 +121,14 @@ export function computeRms(samples: Float64Array): number {
     sumSq += samples[i]! * samples[i]!;
   }
   return Math.sqrt(sumSq / samples.length);
+}
+
+/** Amplitude de pico (valor absoluto máximo) de um buffer de amostras. */
+export function computePeakAmplitude(samples: Float64Array): number {
+  let peak = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const abs = Math.abs(samples[i]!);
+    if (abs > peak) peak = abs;
+  }
+  return peak;
 }

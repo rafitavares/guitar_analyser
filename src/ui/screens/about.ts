@@ -6,24 +6,23 @@ export function renderAbout(): void {
     <div class="screen">
       <div class="card">
         <h2>O que este app faz</h2>
-        <p>Este app compara o mesmo instrumento consigo mesmo ao longo do tempo, usando o microfone do celular e um protocolo de captura consistente (distância, sala, força de toque).</p>
+        <p>3 ferramentas independentes de medição acústica do violão, usando só o microfone do celular: Sustentação (tempo de decaimento do som), Volume (nível por canal do microfone) e Harmônicos (espectro da nota com pico fixo).</p>
       </div>
 
       <div class="card">
         <h2>O que ele NÃO faz</h2>
-        <p>Não mede volume absoluto (dB SPL) nem substitui análise de laboratório com equipamento calibrado. Todos os valores de amplitude/energia são <strong>relativos</strong> à própria gravação, não uma medida física absoluta.</p>
-        <p>Abaixo de ~80Hz o microfone de celular perde precisão — leve isso em conta ao interpretar cordas graves.</p>
-        <p>Os dados de madeira e geometria do instrumento são rótulos para seu próprio catálogo/comparação — o app não deriva nem prevê som a partir da espécie da madeira.</p>
+        <p>Não mede volume absoluto em dB SPL calibrado, nem substitui análise de laboratório — os valores de dB são relativos ao ruído ambiente medido antes de cada teste e ao próprio sinal captado, não uma escala física absoluta e comparável entre aparelhos diferentes.</p>
+        <p>Abaixo de ~80Hz o microfone de celular perde precisão — leve isso em conta ao medir cordas graves.</p>
       </div>
 
       <div class="card">
-        <h2>Por que a comparação pode "não bater"</h2>
-        <p>Se a distância do microfone, a sala, o calibre das cordas ou a força de toque mudarem entre duas sessões, os números vão variar por causa disso — não necessariamente porque o violão mudou. Siga sempre o checklist de protocolo antes de medir.</p>
+        <h2>Por que os números podem variar entre medições</h2>
+        <p>A distância do celular ao violão, a sala e a força do toque afetam diretamente os resultados. Para comparar medições ao longo do tempo, tente manter essas condições parecidas.</p>
       </div>
 
       <div class="card">
         <h2>Privacidade</h2>
-        <p>Tudo roda localmente no seu navegador. Nenhum áudio ou dado é enviado a servidores externos. As sessões ficam salvas no armazenamento local do dispositivo (IndexedDB).</p>
+        <p>Tudo roda localmente no seu navegador. Nenhum áudio ou dado é enviado a servidores externos. Os resultados salvos ficam no armazenamento local do dispositivo (IndexedDB).</p>
       </div>
     </div>
   `);

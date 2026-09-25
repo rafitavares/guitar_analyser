@@ -1,12 +1,12 @@
-// Persistência local via IndexedDB. Dois object stores: "instruments" e
-// "sessions". Tudo roda no dispositivo, sem serviços externos.
+// Persistência local via IndexedDB. Um único object store "results" — cada
+// registro é uma medição independente de um dos 3 testes. Tudo roda no
+// dispositivo, sem serviços externos.
 
-import type { Instrument, Session } from "../types/index.ts";
+import type { SavedTestResult } from "../types/index.ts";
 
 const DB_NAME = "guitar-analyser";
-const DB_VERSION = 1;
-const STORE_INSTRUMENTS = "instruments";
-const STORE_SESSIONS = "sessions";
+const DB_VERSION = 2;
+const STORE_RESULTS = "results";
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -16,13 +16,13 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_INSTRUMENTS)) {
-        db.createObjectStore(STORE_INSTRUMENTS, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(STORE_RESULTS)) {
+        const store = db.createObjectStore(STORE_RESULTS, { keyPath: "id" });
+        store.createIndex("testKind", "testKind", { unique: false });
       }
-      if (!db.objectStoreNames.contains(STORE_SESSIONS)) {
-        const store = db.createObjectStore(STORE_SESSIONS, { keyPath: "id" });
-        store.createIndex("instrumentId", "instrumentId", { unique: false });
-      }
+      // Stores de versões anteriores do app (instruments/sessions) não são
+      // mais usados; deixamos como estão para não perder dados sem querer,
+      // mas o app não os lê.
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -37,63 +37,27 @@ function promisify<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-export async function saveInstrument(instrument: Instrument): Promise<void> {
+export async function saveResult(result: SavedTestResult): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction(STORE_INSTRUMENTS, "readwrite");
-  tx.objectStore(STORE_INSTRUMENTS).put(instrument);
+  const tx = db.transaction(STORE_RESULTS, "readwrite");
+  tx.objectStore(STORE_RESULTS).put(result);
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-export async function listInstruments(): Promise<Instrument[]> {
+export async function listResults(): Promise<SavedTestResult[]> {
   const db = await openDb();
-  const tx = db.transaction(STORE_INSTRUMENTS, "readonly");
-  const result = await promisify(tx.objectStore(STORE_INSTRUMENTS).getAll());
-  return result as Instrument[];
+  const tx = db.transaction(STORE_RESULTS, "readonly");
+  const result = await promisify(tx.objectStore(STORE_RESULTS).getAll());
+  return (result as SavedTestResult[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function getInstrument(id: string): Promise<Instrument | undefined> {
+export async function deleteResult(id: string): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction(STORE_INSTRUMENTS, "readonly");
-  const result = await promisify(tx.objectStore(STORE_INSTRUMENTS).get(id));
-  return result as Instrument | undefined;
-}
-
-export async function saveSession(session: Session): Promise<void> {
-  const db = await openDb();
-  const tx = db.transaction(STORE_SESSIONS, "readwrite");
-  tx.objectStore(STORE_SESSIONS).put(session);
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-export async function listSessions(): Promise<Session[]> {
-  const db = await openDb();
-  const tx = db.transaction(STORE_SESSIONS, "readonly");
-  const result = await promisify(tx.objectStore(STORE_SESSIONS).getAll());
-  return (result as Session[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function listSessionsForInstrument(instrumentId: string): Promise<Session[]> {
-  const all = await listSessions();
-  return all.filter((s) => s.instrumentId === instrumentId);
-}
-
-export async function getSession(id: string): Promise<Session | undefined> {
-  const db = await openDb();
-  const tx = db.transaction(STORE_SESSIONS, "readonly");
-  const result = await promisify(tx.objectStore(STORE_SESSIONS).get(id));
-  return result as Session | undefined;
-}
-
-export async function deleteSession(id: string): Promise<void> {
-  const db = await openDb();
-  const tx = db.transaction(STORE_SESSIONS, "readwrite");
-  tx.objectStore(STORE_SESSIONS).delete(id);
+  const tx = db.transaction(STORE_RESULTS, "readwrite");
+  tx.objectStore(STORE_RESULTS).delete(id);
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
@@ -102,4 +66,22 @@ export async function deleteSession(id: string): Promise<void> {
 
 export function generateId(): string {
   return crypto.randomUUID();
+}
+
+const INSTRUMENT_NAME_KEY = "guitar-analyser:lastInstrumentName";
+
+export function getLastInstrumentName(): string {
+  try {
+    return localStorage.getItem(INSTRUMENT_NAME_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setLastInstrumentName(name: string): void {
+  try {
+    localStorage.setItem(INSTRUMENT_NAME_KEY, name);
+  } catch {
+    // ignore (localStorage indisponível)
+  }
 }

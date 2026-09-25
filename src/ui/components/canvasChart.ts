@@ -23,6 +23,8 @@ export interface ChartMarker {
   y: number;
   color: string;
   label?: string;
+  /** Se definido, desenha um traço horizontal (em px) em vez de um ponto — útil como "linha de pico" sobre uma barra. */
+  tickWidthPx?: number;
 }
 
 export interface ChartConfig {
@@ -169,11 +171,26 @@ export function drawChart(canvas: HTMLCanvasElement, cfg: ChartConfig): void {
     const px = xToPixel(marker.x, cfg, w);
     const py = yToPixel(marker.y, cfg, h);
     ctx.fillStyle = marker.color;
-    ctx.beginPath();
-    ctx.arc(px, py, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.strokeStyle = marker.color;
+    if (marker.tickWidthPx) {
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(px - marker.tickWidthPx / 2, py);
+      ctx.lineTo(px + marker.tickWidthPx / 2, py);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (marker.label) {
-      ctx.fillText(marker.label, px + 6, py - 6);
+      if (marker.tickWidthPx) {
+        const textWidth = ctx.measureText(marker.label).width;
+        const labelX = Math.min(Math.max(px - textWidth / 2, PADDING.left), w - PADDING.right - textWidth);
+        ctx.fillText(marker.label, labelX, py - 6);
+      } else {
+        ctx.fillText(marker.label, px + 6, py - 6);
+      }
     }
   }
 }

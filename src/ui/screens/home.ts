@@ -3,25 +3,29 @@ import { setApp } from "../components/layout.ts";
 import { appState } from "../../state/appState.ts";
 
 export function renderHome(): void {
-  appState.reset();
+  appState.stopCapture();
   const app = setApp(`
     <div class="screen">
       <div style="padding-top: 24px; text-align:center;">
         <h1>🎸 Analisador Acústico</h1>
-        <p>Meça e compare a acústica do seu violão ao longo do tempo, usando apenas o microfone do celular.</p>
+        <p>3 ferramentas independentes de medição do violão, direto do microfone do celular.</p>
       </div>
 
       <div class="card">
-        <button class="btn btn-primary" data-action="new-session" style="width:100%">Nova sessão</button>
+        <button class="btn btn-primary" data-action="sustain" style="width:100%">🎵 Sustentação</button>
+        <p style="margin:6px 0 0 0; font-size:0.85rem">Gráfico de decaimento do som até sumir</p>
       </div>
       <div class="card">
-        <button class="btn" data-action="saved-sessions" style="width:100%">Ver sessões salvas</button>
+        <button class="btn btn-primary" data-action="volume" style="width:100%">🔊 Volume</button>
+        <p style="margin:6px 0 0 0; font-size:0.85rem">Medidor de volume por canal, com pico máximo</p>
       </div>
       <div class="card">
-        <button class="btn" data-action="compare-a" style="width:100%">Comparar mesmo instrumento no tempo</button>
+        <button class="btn btn-primary" data-action="harmonics" style="width:100%">🎸 Harmônicos</button>
+        <p style="margin:6px 0 0 0; font-size:0.85rem">Espectro da nota com envelope de pico fixo</p>
       </div>
+
       <div class="card">
-        <button class="btn" data-action="compare-b" style="width:100%">Comparar instrumentos diferentes</button>
+        <button class="btn" data-action="results" style="width:100%">Ver resultados salvos</button>
       </div>
 
       <div class="spacer"></div>
@@ -29,9 +33,9 @@ export function renderHome(): void {
     </div>
   `);
 
-  app.querySelector("[data-action='new-session']")?.addEventListener("click", () => navigate("/instrument"));
-  app.querySelector("[data-action='saved-sessions']")?.addEventListener("click", () => navigate("/sessions"));
-  app.querySelector("[data-action='compare-a']")?.addEventListener("click", () => navigate("/compare-a"));
-  app.querySelector("[data-action='compare-b']")?.addEventListener("click", () => navigate("/compare-b"));
+  app.querySelector("[data-action='sustain']")?.addEventListener("click", () => navigate("/test/sustain"));
+  app.querySelector("[data-action='volume']")?.addEventListener("click", () => navigate("/test/volume"));
+  app.querySelector("[data-action='harmonics']")?.addEventListener("click", () => navigate("/test/harmonics"));
+  app.querySelector("[data-action='results']")?.addEventListener("click", () => navigate("/results"));
   app.querySelector("[data-action='about']")?.addEventListener("click", () => navigate("/about"));
 }

@@ -1,137 +1,70 @@
-// Tipos centrais do domínio do Analisador Acústico de Violão.
-// Todas as sessões salvas devem incluir sampleRate e protocolVersion
-// para que comparações futuras permaneçam válidas.
+// Tipos centrais do Analisador Acústico de Violão. O app é uma coleção de
+// 3 ferramentas de medição independentes (não mais uma "sessão" guiada):
+// Sustentação, Volume e Harmônicos. Cada medição pode ser salva localmente
+// com um rótulo simples de instrumento, para consulta/exportação futura.
 
-export const PROTOCOL_VERSION = 2;
-
-export type InstrumentType = "nylon" | "aco";
-
-export interface StringTuning {
-  /** 1 = corda mais aguda (mi agudo), 6 = corda mais grave (mi grave), etc. */
-  stringNumber: number;
-  /** Nome da nota, ex.: "E2" */
-  noteName: string;
-  /** Frequência alvo em Hz, derivada de noteName + A4 de referência */
-  frequencyHz: number;
-}
-
-export interface Instrument {
-  id: string;
-  nickname: string;
-  type: InstrumentType;
-  topWood: string;
-  backSidesWood: string;
-  neckWood: string;
-  fretboardWood: string;
-  stringCount: number;
-  tuning: StringTuning[];
-  stringBrand: string;
-  stringGauge: string;
-  stringChangeDate: string; // ISO date
-  a4ReferenceHz: number;
-  notes: string;
-  createdAt: string; // ISO datetime
-}
-
-export interface CaptureConditions {
-  distanceCm: number;
-  roomDescription: string;
-  temperatureC: number | null;
-  humidityPct: number | null;
-  measurementDate: string; // ISO datetime
-}
+export const PROTOCOL_VERSION = 3;
 
 export interface NoiseFloorProfile {
-  /** Energia média (RMS linear, 0-1) do piso de ruído */
+  /** RMS linear (0-1) do piso de ruído ambiente */
   rmsLevel: number;
-  /** dB relativo do piso de ruído (referência 1.0 = 0dB) */
+  /** dB relativo do piso de ruído (20*log10, referência 1.0 = 0dB) */
   dbLevel: number;
-  /** Espectro médio do ambiente (magnitude linear por bin) para referência */
-  spectrum: Float32Array;
   sampleRate: number;
-  fftSize: number;
   measuredAt: string;
 }
 
-export interface SustainResult {
+export interface SustainRunResult {
+  /** Margem acima do piso de ruído usada para disparar a medição (dB) */
+  thresholdDb: number;
+  decayCurve: { timeSec: number; db: number }[];
   t60EstimatedSec: number;
   method: "T20" | "T30";
-  decayCurve: { timeSec: number; db: number }[];
-  noiseFloorDb: number;
   fitR2: number;
+  noiseFloorDb: number;
 }
 
-export interface HnrResult {
-  hnrDb: number;
-  isClean: boolean;
+export interface VolumeChannelResult {
+  channelIndex: number;
+  channelLabel: string;
+  peakDb: number;
+  finalDb: number;
 }
 
-export interface NoteTakeResult {
-  takeIndex: number;
-  valid: boolean;
-  discardReason?: string;
-  detectedFundamentalHz: number;
-  peakAmplitude: number;
-  capturedAt: string;
-  sustain?: SustainResult;
-  hnr?: HnrResult;
+export interface VolumeRunResult {
+  channels: VolumeChannelResult[];
+  durationSec: number;
 }
 
-export interface StringSustainMeasurement {
-  stringNumber: number;
-  noteName: string;
-  expectedFrequencyHz: number;
-  takes: NoteTakeResult[];
-  /** Índice da tomada usada como mediana/representativa */
-  medianTakeIndex: number | null;
-}
-
-export interface SustainSessionResult {
-  strings: StringSustainMeasurement[];
-  completedAt: string;
-}
-
-export interface ResonancePeak {
+export interface HarmonicPeakResult {
   freqHz: number;
   noteName: string;
   centsDeviation: number;
-  /** dB relativo ao pico mais forte detectado (0 = o mais forte) */
+  /** dB relativo ao pico mais forte do peak-hold (0 = o mais forte) */
   amplitudeDb: number;
 }
 
-export interface ResonanceOverlapPair {
-  peakAIndex: number;
-  peakBIndex: number;
-  centsApart: number;
+export interface HarmonicsRunResult {
+  /** Rótulo livre da nota/corda selecionada antes de tocar (ex.: "E2 (corda 6)") */
+  noteLabel: string;
+  a4ReferenceHz: number;
+  /** Envelope de peak-hold (máximo já observado por bin), reduzido para poucos pontos */
+  peakHoldSpectrum: { freqHz: number; db: number }[];
+  peaks: HarmonicPeakResult[];
+  durationSec: number;
 }
 
-export interface ResonanceResult {
-  capturedAt: string;
-  peaks: ResonancePeak[];
-  overlaps: ResonanceOverlapPair[];
-  verdict: "separado" | "sobreposto";
-}
+export type TestKind = "sustain" | "volume" | "harmonics";
 
-export type TestId = "sustain" | "resonance";
-
-export interface Session {
+export interface SavedTestResult {
   id: string;
-  instrumentId: string;
-  instrumentSnapshot: Instrument;
-  conditions: CaptureConditions;
-  noiseFloor: NoiseFloorProfile | null;
+  testKind: TestKind;
+  instrumentName: string;
   sampleRate: number;
-  protocolVersion: number;
-  tests: {
-    sustain?: SustainSessionResult;
-    resonance?: ResonanceResult;
-  };
+  noiseFloorDb: number;
   createdAt: string;
-  updatedAt: string;
-}
-
-export interface ComparisonWeights {
-  sustain: { weight: number; direction: "more" | "less" };
-  uniformity: { weight: number }; // sempre "mais é melhor"
-  clarity: { weight: number }; // separação harmônica na ressonância, sempre "mais é melhor"
+  protocolVersion: number;
+  sustain?: SustainRunResult;
+  volume?: VolumeRunResult;
+  harmonics?: HarmonicsRunResult;
 }

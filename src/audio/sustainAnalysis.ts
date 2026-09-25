@@ -1,17 +1,22 @@
 // Cálculo de T60 estimado via integração de Schroeder (backward integration)
 // + ajuste linear na região de -5dB a -25/-35dB, extrapolado para -60dB.
 
-import type { EnvelopeFrame } from "./noteCapture.ts";
-import type { SustainResult } from "../types/index.ts";
+import type { SustainRunResult } from "../types/index.ts";
+
+export interface RawEnvelopePoint {
+  timeSec: number;
+  /** dB relativo ao pico do envelope (RMS de banda larga, não harmônico) */
+  db: number;
+}
 
 /**
  * Integração de Schroeder: E(t) = integral de t até o fim de p(τ)² dτ,
  * em escala de energia (não dB). Aqui trabalhamos a partir do envelope em dB
  * relativo ao pico, convertendo de volta para energia linear antes de integrar.
  */
-function schroederIntegration(envelope: EnvelopeFrame[]): { timeSec: number; db: number }[] {
+function schroederIntegration(envelope: RawEnvelopePoint[]): { timeSec: number; db: number }[] {
   if (envelope.length === 0) return [];
-  const energies = envelope.map((f) => Math.pow(10, f.combEnergyDb / 10));
+  const energies = envelope.map((f) => Math.pow(10, f.db / 10));
   const n = energies.length;
   const cumulative = new Array<number>(n);
   let sum = 0;
@@ -58,7 +63,11 @@ function linearRegression(
   return { slope, intercept, r2 };
 }
 
-export function analyzeSustain(envelope: EnvelopeFrame[], noiseFloorDb: number): SustainResult {
+export function analyzeSustain(
+  envelope: RawEnvelopePoint[],
+  noiseFloorDb: number,
+  thresholdDb: number
+): SustainRunResult {
   const schroederCurve = schroederIntegration(envelope);
 
   // Tenta T30 (-5 a -35dB) primeiro; cai para T20 (-5 a -25dB) se não houver
@@ -92,6 +101,7 @@ export function analyzeSustain(envelope: EnvelopeFrame[], noiseFloorDb: number):
   t60EstimatedSec = Math.max(0, t60EstimatedSec);
 
   return {
+    thresholdDb,
     t60EstimatedSec,
     method,
     decayCurve: schroederCurve,
