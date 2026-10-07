@@ -13,6 +13,15 @@ python app.py              # abre http://127.0.0.1:8050
 
 Opções: `--port 8080`, `--no-browser`. Funciona offline (o uPlot fica em `static/vendor`).
 
+## Versão arquivo único (sem instalar nada)
+
+`dist/simulador_tracao.html` é um arquivo só (~150 KB) que abre com duplo clique em qualquer navegador
+(Chrome, Edge, Firefox, Safari), funciona offline e pode ser enviado por e-mail/Teams/WhatsApp.
+Nele o motor roda em JavaScript (`static/js/engine.js`), um port do `sim/engine.py` validado contra o Python
+por `tests/test_js_port.py` (mesmos estados, eventos, formas de onda e espectro).
+
+Para regerar depois de alterar o código: `python build_standalone.py`.
+
 ## O que tem
 
 **Aba Simulador**
@@ -60,5 +69,7 @@ app.py                 servidor Flask + API (/api/state, /api/command, /api/lab/
 sim/excel_models.py    port fiel das fórmulas do Excel
 sim/engine.py          máquina de estados, DC link, inversor, motor e dinâmica do trem
 static/                interface (SVG + uPlot)
-tests/                 validação contra os valores do Excel
+static/js/engine.js    port JS do motor (versão arquivo único)
+build_standalone.py    gera dist/simulador_tracao.html
+tests/                 validação contra o Excel e JS × Python
 ```
