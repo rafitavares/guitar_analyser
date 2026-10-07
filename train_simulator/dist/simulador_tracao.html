@@ -1,0 +1,1862 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulador de Tração</title>
+  <style>
+.uplot, .uplot *, .uplot *::before, .uplot *::after {box-sizing: border-box;}.uplot {font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";line-height: 1.5;width: min-content;}.u-title {text-align: center;font-size: 18px;font-weight: bold;}.u-wrap {position: relative;user-select: none;}.u-over, .u-under {position: absolute;}.u-under {overflow: hidden;}.uplot canvas {display: block;position: relative;width: 100%;height: 100%;}.u-axis {position: absolute;}.u-legend {font-size: 14px;margin: auto;text-align: center;}.u-inline {display: block;}.u-inline * {display: inline-block;}.u-inline tr {margin-right: 16px;}.u-legend th {font-weight: 600;}.u-legend th > * {vertical-align: middle;display: inline-block;}.u-legend .u-marker {width: 1em;height: 1em;margin-right: 4px;background-clip: padding-box !important;}.u-inline.u-live th::after {content: ":";vertical-align: middle;}.u-inline:not(.u-live) .u-value {display: none;}.u-series > * {padding: 4px;}.u-series th {cursor: pointer;}.u-legend .u-off > * {opacity: 0.3;}.u-select {background: rgba(0,0,0,0.07);position: absolute;pointer-events: none;}.u-cursor-x, .u-cursor-y {position: absolute;left: 0;top: 0;pointer-events: none;will-change: transform;}.u-hz .u-cursor-x, .u-vt .u-cursor-y {height: 100%;border-right: 1px dashed #607D8B;}.u-hz .u-cursor-y, .u-vt .u-cursor-x {width: 100%;border-bottom: 1px dashed #607D8B;}.u-cursor-pt {position: absolute;top: 0;left: 0;border-radius: 50%;border: 0 solid;pointer-events: none;will-change: transform;/*this has to be !important since we set inline "background" shorthand */background-clip: padding-box !important;}.u-axis.u-off, .u-select.u-off, .u-cursor-x.u-off, .u-cursor-y.u-off, .u-cursor-pt.u-off {display: none;}
+</style>
+  <style>
+:root {
+  --bg: #0a0f1a;
+  --bg2: #0f1624;
+  --card: #121b2c;
+  --card2: #172238;
+  --border: #22304a;
+  --text: #e6ecf5;
+  --muted: #8b97ad;
+  --dim: #56627a;
+  --c-line: #f5a524;   /* catenária / alimentação */
+  --c-dc: #22d3ee;     /* DC link */
+  --c-ac: #a78bfa;     /* saída AC */
+  --c-ok: #34d399;
+  --c-warn: #fbbf24;
+  --c-bad: #f43f5e;
+  --c-regen: #4ade80;
+  --radius: 14px;
+  --mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { background: radial-gradient(1200px 600px at 70% -10%, #13213a 0%, transparent 60%), var(--bg); min-height: 100vh; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { margin: 0; font-weight: 600; }
+h2 { font-size: 13px; letter-spacing: .02em; color: #cfd8e6; }
+h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 10px; }
+button, select, input { font: inherit; color: inherit; }
+
+/* ---------- topo ---------- */
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px;
+  padding: 10px 20px; background: rgba(10, 15, 26, .85); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 30px; height: 30px; color: var(--c-dc); }
+.brand h1 { font-size: 16px; }
+.brand .sub { margin: 0; font-size: 12px; color: var(--muted); }
+.tabs { display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--border); padding: 3px; border-radius: 10px; }
+.tab { background: none; border: 0; padding: 6px 14px; border-radius: 8px; color: var(--muted); cursor: pointer; }
+.tab.active { background: var(--card2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.status { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.pill { padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; letter-spacing: .05em;
+  background: #1d2638; color: var(--muted); border: 1px solid var(--border); }
+.pill.run { background: rgba(52, 211, 153, .12); color: var(--c-ok); border-color: rgba(52, 211, 153, .4); }
+.pill.seq { background: rgba(34, 211, 238, .12); color: var(--c-dc); border-color: rgba(34, 211, 238, .4); }
+.pill.bad { background: rgba(244, 63, 94, .15); color: var(--c-bad); border-color: rgba(244, 63, 94, .5); }
+.pill.man { background: rgba(245, 165, 36, .12); color: var(--c-line); border-color: rgba(245, 165, 36, .4); }
+.clock { color: var(--muted); font-size: 12px; }
+
+.tabpane { padding: 16px 20px 40px; max-width: 1680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.card { background: linear-gradient(180deg, var(--card) 0%, var(--bg2) 100%); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px; min-width: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.note { font-size: 11px; color: var(--muted); }
+
+/* ---------- cena do trem ---------- */
+.scene-card { position: relative; padding: 0; overflow: hidden; aspect-ratio: 1200 / 190; max-height: 230px; }
+#scene { width: 100%; height: 100%; display: block; }
+.scene-hud { position: absolute; left: 18px; top: 12px; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 6px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .7); }
+.scene-hud .big { font-size: 40px; font-weight: 700; line-height: 1; }
+.scene-hud .unit { color: var(--muted); font-size: 14px; }
+.scene-hud .hud-sub { grid-column: 1 / 3; color: var(--muted); font-size: 12px; }
+.fault-banner { position: absolute; right: 14px; top: 12px; max-width: 46%; padding: 8px 12px; border-radius: 10px;
+  background: rgba(244, 63, 94, .18); border: 1px solid rgba(244, 63, 94, .6); color: #ffd2da; font-size: 12px; }
+
+/* ---------- linha principal ---------- */
+.row-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
+.schem-card #schem { width: 100%; height: auto; display: block; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); align-items: center; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.legend .hint { padding: 2px 8px; border-radius: 6px; background: var(--card2); color: var(--text); }
+
+.side .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.btn { border: 1px solid var(--border); background: var(--card2); border-radius: 10px; padding: 10px; cursor: pointer;
+  font-weight: 700; letter-spacing: .04em; transition: transform .08s, filter .15s; }
+.btn:hover { filter: brightness(1.15); }
+.btn:active { transform: translateY(1px); }
+.btn.start { background: linear-gradient(180deg, #10b981, #047857); border-color: #10b981; color: #fff; }
+.btn.stop { background: linear-gradient(180deg, #f59e0b, #b45309); border-color: #f59e0b; color: #fff; }
+.btn.emerg { background: linear-gradient(180deg, #f43f5e, #9f1239); border-color: #f43f5e; color: #fff; }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 6px 10px; font-size: 12px; }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+
+.seg { display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { flex: 1; white-space: nowrap; border: 0; background: none; padding: 7px 10px; border-radius: 8px; color: var(--muted); cursor: pointer; font-weight: 600; }
+.seg button.on { background: var(--card2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.seg.small button { padding: 5px 10px; font-size: 12px; }
+
+.topo { display: grid; gap: 8px; }
+.topo label { display: grid; gap: 4px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+select { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 22px 1fr 38px; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.steps li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--bg2); border: 1px solid var(--border); font-size: 11px; font-weight: 700; }
+.steps li .bar { grid-column: 2 / 3; height: 5px; border-radius: 3px; background: var(--bg2); overflow: hidden; margin-top: 3px; }
+.steps li .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #0891b2, var(--c-dc)); transition: width .15s; }
+.steps li .lbl { grid-column: 2 / 3; }
+.steps li .pct { grid-row: 1 / 3; grid-column: 3; text-align: right; font-family: var(--mono); font-size: 11px; }
+.steps li::before { grid-row: 1 / 3; }
+.steps li.active { color: var(--text); }
+.steps li.active::before { border-color: var(--c-dc); color: var(--c-dc); box-shadow: 0 0 0 3px rgba(34, 211, 238, .15); }
+.steps li.done { color: #cfe9e0; }
+.steps li.done::before { content: "✓"; background: var(--c-ok); border-color: var(--c-ok); color: #052e22; }
+.steps li.done .bar i { background: var(--c-ok); }
+
+/* ---------- KPIs ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr); gap: 16px; }
+.gauge-card { padding: 6px; display: grid; place-items: center; }
+.gauge-card svg { width: 100%; max-width: 240px; height: auto; display: block; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: center; }
+.tile { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.tile span { font-size: 11px; color: var(--muted); }
+.tile b { font-size: 17px; }
+
+/* ---------- comando ---------- */
+.drive { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.drive-auto, .drive-manual, .ctrl-group { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.drive-manual { flex-direction: column; align-items: flex-start; gap: 12px; }
+[hidden] { display: none !important; }
+.slider { display: grid; gap: 6px; min-width: 240px; font-size: 12px; color: var(--muted); }
+.slider b { float: right; color: var(--text); font-weight: 600; }
+.slider.throttle { min-width: 420px; }
+.slider .scale { display: flex; justify-content: space-between; font-size: 10px; }
+.slider .scale em { font-style: normal; }
+.slider .scale em:first-child { color: var(--c-bad); }
+.slider .scale em:last-child { color: var(--c-ok); }
+.check { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); padding-bottom: 4px; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--bg2); border: 1px solid var(--border); outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--c-dc); border: 3px solid #0b1324; box-shadow: 0 0 0 1px var(--c-dc); cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c-dc); border: 3px solid #0b1324; cursor: pointer; }
+#in-thr { background: linear-gradient(90deg, rgba(244, 63, 94, .5), var(--bg2) 50%, rgba(52, 211, 153, .5)); }
+
+/* ---------- gráficos ---------- */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 16px; }
+.chart { width: 100%; min-height: 230px; }
+.uplot { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.u-legend { font-size: 11px; color: var(--muted); }
+.u-legend .u-marker { border-radius: 2px; }
+.u-legend th { font-weight: 500; }
+.u-select { background: rgba(34, 211, 238, .1); }
+
+/* ---------- log ---------- */
+.log { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; font-size: 12px; display: grid; gap: 2px; }
+.log li { padding: 3px 8px; border-radius: 6px; display: grid; grid-template-columns: 70px 1fr; gap: 10px; color: #c7d0de; }
+.log li span { color: var(--dim); }
+.log li.warn { background: rgba(251, 191, 36, .08); color: #fde68a; }
+.log li.fault { background: rgba(244, 63, 94, .12); color: #fecdd3; }
+
+/* ---------- esquema (SVG) ---------- */
+#schem text { font-family: system-ui, sans-serif; fill: var(--muted); font-size: 12px; }
+#schem text.val { font-family: var(--mono); fill: var(--text); font-size: 12px; }
+#schem text.ttl { fill: #cfd8e6; font-weight: 600; font-size: 12px; }
+#schem .wire { fill: none; stroke: #34405a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; transition: stroke .3s; }
+#schem .wire.line { stroke: var(--c-line); }
+#schem .wire.dc { stroke: var(--c-dc); }
+#schem .wire.ac { stroke: var(--c-ac); }
+#schem .flow { fill: none; stroke: #fff; stroke-width: 2; stroke-dasharray: 3 14; stroke-linecap: round; opacity: 0;
+  animation: dash 1s linear infinite; pointer-events: none; }
+#schem .flow.on { opacity: .75; }
+#schem .flow.rev { animation-direction: reverse; }
+@keyframes dash { to { stroke-dashoffset: -34; } }
+#schem .box { fill: #0e1626; stroke: #3a4966; stroke-width: 2; }
+#schem .box.live { stroke: var(--c-dc); filter: drop-shadow(0 0 6px rgba(34, 211, 238, .45)); }
+#schem .box.livea { stroke: var(--c-ac); filter: drop-shadow(0 0 6px rgba(167, 139, 250, .5)); }
+#schem .sym { fill: none; stroke: #cfd8e6; stroke-width: 2; }
+#schem .term { fill: #0e1626; stroke: #cfd8e6; stroke-width: 2; }
+#schem .lever { stroke: #e6ecf5; stroke-width: 3.5; stroke-linecap: round; transition: transform .35s cubic-bezier(.5, 1.6, .4, 1); }
+#schem .sw.closed .lever { stroke: var(--c-ok); }
+#schem .hit { fill: transparent; }
+#schem.manual .clickable { cursor: pointer; }
+#schem.manual .clickable:hover .hit { fill: rgba(34, 211, 238, .08); stroke: rgba(34, 211, 238, .5); stroke-dasharray: 4 3; }
+#schem .vlu-on { stroke: var(--c-bad) !important; filter: drop-shadow(0 0 8px rgba(244, 63, 94, .8)); }
+#schem .rotor { stroke: var(--c-ac); stroke-width: 3; stroke-linecap: round; }
+#schem .capfill { transition: height .2s, y .2s; }
+
+/* ---------- laboratório ---------- */
+.lab-intro { margin: 0; color: var(--muted); }
+.lab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(520px, 1fr)); gap: 16px; }
+.lab-ctrls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 8px; }
+.lab-ctrls .slider { min-width: 0; }
+.formula { margin-top: 8px; font-size: 11px; color: var(--muted); background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+.formula b { color: var(--c-dc); }
+
+@media (max-width: 1200px) {
+  .row-main { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tiles { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .topbar { flex-wrap: wrap; gap: 10px; padding: 10px 16px; }
+  .tabpane { padding: 12px 16px 32px; }
+  .charts, .lab-grid { grid-template-columns: 1fr; }
+  .lab-ctrls { grid-template-columns: 1fr; }
+  .slider, .slider.throttle { min-width: 0; width: 100%; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+}
+
+</style>
+  <script>
+/*! https://github.com/leeoniya/uPlot (v1.6.31) */
+var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="height",i="top",o="bottom",s="left",r="right",u="#000",a=u+"0",f="mousemove",c="mousedown",h="mouseup",d="mouseenter",p="mouseleave",m="dblclick",g="change",x="dppxchange",w="--",_="undefined"!=typeof window,b=_?document:null,v=_?window:null,k=_?navigator:null;let y,M;function S(e,l){if(null!=l){let t=e.classList;!t.contains(l)&&t.add(l)}}function E(e,l){let t=e.classList;t.contains(l)&&t.remove(l)}function T(e,l,t){e.style[l]=t+"px"}function z(e,l,t,n){let i=b.createElement(e);return null!=l&&S(i,l),null!=t&&t.insertBefore(i,n),i}function D(e,l){return z("div",e,l)}const P=new WeakMap;function A(l,t,n,i,o){let s="translate("+t+"px,"+n+"px)";s!=P.get(l)&&(l.style.transform=s,P.set(l,s),0>t||0>n||t>i||n>o?S(l,e):E(l,e))}const W=new WeakMap;function Y(e,l,t){let n=l+t;n!=W.get(e)&&(W.set(e,n),e.style.background=l,e.style.borderColor=t)}const C=new WeakMap;function F(e,l,t,n){let i=l+""+t;i!=C.get(e)&&(C.set(e,i),e.style.height=t+"px",e.style.width=l+"px",e.style.marginLeft=n?-l/2+"px":0,e.style.marginTop=n?-t/2+"px":0)}const H={passive:!0},R={...H,capture:!0};function G(e,l,t,n){l.addEventListener(e,t,n?R:H)}function I(e,l,t){l.removeEventListener(e,t,H)}function O(e,l,t,n){let i;t=t||0;let o=2147483647>=(n=n||l.length-1);for(;n-t>1;)i=o?t+n>>1:te((t+n)/2),e>l[i]?t=i:n=i;return e-l[t]>l[n]-e?n:t}function L(e,l,t,n){for(let i=1==n?l:t;i>=l&&t>=i;i+=n)if(null!=e[i])return i;return-1}function N(e,l,t,n){let i=ue(e),o=ue(l);e==l&&(-1==i?(e*=t,l/=t):(e/=t,l*=t));let s=10==t?ae:fe,r=1==o?ie:te,u=(1==i?te:ie)(s(le(e))),a=r(s(le(l))),f=re(t,u),c=re(t,a);return 10==t&&(0>u&&(f=Ee(f,-u)),0>a&&(c=Ee(c,-a))),n||2==t?(e=f*i,l=c*o):(e=Se(e,f),l=Me(l,c)),[e,l]}function j(e,l,t,n){let i=N(e,l,t,n);return 0==e&&(i[0]=0),0==l&&(i[1]=0),i}_&&function e(){let l=devicePixelRatio;y!=l&&(y=l,M&&I(g,M,e),M=matchMedia(`(min-resolution: ${y-.001}dppx) and (max-resolution: ${y+.001}dppx)`),G(g,M,e),v.dispatchEvent(new CustomEvent(x)))}();const U=.1,B={mode:3,pad:U},V={pad:0,soft:null,mode:0},$={min:V,max:V};function J(e,l,t,n){return He(t)?K(e,l,t):(V.pad=t,V.soft=n?0:null,V.mode=n?3:0,K(e,l,$))}function q(e,l){return null==e?l:e}function K(e,l,t){let n=t.min,i=t.max,o=q(n.pad,0),s=q(i.pad,0),r=q(n.hard,-he),u=q(i.hard,he),a=q(n.soft,he),f=q(i.soft,-he),c=q(n.mode,0),h=q(i.mode,0),d=l-e,p=ae(d),m=se(le(e),le(l)),g=ae(m),x=le(g-p);(1e-24>d||x>10)&&(d=0,0!=e&&0!=l||(d=1e-24,2==c&&a!=he&&(o=0),2==h&&f!=-he&&(s=0)));let w=d||m||1e3,_=ae(w),b=re(10,te(_)),v=Ee(Se(e-w*(0==d?0==e?.1:1:o),b/10),24),k=a>e||1!=c&&(3!=c||v>a)&&(2!=c||a>v)?he:a,y=se(r,k>v&&e>=k?k:oe(k,v)),M=Ee(Me(l+w*(0==d?0==l?.1:1:s),b/10),24),S=l>f||1!=h&&(3!=h||f>M)&&(2!=h||M>f)?-he:f,E=oe(u,M>S&&S>=l?S:se(S,M));return y==E&&0==y&&(E=100),[y,E]}const X=new Intl.NumberFormat(_?k.language:"en-US"),Z=e=>X.format(e),Q=Math,ee=Q.PI,le=Q.abs,te=Q.floor,ne=Q.round,ie=Q.ceil,oe=Q.min,se=Q.max,re=Q.pow,ue=Q.sign,ae=Q.log10,fe=Q.log2,ce=(e,l=1)=>Q.asinh(e/l),he=1/0;function de(e){return 1+(0|ae((e^e>>31)-(e>>31)))}function pe(e,l,t){return oe(se(e,l),t)}function me(e){return"function"==typeof e?e:()=>e}const ge=e=>e,xe=(e,l)=>l,we=()=>null,_e=()=>!0,be=(e,l)=>e==l,ve=/\.\d*?(?=9{6,}|0{6,})/gm,ke=e=>{if(Ce(e)||Te.has(e))return e;const l=""+e,t=l.match(ve);if(null==t)return e;let n=t[0].length-1;if(-1!=l.indexOf("e-")){let[e,t]=l.split("e");return+`${ke(e)}e${t}`}return Ee(e,n)};function ye(e,l){return ke(Ee(ke(e/l))*l)}function Me(e,l){return ke(ie(ke(e/l))*l)}function Se(e,l){return ke(te(ke(e/l))*l)}function Ee(e,l=0){if(Ce(e))return e;let t=10**l;return ne(e*t*(1+Number.EPSILON))/t}const Te=new Map;function ze(e){return((""+e).split(".")[1]||"").length}function De(e,l,t,n){let i=[],o=n.map(ze);for(let s=l;t>s;s++){let l=le(s),t=Ee(re(e,s),l);for(let r=0;n.length>r;r++){let u=10==e?+`${n[r]}e${s}`:n[r]*t,a=(0>s?l:0)+(o[r]>s?o[r]:0),f=10==e?u:Ee(u,a);i.push(f),Te.set(f,a)}}return i}const Pe={},Ae=[],We=[null,null],Ye=Array.isArray,Ce=Number.isInteger;function Fe(e){return"string"==typeof e}function He(e){let l=!1;if(null!=e){let t=e.constructor;l=null==t||t==Object}return l}function Re(e){return null!=e&&"object"==typeof e}const Ge=Object.getPrototypeOf(Uint8Array),Ie="__proto__";function Oe(e,l=He){let t;if(Ye(e)){let n=e.find((e=>null!=e));if(Ye(n)||l(n)){t=Array(e.length);for(let n=0;e.length>n;n++)t[n]=Oe(e[n],l)}else t=e.slice()}else if(e instanceof Ge)t=e.slice();else if(l(e)){t={};for(let n in e)n!=Ie&&(t[n]=Oe(e[n],l))}else t=e;return t}function Le(e){let l=arguments;for(let t=1;l.length>t;t++){let n=l[t];for(let l in n)l!=Ie&&(He(e[l])?Le(e[l],Oe(n[l])):e[l]=Oe(n[l]))}return e}function Ne(e,l,t){for(let n,i=0,o=-1;l.length>i;i++){let s=l[i];if(s>o){for(n=s-1;n>=0&&null==e[n];)e[n--]=null;for(n=s+1;t>n&&null==e[n];)e[o=n++]=null}}}const je="undefined"==typeof queueMicrotask?e=>Promise.resolve().then(e):queueMicrotask,Ue=["January","February","March","April","May","June","July","August","September","October","November","December"],Be=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];function Ve(e){return e.slice(0,3)}const $e=Be.map(Ve),Je=Ue.map(Ve),qe={MMMM:Ue,MMM:Je,WWWW:Be,WWW:$e};function Ke(e){return(10>e?"0":"")+e}const Xe={YYYY:e=>e.getFullYear(),YY:e=>(e.getFullYear()+"").slice(2),MMMM:(e,l)=>l.MMMM[e.getMonth()],MMM:(e,l)=>l.MMM[e.getMonth()],MM:e=>Ke(e.getMonth()+1),M:e=>e.getMonth()+1,DD:e=>Ke(e.getDate()),D:e=>e.getDate(),WWWW:(e,l)=>l.WWWW[e.getDay()],WWW:(e,l)=>l.WWW[e.getDay()],HH:e=>Ke(e.getHours()),H:e=>e.getHours(),h:e=>{let l=e.getHours();return 0==l?12:l>12?l-12:l},AA:e=>12>e.getHours()?"AM":"PM",aa:e=>12>e.getHours()?"am":"pm",a:e=>12>e.getHours()?"a":"p",mm:e=>Ke(e.getMinutes()),m:e=>e.getMinutes(),ss:e=>Ke(e.getSeconds()),s:e=>e.getSeconds(),fff:e=>function(e){return(10>e?"00":100>e?"0":"")+e}(e.getMilliseconds())};function Ze(e,l){l=l||qe;let t,n=[],i=/\{([a-z]+)\}|[^{]+/gi;for(;t=i.exec(e);)n.push("{"==t[0][0]?Xe[t[1]]:t[0]);return e=>{let t="";for(let i=0;n.length>i;i++)t+="string"==typeof n[i]?n[i]:n[i](e,l);return t}}const Qe=(new Intl.DateTimeFormat).resolvedOptions().timeZone,el=e=>e%1==0,ll=[1,2,2.5,5],tl=De(10,-32,0,ll),nl=De(10,0,32,ll),il=nl.filter(el),ol=tl.concat(nl),sl="{YYYY}",rl="\n"+sl,ul="{M}/{D}",al="\n"+ul,fl=al+"/{YY}",cl="{aa}",hl="{h}:{mm}"+cl,dl="\n"+hl,pl=":{ss}",ml=null;function gl(e){let l=1e3*e,t=60*l,n=60*t,i=24*n,o=30*i,s=365*i;return[(1==e?De(10,0,3,ll).filter(el):De(10,-3,0,ll)).concat([l,5*l,10*l,15*l,30*l,t,5*t,10*t,15*t,30*t,n,2*n,3*n,4*n,6*n,8*n,12*n,i,2*i,3*i,4*i,5*i,6*i,7*i,8*i,9*i,10*i,15*i,o,2*o,3*o,4*o,6*o,s,2*s,5*s,10*s,25*s,50*s,100*s]),[[s,sl,ml,ml,ml,ml,ml,ml,1],[28*i,"{MMM}",rl,ml,ml,ml,ml,ml,1],[i,ul,rl,ml,ml,ml,ml,ml,1],[n,"{h}"+cl,fl,ml,al,ml,ml,ml,1],[t,hl,fl,ml,al,ml,ml,ml,1],[l,pl,fl+" "+hl,ml,al+" "+hl,ml,dl,ml,1],[e,pl+".{fff}",fl+" "+hl,ml,al+" "+hl,ml,dl,ml,1]],function(l){return(r,u,a,f,c,h)=>{let d=[],p=c>=s,m=c>=o&&s>c,g=l(a),x=Ee(g*e,3),w=Sl(g.getFullYear(),p?0:g.getMonth(),m||p?1:g.getDate()),_=Ee(w*e,3);if(m||p){let t=m?c/o:0,n=p?c/s:0,i=x==_?x:Ee(Sl(w.getFullYear()+n,w.getMonth()+t,1)*e,3),r=new Date(ne(i/e)),u=r.getFullYear(),a=r.getMonth();for(let o=0;f>=i;o++){let s=Sl(u+n*o,a+t*o,1),r=s-l(Ee(s*e,3));i=Ee((+s+r)*e,3),i>f||d.push(i)}}else{let o=i>c?c:i,s=_+(te(a)-te(x))+Me(x-_,o);d.push(s);let p=l(s),m=p.getHours()+p.getMinutes()/t+p.getSeconds()/n,g=c/n,w=h/r.axes[u]._space;for(;s=Ee(s+c,1==e?0:3),f>=s;)if(g>1){let e=te(Ee(m+g,6))%24,t=l(s).getHours()-e;t>1&&(t=-1),s-=t*n,m=(m+g)%24,.7>Ee((s-d[d.length-1])/c,3)*w||d.push(s)}else d.push(s)}return d}}]}const[xl,wl,_l]=gl(1),[bl,vl,kl]=gl(.001);function yl(e,l){return e.map((e=>e.map(((t,n)=>0==n||8==n||null==t?t:l(1==n||0==e[8]?t:e[1]+t)))))}function Ml(e,l){return(t,n,i,o,s)=>{let r,u,a,f,c,h,d=l.find((e=>s>=e[0]))||l[l.length-1];return n.map((l=>{let t=e(l),n=t.getFullYear(),i=t.getMonth(),o=t.getDate(),s=t.getHours(),p=t.getMinutes(),m=t.getSeconds(),g=n!=r&&d[2]||i!=u&&d[3]||o!=a&&d[4]||s!=f&&d[5]||p!=c&&d[6]||m!=h&&d[7]||d[1];return r=n,u=i,a=o,f=s,c=p,h=m,g(t)}))}}function Sl(e,l,t){return new Date(e,l,t)}function El(e,l){return l(e)}function Tl(e,l){return(t,n,i,o)=>null==o?w:l(e(n))}De(2,-53,53,[1]);const zl={show:!0,live:!0,isolate:!1,mount:()=>{},markers:{show:!0,width:2,stroke:function(e,l){let t=e.series[l];return t.width?t.stroke(e,l):t.points.width?t.points.stroke(e,l):null},fill:function(e,l){return e.series[l].fill(e,l)},dash:"solid"},idx:null,idxs:null,values:[]},Dl=[0,0];function Pl(e,l,t,n=!0){return e=>{0==e.button&&(!n||e.target==l)&&t(e)}}function Al(e,l,t,n=!0){return e=>{(!n||e.target==l)&&t(e)}}const Wl={show:!0,x:!0,y:!0,lock:!1,move:function(e,l,t){return Dl[0]=l,Dl[1]=t,Dl},points:{one:!1,show:function(e,l){let i=e.cursor.points,o=D(),s=i.size(e,l);T(o,t,s),T(o,n,s);let r=s/-2;T(o,"marginLeft",r),T(o,"marginTop",r);let u=i.width(e,l,s);return u&&T(o,"borderWidth",u),o},size:function(e,l){return e.series[l].points.size},width:0,stroke:function(e,l){let t=e.series[l].points;return t._stroke||t._fill},fill:function(e,l){let t=e.series[l].points;return t._fill||t._stroke}},bind:{mousedown:Pl,mouseup:Pl,click:Pl,dblclick:Pl,mousemove:Al,mouseleave:Al,mouseenter:Al},drag:{setScale:!0,x:!0,y:!1,dist:0,uni:null,click:(e,l)=>{l.stopPropagation(),l.stopImmediatePropagation()},_x:!1,_y:!1},focus:{dist:(e,l,t,n,i)=>n-i,prox:-1,bias:0},hover:{skip:[void 0],prox:null,bias:0},left:-10,top:-10,idx:null,dataIdx:null,idxs:null,event:null},Yl={show:!0,stroke:"rgba(0,0,0,0.07)",width:2},Cl=Le({},Yl,{filter:xe}),Fl=Le({},Cl,{size:10}),Hl=Le({},Yl,{show:!1}),Rl='12px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',Gl="bold "+Rl,Il={show:!0,scale:"x",stroke:u,space:50,gap:5,size:50,labelGap:0,labelSize:30,labelFont:Gl,side:2,grid:Cl,ticks:Fl,border:Hl,font:Rl,lineGap:1.5,rotate:0},Ol={show:!0,scale:"x",auto:!1,sorted:1,min:he,max:-he,idxs:[]};function Ll(e,l){return l.map((e=>null==e?"":Z(e)))}function Nl(e,l,t,n,i,o,s){let r=[],u=Te.get(i)||0;for(let e=t=s?t:Ee(Me(t,i),u);n>=e;e=Ee(e+i,u))r.push(Object.is(e,-0)?0:e);return r}function jl(e,l,t,n,i){const o=[],s=e.scales[e.axes[l].scale].log,r=te((10==s?ae:fe)(t));i=re(s,r),10==s&&(i=ol[O(i,ol)]);let u=t,a=i*s;10==s&&(a=ol[O(a,ol)]);do{o.push(u),u+=i,10!=s||Te.has(u)||(u=Ee(u,Te.get(i))),a>u||(a=(i=u)*s,10==s&&(a=ol[O(a,ol)]))}while(n>=u);return o}function Ul(e,l,t,n,i){let o=e.scales[e.axes[l].scale].asinh,s=n>o?jl(e,l,se(o,t),n,i):[o],r=0>n||t>0?[]:[0];return(-o>t?jl(e,l,se(o,-n),-t,i):[o]).reverse().map((e=>-e)).concat(r,s)}const Bl=/./,Vl=/[12357]/,$l=/[125]/,Jl=/1/,ql=(e,l,t,n)=>e.map(((e,i)=>4==l&&0==e||i%n==0&&t.test(e.toExponential()[0>e?1:0])?e:null));function Kl(e,l,t){let n=e.axes[t],i=n.scale,o=e.scales[i],s=e.valToPos,r=n._space,u=s(10,i),a=s(9,i)-u<r?s(7,i)-u<r?s(5,i)-u<r?Jl:$l:Vl:Bl;if(a==Jl){let e=le(s(1,i)-u);if(r>e)return ql(l.slice().reverse(),o.distr,a,ie(r/e)).reverse()}return ql(l,o.distr,a,1)}function Xl(e,l,t){let n=e.axes[t],i=n.scale,o=n._space,s=e.valToPos,r=le(s(1,i)-s(2,i));return o>r?ql(l.slice().reverse(),3,Bl,ie(o/r)).reverse():l}function Zl(e,l,t,n){return null==n?w:null==l?"":Z(l)}const Ql={show:!0,scale:"y",stroke:u,space:30,gap:5,size:50,labelGap:0,labelSize:30,labelFont:Gl,side:3,grid:Cl,ticks:Fl,border:Hl,font:Rl,lineGap:1.5,rotate:0},et={scale:null,auto:!0,sorted:0,min:he,max:-he},lt=(e,l,t,n,i)=>i,tt={show:!0,auto:!0,sorted:0,gaps:lt,alpha:1,facets:[Le({},et,{scale:"x"}),Le({},et,{scale:"y"})]},nt={scale:"y",auto:!0,sorted:0,show:!0,spanGaps:!1,gaps:lt,alpha:1,points:{show:function(e,l){let{scale:t,idxs:n}=e.series[0],i=e._data[0],o=e.valToPos(i[n[0]],t,!0),s=e.valToPos(i[n[1]],t,!0);return le(s-o)/(e.series[l].points.space*y)>=n[1]-n[0]},filter:null},values:null,min:he,max:-he,idxs:[],path:null,clip:null};function it(e,l,t){return t/10}const ot={time:!0,auto:!0,distr:1,log:10,asinh:1,min:null,max:null,dir:1,ori:0},st=Le({},ot,{time:!1,ori:1}),rt={};function ut(e){let l=rt[e];return l||(l={key:e,plots:[],sub(e){l.plots.push(e)},unsub(e){l.plots=l.plots.filter((l=>l!=e))},pub(e,t,n,i,o,s,r){for(let u=0;l.plots.length>u;u++)l.plots[u]!=t&&l.plots[u].pub(e,t,n,i,o,s,r)}},null!=e&&(rt[e]=l)),l}function at(e,l,t){const n=e.mode,i=e.series[l],o=2==n?e._data[l]:e._data,s=e.scales,r=e.bbox;let u=o[0],a=2==n?o[1]:o[l],f=2==n?s[i.facets[0].scale]:s[e.series[0].scale],c=2==n?s[i.facets[1].scale]:s[i.scale],h=r.left,d=r.top,p=r.width,m=r.height,g=e.valToPosH,x=e.valToPosV;return 0==f.ori?t(i,u,a,f,c,g,x,h,d,p,m,xt,_t,vt,yt,St):t(i,u,a,f,c,x,g,d,h,m,p,wt,bt,kt,Mt,Et)}function ft(e,l){let t=0,n=0,i=q(e.bands,Ae);for(let e=0;i.length>e;e++){let o=i[e];o.series[0]==l?t=o.dir:o.series[1]==l&&(n|=1==o.dir?1:2)}return[t,1==n?-1:2==n?1:3==n?2:0]}function ct(e,l,t,n,i){let o=e.series[l],s=e.scales[2==e.mode?o.facets[1].scale:o.scale];return-1==i?s.min:1==i?s.max:3==s.distr?1==s.dir?s.min:s.max:0}function ht(e,l,t,n,i,o){return at(e,l,((e,l,s,r,u,a,f,c,h,d,p)=>{let m=e.pxRound;const g=0==r.ori?_t:bt;let x,w;1==r.dir*(0==r.ori?1:-1)?(x=t,w=n):(x=n,w=t);let _=m(a(l[x],r,d,c)),b=m(f(s[x],u,p,h)),v=m(a(l[w],r,d,c)),k=m(f(1==o?u.max:u.min,u,p,h)),y=new Path2D(i);return g(y,v,k),g(y,_,k),g(y,_,b),y}))}function dt(e,l,t,n,i,o){let s=null;if(e.length>0){s=new Path2D;const r=0==l?vt:kt;let u=t;for(let l=0;e.length>l;l++){let t=e[l];if(t[1]>t[0]){let e=t[0]-u;e>0&&r(s,u,n,e,n+o),u=t[1]}}let a=t+i-u,f=10;a>0&&r(s,u,n-f/2,a,n+o+f)}return s}function pt(e,l,t,n,i,o,s){let r=[],u=e.length;for(let a=1==i?t:n;a>=t&&n>=a;a+=i)if(null===l[a]){let f=a,c=a;if(1==i)for(;++a<=n&&null===l[a];)c=a;else for(;--a>=t&&null===l[a];)c=a;let h=o(e[f]),d=c==f?h:o(e[c]),p=f-i;h=s>0||0>p||p>=u?h:o(e[p]);let m=c+i;d=0>s||0>m||m>=u?d:o(e[m]),h>d||r.push([h,d])}return r}function mt(e){return 0==e?ge:1==e?ne:l=>ye(l,e)}function gt(e){let l=0==e?xt:wt,t=0==e?(e,l,t,n,i,o)=>{e.arcTo(l,t,n,i,o)}:(e,l,t,n,i,o)=>{e.arcTo(t,l,i,n,o)},n=0==e?(e,l,t,n,i)=>{e.rect(l,t,n,i)}:(e,l,t,n,i)=>{e.rect(t,l,i,n)};return(e,i,o,s,r,u=0,a=0)=>{0==u&&0==a?n(e,i,o,s,r):(u=oe(u,s/2,r/2),a=oe(a,s/2,r/2),l(e,i+u,o),t(e,i+s,o,i+s,o+r,u),t(e,i+s,o+r,i,o+r,a),t(e,i,o+r,i,o,a),t(e,i,o,i+s,o,u),e.closePath())}}const xt=(e,l,t)=>{e.moveTo(l,t)},wt=(e,l,t)=>{e.moveTo(t,l)},_t=(e,l,t)=>{e.lineTo(l,t)},bt=(e,l,t)=>{e.lineTo(t,l)},vt=gt(0),kt=gt(1),yt=(e,l,t,n,i,o)=>{e.arc(l,t,n,i,o)},Mt=(e,l,t,n,i,o)=>{e.arc(t,l,n,i,o)},St=(e,l,t,n,i,o,s)=>{e.bezierCurveTo(l,t,n,i,o,s)},Et=(e,l,t,n,i,o,s)=>{e.bezierCurveTo(t,l,i,n,s,o)};function Tt(){return(e,l,t,n,i)=>at(e,l,((l,o,s,r,u,a,f,c,h,d,p)=>{let m,g,{pxRound:x,points:w}=l;0==r.ori?(m=xt,g=yt):(m=wt,g=Mt);const _=Ee(w.width*y,3);let b=(w.size-w.width)/2*y,v=Ee(2*b,3),k=new Path2D,M=new Path2D,{left:S,top:E,width:T,height:z}=e.bbox;vt(M,S-v,E-v,T+2*v,z+2*v);const D=e=>{if(null!=s[e]){let l=x(a(o[e],r,d,c)),t=x(f(s[e],u,p,h));m(k,l+b,t),g(k,l,t,b,0,2*ee)}};if(i)i.forEach(D);else for(let e=t;n>=e;e++)D(e);return{stroke:_>0?k:null,fill:k,clip:M,flags:3}}))}function zt(e){return(l,t,n,i,o,s)=>{n!=i&&(o!=n&&s!=n&&e(l,t,n),o!=i&&s!=i&&e(l,t,i),e(l,t,s))}}const Dt=zt(_t),Pt=zt(bt);function At(e){const l=q(e?.alignGaps,0);return(e,t,n,i)=>at(e,t,((o,s,r,u,a,f,c,h,d,p,m)=>{let g,x,w=o.pxRound,_=e=>w(f(e,u,p,h)),b=e=>w(c(e,a,m,d));0==u.ori?(g=_t,x=Dt):(g=bt,x=Pt);const v=u.dir*(0==u.ori?1:-1),k={stroke:new Path2D,fill:null,clip:null,band:null,gaps:null,flags:1},y=k.stroke;let M,S,E,T=he,z=-he,D=_(s[1==v?n:i]),P=L(r,n,i,1*v),A=L(r,n,i,-1*v),W=_(s[P]),Y=_(s[A]),C=!1;for(let e=1==v?n:i;e>=n&&i>=e;e+=v){let l=_(s[e]),t=r[e];l==D?null!=t?(S=b(t),T==he&&(g(y,l,S),M=S),T=oe(S,T),z=se(S,z)):null===t&&(C=!0):(T!=he&&(x(y,D,T,z,M,S),E=D),null!=t?(S=b(t),g(y,l,S),T=z=M=S):(T=he,z=-he,null===t&&(C=!0)),D=l)}T!=he&&T!=z&&E!=D&&x(y,D,T,z,M,S);let[F,H]=ft(e,t);if(null!=o.fill||0!=F){let l=k.fill=new Path2D(y),n=b(o.fillTo(e,t,o.min,o.max,F));g(l,Y,n),g(l,W,n)}if(!o.spanGaps){let a=[];C&&a.push(...pt(s,r,n,i,v,_,l)),k.gaps=a=o.gaps(e,t,n,i,a),k.clip=dt(a,u.ori,h,d,p,m)}return 0!=H&&(k.band=2==H?[ht(e,t,n,i,y,-1),ht(e,t,n,i,y,1)]:ht(e,t,n,i,y,H)),k}))}function Wt(e,l,t,n,i,o,s=he){if(e.length>1){let r=null;for(let u=0,a=1/0;e.length>u;u++)if(void 0!==l[u]){if(null!=r){let l=le(e[u]-e[r]);a>l&&(a=l,s=le(t(e[u],n,i,o)-t(e[r],n,i,o)))}r=u}}return s}function Yt(e,l,t,n,i){const o=e.length;if(2>o)return null;const s=new Path2D;if(t(s,e[0],l[0]),2==o)n(s,e[1],l[1]);else{let t=Array(o),n=Array(o-1),r=Array(o-1),u=Array(o-1);for(let t=0;o-1>t;t++)r[t]=l[t+1]-l[t],u[t]=e[t+1]-e[t],n[t]=r[t]/u[t];t[0]=n[0];for(let e=1;o-1>e;e++)0===n[e]||0===n[e-1]||n[e-1]>0!=n[e]>0?t[e]=0:(t[e]=3*(u[e-1]+u[e])/((2*u[e]+u[e-1])/n[e-1]+(u[e]+2*u[e-1])/n[e]),isFinite(t[e])||(t[e]=0));t[o-1]=n[o-2];for(let n=0;o-1>n;n++)i(s,e[n]+u[n]/3,l[n]+t[n]*u[n]/3,e[n+1]-u[n]/3,l[n+1]-t[n+1]*u[n]/3,e[n+1],l[n+1])}return s}const Ct=new Set;function Ft(){for(let e of Ct)e.syncRect(!0)}_&&(G("resize",v,Ft),G("scroll",v,Ft,!0),G(x,v,(()=>{Kt.pxRatio=y})));const Ht=At(),Rt=Tt();function Gt(e,l,t,n){return(n?[e[0],e[1]].concat(e.slice(2)):[e[0]].concat(e.slice(1))).map(((e,n)=>It(e,n,l,t)))}function It(e,l,t,n){return Le({},0==l?t:n,e)}function Ot(e,l,t){return null==l?We:[l,t]}const Lt=Ot;function Nt(e,l,t){return null==l?We:J(l,t,U,!0)}function jt(e,l,t,n){return null==l?We:N(l,t,e.scales[n].log,!1)}const Ut=jt;function Bt(e,l,t,n){return null==l?We:j(l,t,e.scales[n].log,!1)}const Vt=Bt;function $t(e,l,t,n,i){let o=se(de(e),de(l)),s=l-e,r=O(i/n*s,t);do{let e=t[r],l=n*e/s;if(l>=i&&17>=o+(5>e?Te.get(e):0))return[e,l]}while(++r<t.length);return[0,0]}function Jt(e){let l,t;return[e=e.replace(/(\d+)px/,((e,n)=>(l=ne((t=+n)*y))+"px")),l,t]}function qt(e){e.show&&[e.font,e.labelFont].forEach((e=>{let l=Ee(e[2]*y,1);e[0]=e[0].replace(/[0-9.]+px/,l+"px"),e[1]=l}))}function Kt(u,g,_){const k={mode:q(u.mode,1)},M=k.mode;function P(e,l){return((3==l.distr?ae(e>0?e:l.clamp(k,e,l.min,l.max,l.key)):4==l.distr?ce(e,l.asinh):100==l.distr?l.fwd(e):e)-l._min)/(l._max-l._min)}function W(e,l,t,n){let i=P(e,l);return n+t*(-1==l.dir?1-i:i)}function C(e,l,t,n){let i=P(e,l);return n+t*(-1==l.dir?i:1-i)}function H(e,l,t,n){return 0==l.ori?W(e,l,t,n):C(e,l,t,n)}k.valToPosH=W,k.valToPosV=C;let R=!1;k.status=0;const L=k.root=D("uplot");null!=u.id&&(L.id=u.id),S(L,u.class),u.title&&(D("u-title",L).textContent=u.title);const V=z("canvas"),$=k.ctx=V.getContext("2d"),K=D("u-wrap",L);G("click",K,(e=>{e.target===Z&&(Hn!=Wn||Rn!=Yn)&&Vn.click(k,e)}),!0);const X=k.under=D("u-under",K);K.appendChild(V);const Z=k.over=D("u-over",K),te=+q((u=Oe(u)).pxAlign,1),ue=mt(te);(u.plugins||[]).forEach((e=>{e.opts&&(u=e.opts(k,u)||u)}));const fe=u.ms||.001,de=k.series=1==M?Gt(u.series||[],Ol,nt,!1):function(e,l){return e.map(((e,t)=>0==t?{}:Le({},l,e)))}(u.series||[null],tt),ge=k.axes=Gt(u.axes||[],Il,Ql,!0),ve=k.scales={},ke=k.bands=u.bands||[];ke.forEach((e=>{e.fill=me(e.fill||null),e.dir=q(e.dir,-1)}));const Me=2==M?de[1].facets[0].scale:de[0].scale,Se={axes:function(){for(let e=0;ge.length>e;e++){let l=ge[e];if(!l.show||!l._show)continue;let t,n,u=l.side,a=u%2,f=l.stroke(k,e),c=0==u||3==u?-1:1;if(l.label){let e=ne((l._lpos+l.labelGap*c)*y);dn(l.labelFont[0],f,"center",2==u?i:o),$.save(),1==a?(t=n=0,$.translate(e,ne($l+ql/2)),$.rotate((3==u?-ee:ee)/2)):(t=ne(Vl+Jl/2),n=e),$.fillText(l.label,t,n),$.restore()}let[h,d]=l._found;if(0==d)continue;let p=ve[l.scale],m=0==a?Jl:ql,g=0==a?Vl:$l,x=ne(l.gap*y),w=l._splits,_=2==p.distr?w.map((e=>un[e])):w,b=2==p.distr?un[w[1]]-un[w[0]]:h,v=l.ticks,M=l.border,S=v.show?ne(v.size*y):0,E=l._rotate*-ee/180,T=ue(l._pos*y),z=T+(S+x)*c;n=0==a?z:0,t=1==a?z:0,dn(l.font[0],f,1==l.align?s:2==l.align?r:E>0?s:0>E?r:0==a?"center":3==u?r:s,E||1==a?"middle":2==u?i:o);let D=l.font[1]*l.lineGap,P=w.map((e=>ue(H(e,p,m,g)))),A=l._values;for(let e=0;A.length>e;e++){let l=A[e];if(null!=l){0==a?t=P[e]:n=P[e],l=""+l;let i=-1==l.indexOf("\n")?[l]:l.split(/\n/gm);for(let e=0;i.length>e;e++){let l=i[e];E?($.save(),$.translate(t,n+e*D),$.rotate(E),$.fillText(l,0,0),$.restore()):$.fillText(l,t,n+e*D)}}}v.show&&kn(P,v.filter(k,_,e,d,b),a,u,T,S,Ee(v.width*y,3),v.stroke(k,e),v.dash,v.cap);let W=l.grid;W.show&&kn(P,W.filter(k,_,e,d,b),a,0==a?2:1,0==a?$l:Vl,0==a?ql:Jl,Ee(W.width*y,3),W.stroke(k,e),W.dash,W.cap),M.show&&kn([T],[1],0==a?1:0,0==a?1:2,1==a?$l:Vl,1==a?ql:Jl,Ee(M.width*y,3),M.stroke(k,e),M.dash,M.cap)}zi("drawAxes")},series:function(){Wt>0&&(de.forEach(((e,l)=>{if(l>0&&e.show&&(gn(l,!1),gn(l,!0),null==e._paths)){rn!=e.alpha&&($.globalAlpha=rn=e.alpha);let t=2==M?[0,g[l][0].length-1]:function(e){let l=pe(Yt-1,0,Wt-1),t=pe(Ft+1,0,Wt-1);for(;null==e[l]&&l>0;)l--;for(;null==e[t]&&Wt-1>t;)t++;return[l,t]}(g[l]);e._paths=e.paths(k,l,t[0],t[1]),1!=rn&&($.globalAlpha=rn=1)}})),de.forEach(((e,l)=>{if(l>0&&e.show){rn!=e.alpha&&($.globalAlpha=rn=e.alpha),null!=e._paths&&xn(l,!1);{let t=null!=e._paths?e._paths.gaps:null,n=e.points.show(k,l,Yt,Ft,t),i=e.points.filter(k,l,n,t);(n||i)&&(e.points._paths=e.points.paths(k,l,Yt,Ft,i),xn(l,!0))}1!=rn&&($.globalAlpha=rn=1),zi("drawSeries",l)}})))}},De=(u.drawOrder||["axes","series"]).map((e=>Se[e]));function Ce(e){let l=ve[e];if(null==l){let t=(u.scales||Pe)[e]||Pe;if(null!=t.from)Ce(t.from),ve[e]=Le({},ve[t.from],t,{key:e});else{l=ve[e]=Le({},e==Me?ot:st,t),l.key=e;let n=l.time,i=l.range,o=Ye(i);if((e!=Me||2==M&&!n)&&(!o||null!=i[0]&&null!=i[1]||(i={min:null==i[0]?B:{mode:1,hard:i[0],soft:i[0]},max:null==i[1]?B:{mode:1,hard:i[1],soft:i[1]}},o=!1),!o&&He(i))){let e=i;i=(l,t,n)=>null==t?We:J(t,n,e)}l.range=me(i||(n?Lt:e==Me?3==l.distr?Ut:4==l.distr?Vt:Ot:3==l.distr?jt:4==l.distr?Bt:Nt)),l.auto=me(!o&&l.auto),l.clamp=me(l.clamp||it),l._min=l._max=null}}}Ce("x"),Ce("y"),1==M&&de.forEach((e=>{Ce(e.scale)})),ge.forEach((e=>{Ce(e.scale)}));for(let e in u.scales)Ce(e);const Ge=ve[Me],Ie=Ge.distr;let Ne,Ue;0==Ge.ori?(S(L,"u-hz"),Ne=W,Ue=C):(S(L,"u-vt"),Ne=C,Ue=W);const Be={};for(let e in ve){let l=ve[e];null==l.min&&null==l.max||(Be[e]={min:l.min,max:l.max},l.min=l.max=null)}const Ve=u.tzDate||(e=>new Date(ne(e/fe))),$e=u.fmtDate||Ze,Je=1==fe?_l(Ve):kl(Ve),qe=Ml(Ve,yl(1==fe?wl:vl,$e)),Ke=Tl(Ve,El("{YYYY}-{MM}-{DD} {h}:{mm}{aa}",$e)),Xe=[],Qe=k.legend=Le({},zl,u.legend),el=Qe.show,ll=Qe.markers;let tl,nl,sl;Qe.idxs=Xe,ll.width=me(ll.width),ll.dash=me(ll.dash),ll.stroke=me(ll.stroke),ll.fill=me(ll.fill);let rl,ul=[],al=[],fl=!1,cl={};if(Qe.live){const e=de[1]?de[1].values:null;fl=null!=e,rl=fl?e(k,1,0):{_:0};for(let e in rl)cl[e]=w}if(el)if(tl=z("table","u-legend",L),sl=z("tbody",null,tl),Qe.mount(k,tl),fl){nl=z("thead",null,tl,sl);let e=z("tr",null,nl);for(var hl in z("th",null,e),rl)z("th",l,e).textContent=hl}else S(tl,"u-inline"),Qe.live&&S(tl,"u-live");const dl={show:!0},pl={show:!1},ml=new Map;function gl(e,l,t,n=!0){const i=ml.get(l)||{},o=xt.bind[e](k,l,t,n);o&&(G(e,l,i[e]=o),ml.set(l,i))}function Sl(e,l){const t=ml.get(l)||{};for(let n in t)null!=e&&n!=e||(I(n,l,t[n]),delete t[n]);null==e&&ml.delete(l)}let Dl=0,Pl=0,Al=0,Yl=0,Cl=0,Fl=0,Hl=Cl,Rl=Fl,Gl=Al,Bl=Yl,Vl=0,$l=0,Jl=0,ql=0;k.bbox={};let et=!1,lt=!1,rt=!1,at=!1,ft=!1,ht=!1;function dt(e,l,t){(t||e!=k.width||l!=k.height)&&pt(e,l),Sn(!1),rt=!0,lt=!0,Nn()}function pt(e,l){k.width=Dl=Al=e,k.height=Pl=Yl=l,Cl=Fl=0,function(){let e=!1,l=!1,t=!1,n=!1;ge.forEach((i=>{if(i.show&&i._show){let{side:o,_size:s}=i,r=s+(null!=i.label?i.labelSize:0);r>0&&(o%2?(Al-=r,3==o?(Cl+=r,n=!0):t=!0):(Yl-=r,0==o?(Fl+=r,e=!0):l=!0))}})),zt[0]=e,zt[1]=t,zt[2]=l,zt[3]=n,Al-=At[1]+At[3],Cl+=At[3],Yl-=At[2]+At[0],Fl+=At[0]}(),function(){let e=Cl+Al,l=Fl+Yl,t=Cl,n=Fl;function i(i,o){switch(i){case 1:return e+=o,e-o;case 2:return l+=o,l-o;case 3:return t-=o,t+o;case 0:return n-=o,n+o}}ge.forEach((e=>{if(e.show&&e._show){let l=e.side;e._pos=i(l,e._size),null!=e.label&&(e._lpos=i(l,e.labelSize))}}))}();let t=k.bbox;Vl=t.left=ye(Cl*y,.5),$l=t.top=ye(Fl*y,.5),Jl=t.width=ye(Al*y,.5),ql=t.height=ye(Yl*y,.5)}const gt=3;k.setSize=function({width:e,height:l}){dt(e,l)};const xt=k.cursor=Le({},Wl,{drag:{y:2==M}},u.cursor);if(null==xt.dataIdx){let e=xt.hover,l=e.skip=new Set(e.skip??[]);l.add(void 0);let t=e.prox=me(e.prox),n=e.bias??=0;xt.dataIdx=(e,i,o,s)=>{if(0==i)return o;let r=o,u=t(e,i,o,s)??he,a=u>=0&&he>u,f=0==Ge.ori?Al:Yl,c=xt.left,h=g[0],d=g[i];if(l.has(d[o])){r=null;let e,t=null,i=null;if(0==n||-1==n)for(e=o;null==t&&e-- >0;)l.has(d[e])||(t=e);if(0==n||1==n)for(e=o;null==i&&e++<d.length;)l.has(d[e])||(i=e);if(null!=t||null!=i)if(a){let e=c-(null==t?-1/0:Ne(h[t],Ge,f,0)),l=(null==i?1/0:Ne(h[i],Ge,f,0))-c;e>l?l>u||(r=i):e>u||(r=t)}else r=null==i?t:null==t||o-t>i-o?i:t}else a&&le(c-Ne(h[o],Ge,f,0))>u&&(r=null);return r}}const wt=e=>{xt.event=e};xt.idxs=Xe,xt._lock=!1;let _t=xt.points;_t.show=me(_t.show),_t.size=me(_t.size),_t.stroke=me(_t.stroke),_t.width=me(_t.width),_t.fill=me(_t.fill);const bt=k.focus=Le({},u.focus||{alpha:.3},xt.focus),vt=bt.prox>=0,kt=vt&&_t.one;let yt=[],Mt=[],St=[];function Et(e,l){let t=_t.show(k,l);if(t)return S(t,"u-cursor-pt"),S(t,e.class),A(t,-10,-10,Al,Yl),Z.insertBefore(t,yt[l]),t}function Tt(t,n){if(1==M||n>0){let e=1==M&&ve[t.scale].time,l=t.value;t.value=e?Fe(l)?Tl(Ve,El(l,$e)):l||Ke:l||Zl,t.label=t.label||(e?"Time":"Value")}if(kt||n>0){t.width=null==t.width?1:t.width,t.paths=t.paths||Ht||we,t.fillTo=me(t.fillTo||ct),t.pxAlign=+q(t.pxAlign,te),t.pxRound=mt(t.pxAlign),t.stroke=me(t.stroke||null),t.fill=me(t.fill||null),t._stroke=t._fill=t._paths=t._focus=null;let e=function(e){return Ee(1*(3+2*(e||1)),3)}(se(1,t.width)),l=t.points=Le({},{size:e,width:se(1,.2*e),stroke:t.stroke,space:2*e,paths:Rt,_stroke:null,_fill:null},t.points);l.show=me(l.show),l.filter=me(l.filter),l.fill=me(l.fill),l.stroke=me(l.stroke),l.paths=me(l.paths),l.pxAlign=t.pxAlign}if(el){let i=function(t,n){if(0==n&&(fl||!Qe.live||2==M))return We;let i=[],o=z("tr","u-series",sl,sl.childNodes[n]);S(o,t.class),t.show||S(o,e);let s=z("th",null,o);if(ll.show){let e=D("u-marker",s);if(n>0){let l=ll.width(k,n);l&&(e.style.border=l+"px "+ll.dash(k,n)+" "+ll.stroke(k,n)),e.style.background=ll.fill(k,n)}}let r=D(l,s);for(var u in r.textContent=t.label,n>0&&(ll.show||(r.style.color=t.width>0?ll.stroke(k,n):ll.fill(k,n)),gl("click",s,(e=>{if(xt._lock)return;wt(e);let l=de.indexOf(t);if((e.ctrlKey||e.metaKey)!=Qe.isolate){let e=de.some(((e,t)=>t>0&&t!=l&&e.show));de.forEach(((t,n)=>{n>0&&Qn(n,e?n==l?dl:pl:dl,!0,Pi.setSeries)}))}else Qn(l,{show:!t.show},!0,Pi.setSeries)}),!1),vt&&gl(d,s,(e=>{xt._lock||(wt(e),Qn(de.indexOf(t),ni,!0,Pi.setSeries))}),!1)),rl){let e=z("td","u-value",o);e.textContent="--",i.push(e)}return[o,i]}(t,n);ul.splice(n,0,i[0]),al.splice(n,0,i[1]),Qe.values.push(null)}if(xt.show){Xe.splice(n,0,null);let e=null;kt?0==n&&(e=Et(t,n)):n>0&&(e=Et(t,n)),yt.splice(n,0,e),Mt.splice(n,0,0),St.splice(n,0,0)}zi("addSeries",n)}k.addSeries=function(e,l){l=null==l?de.length:l,e=1==M?It(e,l,Ol,nt):It(e,l,{},tt),de.splice(l,0,e),Tt(de[l],l)},k.delSeries=function(e){if(de.splice(e,1),el){Qe.values.splice(e,1),al.splice(e,1);let l=ul.splice(e,1)[0];Sl(null,l.firstChild),l.remove()}xt.show&&(Xe.splice(e,1),yt.splice(e,1)[0].remove(),Mt.splice(e,1),St.splice(e,1)),zi("delSeries",e)};const zt=[!1,!1,!1,!1];function Dt(e,l,t){let[n,i,o,s]=t,r=l%2,u=0;return 0==r&&(s||i)&&(u=0==l&&!n||2==l&&!o?ne(Il.size/3):0),1==r&&(n||o)&&(u=1==l&&!i||3==l&&!s?ne(Ql.size/2):0),u}const Pt=k.padding=(u.padding||[Dt,Dt,Dt,Dt]).map((e=>me(q(e,Dt)))),At=k._padding=Pt.map(((e,l)=>e(k,l,zt,0)));let Wt,Yt=null,Ft=null;const Kt=1==M?de[0].idxs:null;let Xt,Zt,Qt,en,ln,tn,nn,on,sn,rn,un=null,an=!1;function fn(e,l){if(k.data=k._data=g=null==e?[]:e,2==M){Wt=0;for(let e=1;de.length>e;e++)Wt+=g[e][0].length}else{0==g.length&&(k.data=k._data=g=[[]]),un=g[0],Wt=un.length;let e=g;if(2==Ie){e=g.slice();let l=e[0]=Array(Wt);for(let e=0;Wt>e;e++)l[e]=e}k._data=g=e}if(Sn(!0),zi("setData"),2==Ie&&(rt=!0),!1!==l){let e=Ge;e.auto(k,an)?cn():Zn(Me,e.min,e.max),at=at||xt.left>=0,ht=!0,Nn()}}function cn(){let e,l;an=!0,1==M&&(Wt>0?(Yt=Kt[0]=0,Ft=Kt[1]=Wt-1,e=g[0][Yt],l=g[0][Ft],2==Ie?(e=Yt,l=Ft):e==l&&(3==Ie?[e,l]=N(e,e,Ge.log,!1):4==Ie?[e,l]=j(e,e,Ge.log,!1):Ge.time?l=e+ne(86400/fe):[e,l]=J(e,l,U,!0))):(Yt=Kt[0]=e=null,Ft=Kt[1]=l=null)),Zn(Me,e,l)}function hn(e,l,t,n,i,o){e??=a,t??=Ae,n??="butt",i??=a,o??="round",e!=Xt&&($.strokeStyle=Xt=e),i!=Zt&&($.fillStyle=Zt=i),l!=Qt&&($.lineWidth=Qt=l),o!=ln&&($.lineJoin=ln=o),n!=tn&&($.lineCap=tn=n),t!=en&&$.setLineDash(en=t)}function dn(e,l,t,n){l!=Zt&&($.fillStyle=Zt=l),e!=nn&&($.font=nn=e),t!=on&&($.textAlign=on=t),n!=sn&&($.textBaseline=sn=n)}function pn(e,l,t,n,i=0){if(n.length>0&&e.auto(k,an)&&(null==l||null==l.min)){let l=q(Yt,0),o=q(Ft,n.length-1),s=null==t.min?3==e.distr?function(e,l,t){let n=he,i=-he;for(let o=l;t>=o;o++){let l=e[o];null!=l&&l>0&&(n>l&&(n=l),l>i&&(i=l))}return[n,i]}(n,l,o):function(e,l,t,n){let i=he,o=-he;if(1==n)i=e[l],o=e[t];else if(-1==n)i=e[t],o=e[l];else for(let n=l;t>=n;n++){let l=e[n];null!=l&&(i>l&&(i=l),l>o&&(o=l))}return[i,o]}(n,l,o,i):[t.min,t.max];e.min=oe(e.min,t.min=s[0]),e.max=se(e.max,t.max=s[1])}}k.setData=fn;const mn={min:null,max:null};function gn(e,l){let t=l?de[e].points:de[e];t._stroke=t.stroke(k,e),t._fill=t.fill(k,e)}function xn(e,l){let t=l?de[e].points:de[e],{stroke:n,fill:i,clip:o,flags:s,_stroke:r=t._stroke,_fill:u=t._fill,_width:a=t.width}=t._paths;a=Ee(a*y,3);let f=null,c=a%2/2;l&&null==u&&(u=a>0?"#fff":r);let h=1==t.pxAlign&&c>0;if(h&&$.translate(c,c),!l){let e=Vl-a/2,l=$l-a/2,t=Jl+a,n=ql+a;f=new Path2D,f.rect(e,l,t,n)}l?_n(r,a,t.dash,t.cap,u,n,i,s,o):function(e,l,t,n,i,o,s,r,u,a,f){let c=!1;0!=u&&ke.forEach(((h,d)=>{if(h.series[0]==e){let e,p=de[h.series[1]],m=g[h.series[1]],x=(p._paths||Pe).band;Ye(x)&&(x=1==h.dir?x[0]:x[1]);let w=null;p.show&&x&&function(e,l,t){for(l=q(l,0),t=q(t,e.length-1);t>=l;){if(null!=e[l])return!0;l++}return!1}(m,Yt,Ft)?(w=h.fill(k,d)||o,e=p._paths.clip):x=null,_n(l,t,n,i,w,s,r,u,a,f,e,x),c=!0}})),c||_n(l,t,n,i,o,s,r,u,a,f)}(e,r,a,t.dash,t.cap,u,n,i,s,f,o),h&&$.translate(-c,-c)}const wn=3;function _n(e,l,t,n,i,o,s,r,u,a,f,c){hn(e,l,t,n,i),(u||a||c)&&($.save(),u&&$.clip(u),a&&$.clip(a)),c?(r&wn)==wn?($.clip(c),f&&$.clip(f),vn(i,s),bn(e,o,l)):2&r?(vn(i,s),$.clip(c),bn(e,o,l)):1&r&&($.save(),$.clip(c),f&&$.clip(f),vn(i,s),$.restore(),bn(e,o,l)):(vn(i,s),bn(e,o,l)),(u||a||c)&&$.restore()}function bn(e,l,t){t>0&&(l instanceof Map?l.forEach(((e,l)=>{$.strokeStyle=Xt=l,$.stroke(e)})):null!=l&&e&&$.stroke(l))}function vn(e,l){l instanceof Map?l.forEach(((e,l)=>{$.fillStyle=Zt=l,$.fill(e)})):null!=l&&e&&$.fill(l)}function kn(e,l,t,n,i,o,s,r,u,a){let f=s%2/2;1==te&&$.translate(f,f),hn(r,s,u,a,r),$.beginPath();let c,h,d,p,m=i+(0==n||3==n?-o:o);0==t?(h=i,p=m):(c=i,d=m);for(let n=0;e.length>n;n++)null!=l[n]&&(0==t?c=d=e[n]:h=p=e[n],$.moveTo(c,h),$.lineTo(d,p));$.stroke(),1==te&&$.translate(-f,-f)}function yn(e){let l=!0;return ge.forEach(((t,n)=>{if(!t.show)return;let i=ve[t.scale];if(null==i.min)return void(t._show&&(l=!1,t._show=!1,Sn(!1)));t._show||(l=!1,t._show=!0,Sn(!1));let o=t.side,s=o%2,{min:r,max:u}=i,[a,f]=function(e,l,t,n){let i,o=ge[e];if(n>0){let s=o._space=o.space(k,e,l,t,n);i=$t(l,t,o._incrs=o.incrs(k,e,l,t,n,s),n,s)}else i=[0,0];return o._found=i}(n,r,u,0==s?Al:Yl);if(0==f)return;let c=t._splits=t.splits(k,n,r,u,a,f,2==i.distr),h=2==i.distr?c.map((e=>un[e])):c,d=2==i.distr?un[c[1]]-un[c[0]]:a,p=t._values=t.values(k,t.filter(k,h,n,f,d),n,f,d);t._rotate=2==o?t.rotate(k,p,n,f):0;let m=t._size;t._size=ie(t.size(k,p,n,e)),null!=m&&t._size!=m&&(l=!1)})),l}function Mn(e){let l=!0;return Pt.forEach(((t,n)=>{let i=t(k,n,zt,e);i!=At[n]&&(l=!1),At[n]=i})),l}function Sn(e){de.forEach(((l,t)=>{t>0&&(l._paths=null,e&&(1==M?(l.min=null,l.max=null):l.facets.forEach((e=>{e.min=null,e.max=null}))))}))}let En,Tn,zn,Dn,Pn,An,Wn,Yn,Cn,Fn,Hn,Rn,Gn=!1,In=!1,On=[];function Ln(){In=!1;for(let e=0;On.length>e;e++)zi(...On[e]);On.length=0}function Nn(){Gn||(je(jn),Gn=!0)}function jn(){if(et&&(function(){for(let e in ve){let l=ve[e];null==Be[e]&&(null==l.min||null!=Be[Me]&&l.auto(k,an))&&(Be[e]=mn)}for(let e in ve){let l=ve[e];null==Be[e]&&null!=l.from&&null!=Be[l.from]&&(Be[e]=mn)}null!=Be[Me]&&Sn(!0);let e={};for(let l in Be){let t=Be[l];if(null!=t){let n=e[l]=Oe(ve[l],Re);if(null!=t.min)Le(n,t);else if(l!=Me||2==M)if(0==Wt&&null==n.from){let e=n.range(k,null,null,l);n.min=e[0],n.max=e[1]}else n.min=he,n.max=-he}}if(Wt>0){de.forEach(((l,t)=>{if(1==M){let n=l.scale,i=Be[n];if(null==i)return;let o=e[n];if(0==t){let e=o.range(k,o.min,o.max,n);o.min=e[0],o.max=e[1],Yt=O(o.min,g[0]),Ft=O(o.max,g[0]),Ft-Yt>1&&(o.min>g[0][Yt]&&Yt++,g[0][Ft]>o.max&&Ft--),l.min=un[Yt],l.max=un[Ft]}else l.show&&l.auto&&pn(o,i,l,g[t],l.sorted);l.idxs[0]=Yt,l.idxs[1]=Ft}else if(t>0&&l.show&&l.auto){let[n,i]=l.facets,o=n.scale,s=i.scale,[r,u]=g[t],a=e[o],f=e[s];null!=a&&pn(a,Be[o],n,r,n.sorted),null!=f&&pn(f,Be[s],i,u,i.sorted),l.min=i.min,l.max=i.max}}));for(let l in e){let t=e[l],n=Be[l];if(null==t.from&&(null==n||null==n.min)){let e=t.range(k,t.min==he?null:t.min,t.max==-he?null:t.max,l);t.min=e[0],t.max=e[1]}}}for(let l in e){let t=e[l];if(null!=t.from){let n=e[t.from];if(null==n.min)t.min=t.max=null;else{let e=t.range(k,n.min,n.max,l);t.min=e[0],t.max=e[1]}}}let l={},t=!1;for(let n in e){let i=e[n],o=ve[n];if(o.min!=i.min||o.max!=i.max){o.min=i.min,o.max=i.max;let e=o.distr;o._min=3==e?ae(o.min):4==e?ce(o.min,o.asinh):100==e?o.fwd(o.min):o.min,o._max=3==e?ae(o.max):4==e?ce(o.max,o.asinh):100==e?o.fwd(o.max):o.max,l[n]=t=!0}}if(t){de.forEach(((e,t)=>{2==M?t>0&&l.y&&(e._paths=null):l[e.scale]&&(e._paths=null)}));for(let e in l)rt=!0,zi("setScale",e);xt.show&&xt.left>=0&&(at=ht=!0)}for(let e in Be)Be[e]=null}(),et=!1),rt&&(function(){let e=!1,l=0;for(;!e;){l++;let t=yn(l),n=Mn(l);e=l==gt||t&&n,e||(pt(k.width,k.height),lt=!0)}}(),rt=!1),lt){if(T(X,s,Cl),T(X,i,Fl),T(X,t,Al),T(X,n,Yl),T(Z,s,Cl),T(Z,i,Fl),T(Z,t,Al),T(Z,n,Yl),T(K,t,Dl),T(K,n,Pl),V.width=ne(Dl*y),V.height=ne(Pl*y),ge.forEach((({_el:l,_show:t,_size:n,_pos:i,side:o})=>{if(null!=l)if(t){let t=o%2==1;T(l,t?"left":"top",i-(3===o||0===o?n:0)),T(l,t?"width":"height",n),T(l,t?"top":"left",t?Fl:Cl),T(l,t?"height":"width",t?Yl:Al),E(l,e)}else S(l,e)})),Xt=Zt=Qt=ln=tn=nn=on=sn=en=null,rn=1,di(!0),Cl!=Hl||Fl!=Rl||Al!=Gl||Yl!=Bl){Sn(!1);let e=Al/Gl,l=Yl/Bl;if(xt.show&&!at&&xt.left>=0){xt.left*=e,xt.top*=l,zn&&A(zn,ne(xt.left),0,Al,Yl),Dn&&A(Dn,0,ne(xt.top),Al,Yl);for(let t=0;yt.length>t;t++){let n=yt[t];null!=n&&(Mt[t]*=e,St[t]*=l,A(n,ie(Mt[t]),ie(St[t]),Al,Yl))}}if(qn.show&&!ft&&qn.left>=0&&qn.width>0){qn.left*=e,qn.width*=e,qn.top*=l,qn.height*=l;for(let e in gi)T(Kn,e,qn[e])}Hl=Cl,Rl=Fl,Gl=Al,Bl=Yl}zi("setSize"),lt=!1}Dl>0&&Pl>0&&($.clearRect(0,0,V.width,V.height),zi("drawClear"),De.forEach((e=>e())),zi("draw")),qn.show&&ft&&(Xn(qn),ft=!1),xt.show&&at&&(ci(null,!0,!1),at=!1),Qe.show&&Qe.live&&ht&&(ai(),ht=!1),R||(R=!0,k.status=1,zi("ready")),an=!1,Gn=!1}function Un(e,l){let t=ve[e];if(null==t.from){if(0==Wt){let n=t.range(k,l.min,l.max,e);l.min=n[0],l.max=n[1]}if(l.min>l.max){let e=l.min;l.min=l.max,l.max=e}if(Wt>1&&null!=l.min&&null!=l.max&&1e-16>l.max-l.min)return;e==Me&&2==t.distr&&Wt>0&&(l.min=O(l.min,g[0]),l.max=O(l.max,g[0]),l.min==l.max&&l.max++),Be[e]=l,et=!0,Nn()}}k.batch=function(e,l=!1){Gn=!0,In=l,e(k),jn(),l&&On.length>0&&queueMicrotask(Ln)},k.redraw=(e,l)=>{rt=l||!1,!1!==e?Zn(Me,Ge.min,Ge.max):Nn()},k.setScale=Un;let Bn=!1;const Vn=xt.drag;let $n=Vn.x,Jn=Vn.y;xt.show&&(xt.x&&(En=D("u-cursor-x",Z)),xt.y&&(Tn=D("u-cursor-y",Z)),0==Ge.ori?(zn=En,Dn=Tn):(zn=Tn,Dn=En),Hn=xt.left,Rn=xt.top);const qn=k.select=Le({show:!0,over:!0,left:0,width:0,top:0,height:0},u.select),Kn=qn.show?D("u-select",qn.over?Z:X):null;function Xn(e,l){if(qn.show){for(let l in e)qn[l]=e[l],l in gi&&T(Kn,l,e[l]);!1!==l&&zi("setSelect")}}function Zn(e,l,t){Un(e,{min:l,max:t})}function Qn(l,t,n,i){null!=t.focus&&function(e){if(e!=ti){let l=null==e,t=1!=bt.alpha;de.forEach(((n,i)=>{if(1==M||i>0){let o=l||0==i||i==e;n._focus=l?null:o,t&&function(e,l){de[e].alpha=l,xt.show&&yt[e]&&(yt[e].style.opacity=l),el&&ul[e]&&(ul[e].style.opacity=l)}(i,o?1:bt.alpha)}})),ti=e,t&&Nn()}}(l),null!=t.show&&de.forEach(((n,i)=>{0>=i||l!=i&&null!=l||(n.show=t.show,function(l){let t=el?ul[l]:null;de[l].show?t&&E(t,e):(t&&S(t,e),A(kt?yt[0]:yt[l],-10,-10,Al,Yl))}(i),2==M?(Zn(n.facets[0].scale,null,null),Zn(n.facets[1].scale,null,null)):Zn(n.scale,null,null),Nn())})),!1!==n&&zi("setSeries",l,t),i&&Yi("setSeries",k,l,t)}let ei,li,ti;k.setSelect=Xn,k.setSeries=Qn,k.addBand=function(e,l){e.fill=me(e.fill||null),e.dir=q(e.dir,-1),ke.splice(l=null==l?ke.length:l,0,e)},k.setBand=function(e,l){Le(ke[e],l)},k.delBand=function(e){null==e?ke.length=0:ke.splice(e,1)};const ni={focus:!0};function ii(e,l,t){let n=ve[l];t&&(e=e/y-(1==n.ori?Fl:Cl));let i=Al;1==n.ori&&(i=Yl,e=i-e),-1==n.dir&&(e=i-e);let o=n._min,s=o+e/i*(n._max-o),r=n.distr;return 3==r?re(10,s):4==r?((e,l=1)=>Q.sinh(e)*l)(s,n.asinh):100==r?n.bwd(s):s}function oi(e,l){T(Kn,s,qn.left=e),T(Kn,t,qn.width=l)}function si(e,l){T(Kn,i,qn.top=e),T(Kn,n,qn.height=l)}el&&vt&&gl(p,tl,(e=>{xt._lock||(wt(e),null!=ti&&Qn(null,ni,!0,Pi.setSeries))})),k.valToIdx=e=>O(e,g[0]),k.posToIdx=function(e,l){return O(ii(e,Me,l),g[0],Yt,Ft)},k.posToVal=ii,k.valToPos=(e,l,t)=>0==ve[l].ori?W(e,ve[l],t?Jl:Al,t?Vl:0):C(e,ve[l],t?ql:Yl,t?$l:0),k.setCursor=(e,l,t)=>{Hn=e.left,Rn=e.top,ci(null,l,t)};let ri=0==Ge.ori?oi:si,ui=1==Ge.ori?oi:si;function ai(e,l){if(null!=e&&(e.idxs?e.idxs.forEach(((e,l)=>{Xe[l]=e})):(e=>void 0===e)(e.idx)||Xe.fill(e.idx),Qe.idx=Xe[0]),el&&Qe.live){for(let e=0;de.length>e;e++)(e>0||1==M&&!fl)&&fi(e,Xe[e]);!function(){if(el&&Qe.live)for(let e=2==M?1:0;de.length>e;e++){if(0==e&&fl)continue;let l=Qe.values[e],t=0;for(let n in l)al[e][t++].firstChild.nodeValue=l[n]}}()}ht=!1,!1!==l&&zi("setLegend")}function fi(e,l){let t,n=de[e],i=0==e&&2==Ie?un:g[e];fl?t=n.values(k,e,l)??cl:(t=n.value(k,null==l?null:i[l],e,l),t=null==t?cl:{_:t}),Qe.values[e]=t}function ci(e,l,t){let n;Cn=Hn,Fn=Rn,[Hn,Rn]=xt.move(k,Hn,Rn),xt.left=Hn,xt.top=Rn,xt.show&&(zn&&A(zn,ne(Hn),0,Al,Yl),Dn&&A(Dn,0,ne(Rn),Al,Yl)),ei=he,li=null;let i=0==Ge.ori?Al:Yl,o=1==Ge.ori?Al:Yl;if(0>Hn||0==Wt||Yt>Ft){n=xt.idx=null;for(let e=0;de.length>e;e++){let l=yt[e];null!=l&&A(l,-10,-10,Al,Yl)}vt&&Qn(null,ni,!0,null==e&&Pi.setSeries),Qe.live&&(Xe.fill(n),ht=!0)}else{let e,l,t;1==M&&(e=0==Ge.ori?Hn:Rn,l=ii(e,Me),n=xt.idx=O(l,g[0],Yt,Ft),t=Ne(g[0][n],Ge,i,0));let s=-10,r=-10,u=0,a=0,f=!0,c="",h="";for(let e=2==M?1:0;de.length>e;e++){let d=de[e],p=Xe[e],m=null==p?null:1==M?g[e][p]:g[e][1][p],x=xt.dataIdx(k,e,n,l),w=null==x?null:1==M?g[e][x]:g[e][1][x];ht=ht||w!=m||x!=p,Xe[e]=x;let _=x==n?t:Ne(1==M?g[0][x]:g[e][0][x],Ge,i,0);if(e>0&&d.show){let l=null==w?-10:Ue(w,1==M?ve[d.scale]:ve[d.facets[1].scale],o,0);if(vt&&null!=w){let t=1==Ge.ori?Hn:Rn,n=le(bt.dist(k,e,x,l,t));if(ei>n){let l=bt.bias;if(0!=l){let i=ii(t,d.scale),o=0>i?-1:1;o!=(0>w?-1:1)||(1==o?1==l?i>w:w>i:1==l?w>i:i>w)||(ei=n,li=e)}else ei=n,li=e}}if(ht||kt){let t,n;0==Ge.ori?(t=_,n=l):(t=l,n=_);let i,o,d,p,m,g,x=!0,w=_t.bbox;if(null!=w){x=!1;let l=w(k,e);d=l.left,p=l.top,i=l.width,o=l.height}else d=t,p=n,i=o=_t.size(k,e);if(g=_t.fill(k,e),m=_t.stroke(k,e),kt)e!=li||ei>bt.prox||(s=d,r=p,u=i,a=o,f=x,c=g,h=m);else{let l=yt[e];null!=l&&(Mt[e]=d,St[e]=p,F(l,i,o,x),Y(l,g,m),A(l,ie(d),ie(p),Al,Yl))}}}}if(kt){let e=bt.prox;if(ht||(null==ti?e>=ei:ei>e||li!=ti)){let e=yt[0];Mt[0]=s,St[0]=r,F(e,u,a,f),Y(e,c,h),A(e,ie(s),ie(r),Al,Yl)}}}if(qn.show&&Bn)if(null!=e){let[l,t]=Pi.scales,[n,s]=Pi.match,[r,u]=e.cursor.sync.scales,a=e.cursor.drag;if($n=a._x,Jn=a._y,$n||Jn){let a,f,c,h,d,{left:p,top:m,width:g,height:x}=e.select,w=e.scales[r].ori,_=e.posToVal,b=null!=l&&n(l,r),v=null!=t&&s(t,u);b&&$n?(0==w?(a=p,f=g):(a=m,f=x),c=ve[l],h=Ne(_(a,r),c,i,0),d=Ne(_(a+f,r),c,i,0),ri(oe(h,d),le(d-h))):ri(0,i),v&&Jn?(1==w?(a=p,f=g):(a=m,f=x),c=ve[t],h=Ue(_(a,u),c,o,0),d=Ue(_(a+f,u),c,o,0),ui(oe(h,d),le(d-h))):ui(0,o)}else xi()}else{let e=le(Cn-Pn),l=le(Fn-An);if(1==Ge.ori){let t=e;e=l,l=t}$n=Vn.x&&e>=Vn.dist,Jn=Vn.y&&l>=Vn.dist;let t,n,s=Vn.uni;null!=s?$n&&Jn&&($n=e>=s,Jn=l>=s,$n||Jn||(l>e?Jn=!0:$n=!0)):Vn.x&&Vn.y&&($n||Jn)&&($n=Jn=!0),$n&&(0==Ge.ori?(t=Wn,n=Hn):(t=Yn,n=Rn),ri(oe(t,n),le(n-t)),Jn||ui(0,o)),Jn&&(1==Ge.ori?(t=Wn,n=Hn):(t=Yn,n=Rn),ui(oe(t,n),le(n-t)),$n||ri(0,i)),$n||Jn||(ri(0,0),ui(0,0))}if(Vn._x=$n,Vn._y=Jn,null==e){if(t){if(null!=Ai){let[e,l]=Pi.scales;Pi.values[0]=null!=e?ii(0==Ge.ori?Hn:Rn,e):null,Pi.values[1]=null!=l?ii(1==Ge.ori?Hn:Rn,l):null}Yi(f,k,Hn,Rn,Al,Yl,n)}if(vt){let e=t&&Pi.setSeries,l=bt.prox;null==ti?ei>l||Qn(li,ni,!0,e):ei>l?Qn(null,ni,!0,e):li!=ti&&Qn(li,ni,!0,e)}}ht&&(Qe.idx=n,ai()),!1!==l&&zi("setCursor")}k.setLegend=ai;let hi=null;function di(e=!1){e?hi=null:(hi=Z.getBoundingClientRect(),zi("syncRect",hi))}function pi(e,l,t,n,i,o){xt._lock||Bn&&null!=e&&0==e.movementX&&0==e.movementY||(mi(e,l,t,n,i,o,0,!1,null!=e),null!=e?ci(null,!0,!0):ci(l,!0,!1))}function mi(e,l,t,n,i,o,s,r,u){if(null==hi&&di(!1),wt(e),null!=e)t=e.clientX-hi.left,n=e.clientY-hi.top;else{if(0>t||0>n)return Hn=-10,void(Rn=-10);let[e,s]=Pi.scales,r=l.cursor.sync,[u,a]=r.values,[f,c]=r.scales,[h,d]=Pi.match,p=l.axes[0].side%2==1,m=0==Ge.ori?Al:Yl,g=1==Ge.ori?Al:Yl,x=p?o:i,w=p?i:o,_=p?n:t,b=p?t:n;if(t=null!=f?h(e,f)?H(u,ve[e],m,0):-10:m*(_/x),n=null!=c?d(s,c)?H(a,ve[s],g,0):-10:g*(b/w),1==Ge.ori){let e=t;t=n,n=e}}u&&(t>1&&Al-1>t||(t=ye(t,Al)),n>1&&Yl-1>n||(n=ye(n,Yl))),r?(Pn=t,An=n,[Wn,Yn]=xt.move(k,t,n)):(Hn=t,Rn=n)}Object.defineProperty(k,"rect",{get:()=>(null==hi&&di(!1),hi)});const gi={width:0,height:0,left:0,top:0};function xi(){Xn(gi,!1)}let wi,_i,bi,vi;function ki(e,l,t,n,i,o){Bn=!0,$n=Jn=Vn._x=Vn._y=!1,mi(e,l,t,n,i,o,0,!0,!1),null!=e&&(gl(h,b,yi,!1),Yi(c,k,Wn,Yn,Al,Yl,null));let{left:s,top:r,width:u,height:a}=qn;wi=s,_i=r,bi=u,vi=a,xi()}function yi(e,l,t,n,i,o){Bn=Vn._x=Vn._y=!1,mi(e,l,t,n,i,o,0,!1,!0);let{left:s,top:r,width:u,height:a}=qn,f=u>0||a>0,c=wi!=s||_i!=r||bi!=u||vi!=a;if(f&&c&&Xn(qn),Vn.setScale&&f&&c){let e=s,l=u,t=r,n=a;if(1==Ge.ori&&(e=r,l=a,t=s,n=u),$n&&Zn(Me,ii(e,Me),ii(e+l,Me)),Jn)for(let e in ve){let l=ve[e];e!=Me&&null==l.from&&l.min!=he&&Zn(e,ii(t+n,e),ii(t,e))}xi()}else xt.lock&&(xt._lock=!xt._lock,ci(null,!0,!1));null!=e&&(Sl(h,b),Yi(h,k,Hn,Rn,Al,Yl,null))}function Mi(e){xt._lock||(wt(e),cn(),xi(),null!=e&&Yi(m,k,Hn,Rn,Al,Yl,null))}function Si(){ge.forEach(qt),dt(k.width,k.height,!0)}G(x,v,Si);const Ei={};Ei.mousedown=ki,Ei.mousemove=pi,Ei.mouseup=yi,Ei.dblclick=Mi,Ei.setSeries=(e,l,t,n)=>{-1!=(t=(0,Pi.match[2])(k,l,t))&&Qn(t,n,!0,!1)},xt.show&&(gl(c,Z,ki),gl(f,Z,pi),gl(d,Z,(e=>{wt(e),di(!1)})),gl(p,Z,(function(e){if(xt._lock)return;wt(e);let l=Bn;if(Bn){let e,l,t=!0,n=!0,i=10;0==Ge.ori?(e=$n,l=Jn):(e=Jn,l=$n),e&&l&&(t=i>=Hn||Hn>=Al-i,n=i>=Rn||Rn>=Yl-i),e&&t&&(Hn=Wn>Hn?0:Al),l&&n&&(Rn=Yn>Rn?0:Yl),ci(null,!0,!0),Bn=!1}Hn=-10,Rn=-10,ci(null,!0,!0),l&&(Bn=l)})),gl(m,Z,Mi),Ct.add(k),k.syncRect=di);const Ti=k.hooks=u.hooks||{};function zi(e,l,t){In?On.push([e,l,t]):e in Ti&&Ti[e].forEach((e=>{e.call(null,k,l,t)}))}(u.plugins||[]).forEach((e=>{for(let l in e.hooks)Ti[l]=(Ti[l]||[]).concat(e.hooks[l])}));const Di=(e,l,t)=>t,Pi=Le({key:null,setSeries:!1,filters:{pub:_e,sub:_e},scales:[Me,de[1]?de[1].scale:null],match:[be,be,Di],values:[null,null]},xt.sync);2==Pi.match.length&&Pi.match.push(Di),xt.sync=Pi;const Ai=Pi.key,Wi=ut(Ai);function Yi(e,l,t,n,i,o,s){Pi.filters.pub(e,l,t,n,i,o,s)&&Wi.pub(e,l,t,n,i,o,s)}function Ci(){zi("init",u,g),fn(g||u.data,!1),Be[Me]?Un(Me,Be[Me]):cn(),ft=qn.show&&(qn.width>0||qn.height>0),at=ht=!0,dt(u.width,u.height)}return Wi.sub(k),k.pub=function(e,l,t,n,i,o,s){Pi.filters.sub(e,l,t,n,i,o,s)&&Ei[e](null,l,t,n,i,o,s)},k.destroy=function(){Wi.unsub(k),Ct.delete(k),ml.clear(),I(x,v,Si),L.remove(),tl?.remove(),zi("destroy")},de.forEach(Tt),ge.forEach((function(e,l){if(e._show=e.show,e.show){let t=ve[e.scale];null==t&&(e.scale=e.side%2?de[1].scale:Me,t=ve[e.scale]);let n=t.time;e.size=me(e.size),e.space=me(e.space),e.rotate=me(e.rotate),Ye(e.incrs)&&e.incrs.forEach((e=>{!Te.has(e)&&Te.set(e,ze(e))})),e.incrs=me(e.incrs||(2==t.distr?il:n?1==fe?xl:bl:ol)),e.splits=me(e.splits||(n&&1==t.distr?Je:3==t.distr?jl:4==t.distr?Ul:Nl)),e.stroke=me(e.stroke),e.grid.stroke=me(e.grid.stroke),e.ticks.stroke=me(e.ticks.stroke),e.border.stroke=me(e.border.stroke);let i=e.values;e.values=Ye(i)&&!Ye(i[0])?me(i):n?Ye(i)?Ml(Ve,yl(i,$e)):Fe(i)?function(e,l){let t=Ze(l);return(l,n)=>n.map((l=>t(e(l))))}(Ve,i):i||qe:i||Ll,e.filter=me(e.filter||(3>t.distr||10!=t.log?3==t.distr&&2==t.log?Xl:xe:Kl)),e.font=Jt(e.font),e.labelFont=Jt(e.labelFont),e._size=e.size(k,null,l,0),e._space=e._rotate=e._incrs=e._found=e._splits=e._values=null,e._size>0&&(zt[l]=!0,e._el=D("u-axis",K))}})),_?_ instanceof HTMLElement?(_.appendChild(L),Ci()):_(k,Ci):Ci(),k}Kt.assign=Le,Kt.fmtNum=Z,Kt.rangeNum=J,Kt.rangeLog=N,Kt.rangeAsinh=j,Kt.orient=at,Kt.pxRatio=y,Kt.join=function(e,l){if(function(e){let l=e[0][0],t=l.length;for(let n=1;e.length>n;n++){let i=e[n][0];if(i.length!=t)return!1;if(i!=l)for(let e=0;t>e;e++)if(i[e]!=l[e])return!1}return!0}(e)){let l=e[0].slice();for(let t=1;e.length>t;t++)l.push(...e[t].slice(1));return function(e,l=100){const t=e.length;if(1>=t)return!0;let n=0,i=t-1;for(;i>=n&&null==e[n];)n++;for(;i>=n&&null==e[i];)i--;if(n>=i)return!0;const o=se(1,te((i-n+1)/l));for(let l=e[n],t=n+o;i>=t;t+=o){const n=e[t];if(null!=n){if(l>=n)return!1;l=n}}return!0}(l[0])||(l=function(e){let l=e[0],t=l.length,n=Array(t);for(let e=0;n.length>e;e++)n[e]=e;n.sort(((e,t)=>l[e]-l[t]));let i=[];for(let l=0;e.length>l;l++){let o=e[l],s=Array(t);for(let e=0;t>e;e++)s[e]=o[n[e]];i.push(s)}return i}(l)),l}let t=new Set;for(let l=0;e.length>l;l++){let n=e[l][0],i=n.length;for(let e=0;i>e;e++)t.add(n[e])}let n=[Array.from(t).sort(((e,l)=>e-l))],i=n[0].length,o=new Map;for(let e=0;i>e;e++)o.set(n[0][e],e);for(let t=0;e.length>t;t++){let s=e[t],r=s[0];for(let e=1;s.length>e;e++){let u=s[e],a=Array(i).fill(void 0),f=l?l[t][e]:1,c=[];for(let e=0;u.length>e;e++){let l=u[e],t=o.get(r[e]);null===l?0!=f&&(a[t]=l,2==f&&c.push(t)):a[t]=l}Ne(a,c,i),n.push(a)}}return n},Kt.fmtDate=Ze,Kt.tzDate=function(e,l){let t;return"UTC"==l||"Etc/UTC"==l?t=new Date(+e+6e4*e.getTimezoneOffset()):l==Qe?t=e:(t=new Date(e.toLocaleString("en-US",{timeZone:l})),t.setMilliseconds(e.getMilliseconds())),t},Kt.sync=ut;{Kt.addGap=function(e,l,t){let n=e[e.length-1];n&&n[0]==l?n[1]=t:e.push([l,t])},Kt.clipGaps=dt;let e=Kt.paths={points:Tt};e.linear=At,e.stepped=function(e){const l=q(e.align,1),t=q(e.ascDesc,!1),n=q(e.alignGaps,0),i=q(e.extend,!1);return(e,o,s,r)=>at(e,o,((u,a,f,c,h,d,p,m,g,x,w)=>{let _=u.pxRound,{left:b,width:v}=e.bbox,k=e=>_(d(e,c,x,m)),M=e=>_(p(e,h,w,g)),S=0==c.ori?_t:bt;const E={stroke:new Path2D,fill:null,clip:null,band:null,gaps:null,flags:1},T=E.stroke,z=c.dir*(0==c.ori?1:-1);s=L(f,s,r,1),r=L(f,s,r,-1);let D=M(f[1==z?s:r]),P=k(a[1==z?s:r]),A=P,W=P;i&&-1==l&&(W=b,S(T,W,D)),S(T,P,D);for(let e=1==z?s:r;e>=s&&r>=e;e+=z){let t=f[e];if(null==t)continue;let n=k(a[e]),i=M(t);1==l?S(T,n,D):S(T,A,i),S(T,n,i),D=i,A=n}let Y=A;i&&1==l&&(Y=b+v,S(T,Y,D));let[C,F]=ft(e,o);if(null!=u.fill||0!=C){let l=E.fill=new Path2D(T),t=M(u.fillTo(e,o,u.min,u.max,C));S(l,Y,t),S(l,W,t)}if(!u.spanGaps){let i=[];i.push(...pt(a,f,s,r,z,k,n));let h=u.width*y/2,d=t||1==l?h:-h,p=t||-1==l?-h:h;i.forEach((e=>{e[0]+=d,e[1]+=p})),E.gaps=i=u.gaps(e,o,s,r,i),E.clip=dt(i,c.ori,m,g,x,w)}return 0!=F&&(E.band=2==F?[ht(e,o,s,r,T,-1),ht(e,o,s,r,T,1)]:ht(e,o,s,r,T,F)),E}))},e.bars=function(e){const l=q((e=e||Pe).size,[.6,he,1]),t=e.align||0,n=e.gap||0;let i=e.radius;i=null==i?[0,0]:"number"==typeof i?[i,0]:i;const o=me(i),s=1-l[0],r=q(l[1],he),u=q(l[2],1),a=q(e.disp,Pe),f=q(e.each,(()=>{})),{fill:c,stroke:h}=a;return(e,l,i,d)=>at(e,l,((p,m,g,x,w,_,b,v,k,M,S)=>{let E,T,z=p.pxRound,D=t,P=n*y,A=r*y,W=u*y;0==x.ori?[E,T]=o(e,l):[T,E]=o(e,l);const Y=x.dir*(0==x.ori?1:-1);let C,F,H,R=0==x.ori?vt:kt,G=0==x.ori?f:(e,l,t,n,i,o,s)=>{f(e,l,t,i,n,s,o)},I=q(e.bands,Ae).find((e=>e.series[0]==l)),O=p.fillTo(e,l,p.min,p.max,null!=I?I.dir:0),L=z(b(O,w,S,k)),N=M,j=z(p.width*y),U=!1,B=null,V=null,$=null,J=null;null==c||0!=j&&null==h||(U=!0,B=c.values(e,l,i,d),V=new Map,new Set(B).forEach((e=>{null!=e&&V.set(e,new Path2D)})),j>0&&($=h.values(e,l,i,d),J=new Map,new Set($).forEach((e=>{null!=e&&J.set(e,new Path2D)}))));let{x0:K,size:X}=a;if(null!=K&&null!=X){D=1,m=K.values(e,l,i,d),2==K.unit&&(m=m.map((l=>e.posToVal(v+l*M,x.key,!0))));let t=X.values(e,l,i,d);F=2==X.unit?t[0]*M:_(t[0],x,M,v)-_(0,x,M,v),N=Wt(m,g,_,x,M,v,N),H=N-F+P}else N=Wt(m,g,_,x,M,v,N),H=N*s+P,F=N-H;1>H&&(H=0),F/2>j||(j=0),5>H&&(z=ge);let Z=H>0;F=z(pe(N-H-(Z?j:0),W,A)),C=(0==D?F/2:D==Y?0:F)-D*Y*((0==D?P/2:0)+(Z?j/2:0));const Q={stroke:null,fill:null,clip:null,band:null,gaps:null,flags:0},ee=U?null:new Path2D;let le=null;if(null!=I)le=e.data[I.series[1]];else{let{y0:t,y1:n}=a;null!=t&&null!=n&&(g=n.values(e,l,i,d),le=t.values(e,l,i,d))}let ne=E*F,ie=T*F;for(let t=1==Y?i:d;t>=i&&d>=t;t+=Y){let n=g[t];if(null==n)continue;if(null!=le){let e=le[t]??0;if(n-e==0)continue;L=b(e,w,S,k)}let i=_(2!=x.distr||null!=a?m[t]:t,x,M,v),o=b(q(n,O),w,S,k),s=z(i-C),r=z(se(o,L)),u=z(oe(o,L)),f=r-u;if(null!=n){let i=0>n?ie:ne,o=0>n?ne:ie;U?(j>0&&null!=$[t]&&R(J.get($[t]),s,u+te(j/2),F,se(0,f-j),i,o),null!=B[t]&&R(V.get(B[t]),s,u+te(j/2),F,se(0,f-j),i,o)):R(ee,s,u+te(j/2),F,se(0,f-j),i,o),G(e,l,t,s-j/2,u,F+j,f)}}return j>0?Q.stroke=U?J:ee:U||(Q._fill=0==p.width?p._fill:p._stroke??p._fill,Q.width=0),Q.fill=U?V:ee,Q}))},e.spline=function(e){return function(e,l){const t=q(l?.alignGaps,0);return(l,n,i,o)=>at(l,n,((s,r,u,a,f,c,h,d,p,m,g)=>{let x,w,_,b=s.pxRound,v=e=>b(c(e,a,m,d)),k=e=>b(h(e,f,g,p));0==a.ori?(x=xt,_=_t,w=St):(x=wt,_=bt,w=Et);const y=a.dir*(0==a.ori?1:-1);i=L(u,i,o,1),o=L(u,i,o,-1);let M=v(r[1==y?i:o]),S=M,E=[],T=[];for(let e=1==y?i:o;e>=i&&o>=e;e+=y)if(null!=u[e]){let l=v(r[e]);E.push(S=l),T.push(k(u[e]))}const z={stroke:e(E,T,x,_,w,b),fill:null,clip:null,band:null,gaps:null,flags:1},D=z.stroke;let[P,A]=ft(l,n);if(null!=s.fill||0!=P){let e=z.fill=new Path2D(D),t=k(s.fillTo(l,n,s.min,s.max,P));_(e,S,t),_(e,M,t)}if(!s.spanGaps){let e=[];e.push(...pt(r,u,i,o,y,v,t)),z.gaps=e=s.gaps(l,n,i,o,e),z.clip=dt(e,a.ori,d,p,m,g)}return 0!=A&&(z.band=2==A?[ht(l,n,i,o,D,-1),ht(l,n,i,o,D,1)]:ht(l,n,i,o,D,A)),z}))}(Yt,e)}}return Kt}();
+
+</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" class="logo"><path d="M4 26h24M8 26l4-14h8l4 14M12 12l4-8 4 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>
+      <div>
+        <h1>Simulador de Conversor de Tração</h1>
+        <p class="sub" id="topo-label">3 kV DC · inversor 2 níveis</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="sim">Simulador</button>
+      <button class="tab" data-tab="lab">Laboratório Excel</button>
+    </nav>
+    <div class="status">
+      <span class="pill" id="phase-pill">DESLIGADO</span>
+      <span class="clock mono" id="clock">t = 0.0 s</span>
+    </div>
+  </header>
+
+  <main id="tab-sim" class="tabpane">
+    <section class="card scene-card">
+      <svg id="scene" viewBox="0 0 1200 190" preserveAspectRatio="xMidYMax slice"></svg>
+      <div class="scene-hud">
+        <div class="big mono" id="hud-speed">0</div><div class="unit">km/h</div>
+        <div class="hud-sub mono" id="hud-dist">0.00 km</div>
+      </div>
+      <div class="fault-banner" id="fault-banner" hidden></div>
+    </section>
+
+    <section class="row-main">
+      <div class="card schem-card">
+        <div class="card-head">
+          <h2>Esquema elétrico</h2>
+          <div class="legend">
+            <span><i style="background:var(--c-line)"></i>Catenária</span>
+            <span><i style="background:var(--c-dc)"></i>DC link</span>
+            <span><i style="background:var(--c-ac)"></i>Saída AC</span>
+            <span class="hint" id="schem-hint">Modo automático</span>
+          </div>
+        </div>
+        <svg id="schem" viewBox="0 0 1100 400"></svg>
+      </div>
+
+      <aside class="card side">
+        <div class="seg" id="mode-seg">
+          <button data-mode="auto" class="on">Automático</button>
+          <button data-mode="manual">Manual</button>
+        </div>
+        <div class="btns">
+          <button class="btn start" id="btn-start">▶ START</button>
+          <button class="btn stop" id="btn-stop">■ STOP</button>
+          <button class="btn emerg" id="btn-emerg">⚠ EMERGÊNCIA</button>
+          <button class="btn ghost" id="btn-reset">↺ RESET</button>
+        </div>
+
+        <div class="topo">
+          <label>Alimentação
+            <select id="sel-supply">
+              <option value="DC">Catenária 3 kV DC</option>
+              <option value="AC">25 kV 50 Hz AC (trafo + 4QC)</option>
+            </select>
+          </label>
+          <label>Inversor
+            <select id="sel-levels">
+              <option value="2">2 níveis</option>
+              <option value="3">3 níveis (NPC)</option>
+            </select>
+          </label>
+          <label>Modulação
+            <select id="sel-pwm">
+              <option value="excel">Excel (fórmulas da planilha)</option>
+              <option value="classic">Clássica (2L bipolar / 3L NPC-PD)</option>
+            </select>
+          </label>
+        </div>
+
+        <h3>Sequência de partida</h3>
+        <ol class="steps" id="steps"></ol>
+      </aside>
+    </section>
+
+    <section class="kpis">
+      <div class="card gauge-card"><svg id="g-speed"></svg></div>
+      <div class="card gauge-card"><svg id="g-freq"></svg></div>
+      <div class="card gauge-card"><svg id="g-vdc"></svg></div>
+      <div class="card gauge-card"><svg id="g-power"></svg></div>
+      <div class="card tiles">
+        <div class="tile"><span>Esforço trator</span><b class="mono" id="k-force">0 kN</b></div>
+        <div class="tile"><span>Corrente de fase</span><b class="mono" id="k-iph">0 A</b></div>
+        <div class="tile"><span>Corrente DC link</span><b class="mono" id="k-idc">0 A</b></div>
+        <div class="tile"><span>Índice de modulação</span><b class="mono" id="k-m">0.00</b></div>
+        <div class="tile"><span>THD U–V</span><b class="mono" id="k-thd">—</b></div>
+        <div class="tile"><span>Freio mecânico</span><b class="mono" id="k-mech">0 kN</b></div>
+      </div>
+    </section>
+
+    <section class="card drive">
+      <div class="drive-auto" id="drive-auto">
+        <label class="slider">Velocidade alvo <b class="mono" id="v-target">100 km/h</b>
+          <input type="range" id="in-target" min="0" max="140" step="5" value="100"></label>
+        <label class="slider">Escala de tempo <b class="mono" id="v-ts">1×</b>
+          <input type="range" id="in-ts" min="0" max="5" step="1" value="0"></label>
+      </div>
+      <div class="drive-manual" id="drive-manual" hidden>
+        <div class="seg small" id="ctrl-seg">
+          <button data-ctrl="throttle" class="on">Acelerador / freio</button>
+          <button data-ctrl="freq">Frequência + amplitude (V/f)</button>
+        </div>
+        <div id="ctrl-throttle" class="ctrl-group">
+          <label class="slider throttle">Manipulador <b class="mono" id="v-thr">0 %</b>
+            <input type="range" id="in-thr" min="-100" max="100" step="5" value="0">
+            <span class="scale"><em>FREIO</em><em>0</em><em>TRAÇÃO</em></span></label>
+          <button class="btn ghost small" id="btn-thr0">Neutro</button>
+        </div>
+        <div id="ctrl-freq" class="ctrl-group" hidden>
+          <label class="slider">Frequência do motor <b class="mono" id="v-fcmd">0.0 Hz</b>
+            <input type="range" id="in-fcmd" min="0" max="160" step="0.5" value="0"></label>
+          <label class="slider">Amplitude (índice m) <b class="mono" id="v-mcmd">0.50</b>
+            <input type="range" id="in-mcmd" min="0" max="1.15" step="0.01" value="0.5"></label>
+          <label class="check"><input type="checkbox" id="in-vf" checked> V/f automático</label>
+        </div>
+        <label class="slider">Escala de tempo <b class="mono" id="v-ts2">1×</b>
+          <input type="range" id="in-ts2" min="0" max="5" step="1" value="0"></label>
+      </div>
+      <label class="slider">Portadora (freq port) <b class="mono" id="v-fc">400 Hz</b>
+        <input type="range" id="in-fc" min="200" max="2000" step="50" value="400"></label>
+    </section>
+
+    <section class="charts">
+      <div class="card chart-card"><div class="card-head"><h2>DC link — tensão e corrente</h2><span class="note">histórico 60 s</span></div><div class="chart" id="c-dc"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>PWM — fase U</h2><span class="note" id="pwm-note">ref × portadora</span></div><div class="chart" id="c-pwm"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Tensão de linha U–V e correntes do motor</h2></div><div class="chart" id="c-uab"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Espectro harmônico U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Dinâmica do trem</h2><span class="note">histórico 120 s</span></div><div class="chart" id="c-train"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>DC link — zoom 40 ms (ripple)</h2><span class="note" id="rip-note">—</span></div><div class="chart" id="c-zoom"></div></div>
+    </section>
+
+    <section class="card log-card">
+      <div class="card-head"><h2>Registro de eventos</h2></div>
+      <ul class="log mono" id="log"></ul>
+    </section>
+  </main>
+
+  <main id="tab-lab" class="tabpane" hidden>
+    <p class="lab-intro">Reprodução direta das abas ocultas do <b>simulator.xlsm</b>, calculadas em Python com as mesmas fórmulas. Os controles têm os mesmos limites das barras de rolagem da planilha.</p>
+    <section class="lab-grid">
+      <div class="card lab-card">
+        <div class="card-head"><h2>PWM Level 2 / Level 3</h2>
+          <div class="seg small" id="lab-level"><button data-l="2" class="on">Level 2</button><button data-l="3">Level 3</button></div></div>
+        <div class="lab-ctrls">
+          <label class="slider">freq sen — B2 <b class="mono" id="lv-freq">21 Hz</b><input type="range" id="li-freq" min="10" max="25" step="1" value="21"></label>
+          <label class="slider">Amp — C2 <b class="mono" id="lv-amp">1500 V</b><input type="range" id="li-amp" min="1" max="1500" step="20" value="1500"></label>
+          <label class="slider">freq port — D2 <b class="mono" id="lv-fc">400 Hz</b><input type="range" id="li-fc" min="100" max="2000" step="50" value="400"></label>
+          <label class="slider">amp port — E2 <b class="mono" id="lv-ca">1500 V</b><input type="range" id="li-ca" min="100" max="3000" step="50" value="1500"></label>
+        </div>
+        <div class="chart" id="lc-pwm"></div>
+        <div class="formula mono" id="lf-pwm"></div>
+      </div>
+      <div class="card lab-card">
+        <div class="card-head"><h2>Pre-charge</h2></div>
+        <div class="lab-ctrls">
+          <label class="slider">Maximum Voltage — H1 <b class="mono" id="lv-pvmax">3000 V</b><input type="range" id="li-pvmax" min="500" max="4000" step="100" value="3000"></label>
+          <label class="slider">Resistance R — H2 <b class="mono" id="lv-pr">1000 Ω</b><input type="range" id="li-pr" min="50" max="3000" step="50" value="1000"></label>
+          <label class="slider">Capacitance C — H3 <b class="mono" id="lv-pc">1.0 mF</b><input type="range" id="li-pc" min="0.1" max="5" step="0.1" value="1"></label>
+          <label class="slider">Prozentual — H4 <b class="mono" id="lv-pp">95 %</b><input type="range" id="li-pp" min="0" max="100" step="1" value="95"></label>
+        </div>
+        <div class="chart" id="lc-pre"></div>
+        <div class="formula mono" id="lf-pre"></div>
+      </div>
+      <div class="card lab-card">
+        <div class="card-head"><h2>Ripple Simulator</h2></div>
+        <div class="lab-ctrls">
+          <label class="slider">Resistance — G2 <b class="mono" id="lv-rr">325 Ω</b><input type="range" id="li-rr" min="200" max="1000" step="5" value="325"></label>
+          <label class="slider">Capacitance — H3 (×10 µF) <b class="mono" id="lv-rc">4</b><input type="range" id="li-rc" min="1" max="10" step="1" value="4"></label>
+          <label class="slider">Max Voltage — G4 <b class="mono" id="lv-rv">3000 V</b><input type="range" id="li-rv" min="0" max="3000" step="10" value="3000"></label>
+          <label class="slider">Time Δt — H5 (×0.1 µs) <b class="mono" id="lv-rd">7</b><input type="range" id="li-rd" min="1" max="10" step="1" value="7"></label>
+        </div>
+        <div class="chart" id="lc-rip"></div>
+        <div class="formula mono" id="lf-rip"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+// Utilitários compartilhados
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function svgEl(tag, attrs = {}, parent) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+async function apiGet(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  return r.json();
+}
+
+function apiCmd(cmd, value) {
+  return fetch("/api/command", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cmd, value }),
+  });
+}
+
+function fmt(x, d = 0) {
+  return Number.isFinite(x) ? x.toFixed(d) : "—";
+}
+
+// Formata com unidade automática (k/M)
+function fmtSI(x, unit, d = 1) {
+  const a = Math.abs(x);
+  if (a >= 1e6) return (x / 1e6).toFixed(d) + " M" + unit;
+  if (a >= 1e3) return (x / 1e3).toFixed(d) + " k" + unit;
+  return x.toFixed(0) + " " + unit;
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+// Lê as cores definidas no :root
+const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+</script>
+<script>
+// Versão JavaScript de sim/excel_models.py + sim/engine.py, usada na versão
+// "arquivo único" (roda inteira no navegador, sem servidor Python).
+// Mantenha em sincronia com os arquivos Python: tests/test_js_port.py compara os dois.
+(function (global) {
+  "use strict";
+  const PI = Math.PI;
+  const clip = (x, a, b) => Math.min(b, Math.max(a, x));
+  const linspace = (a, b, n) => Array.from({ length: n }, (_, i) => a + (b - a) * i / n); // endpoint=False
+
+  // ======================================================== excel_models
+  const EM = {
+    EXCEL_PWM_DT: 1e-4,
+    EXCEL_PWM_ROWS: 1001,
+    sineReference: (t, f, amp, ph = 0) => t.map((x) => amp * Math.sin(2 * PI * f * x + ph)),
+    triangleCarrier: (t, fc, amp) => t.map((x) => { const y = x * fc; return amp * (1 - 2 * Math.abs((y - Math.floor(y)) - 0.5)); }),
+    pwmLevel2Excel(ref, car, V = 1500) {
+      return ref.map((r, i) => { const on = Math.abs(r) > Math.abs(car[i]); return r > 0 ? (on ? V : 0) : (on ? -V : 0); });
+    },
+    pwmLevel3Excel(ref, car, V = 1500) {
+      const h = V / 2;
+      return ref.map((r, i) => {
+        const on = Math.abs(r) > Math.abs(car[i]);
+        if (r > 0) return r >= h ? (on ? V : h) : (on ? h : 0);
+        return Math.abs(r) >= h ? (on ? -V : -h) : (on ? -h : 0);
+      });
+    },
+    pwmBipolar(ref, t, fc, V) {
+      const car = EM.triangleCarrier(t, fc, V);
+      return ref.map((r, i) => (r > 2 * car[i] - V ? V : -V));
+    },
+    pwmSheet(level, freq = 21, amp = 1500, fc = null, ca = 1500, dt = 1e-4, n = 1001) {
+      if (fc == null) fc = level === 2 ? 400 : 600;
+      const t = Array.from({ length: n }, (_, i) => i * dt);
+      const ref = EM.sineReference(t, freq, amp);
+      const carrier = EM.triangleCarrier(t, fc, ca);
+      const pwm = level === 2 ? EM.pwmLevel2Excel(ref, carrier, ca) : EM.pwmLevel3Excel(ref, carrier, ca);
+      return { t, ref, carrier, pwm };
+    },
+    prechargeSheet(vmax = 3000, r = 1000, c = 0.001, percent = 100, rows = 800) {
+      const t = Array.from({ length: rows }, (_, i) => i * 5 / 499);
+      const v = t.map((x) => Math.round(vmax * (1 - Math.exp(-x / (r * c)))));
+      const target_v = vmax * percent / 100;
+      const target_t = target_v >= vmax ? 8.5 : -r * c * Math.log(1 - target_v / vmax);
+      return { t, v, pct: v.map((x) => x / vmax * 100), target_t, target_v, tau: r * c };
+    },
+    rippleSheet(r = 325, cStep = 4, vmax = 3000, dtStep = 7, rows = 5000, step = 1e-5, fRect = 100) {
+      const cap = 1e-5 * cStep, tau = r * cap, decay = Math.exp(-(1e-7 * dtStep) / tau);
+      const t = Array.from({ length: rows }, (_, i) => i * step);
+      const b = t.map((x) => vmax * Math.abs(Math.sin(2 * PI * fRect * x)));
+      const c = t.map((x) => vmax * (1 - Math.exp(-x / tau))); c[0] = 0;
+      const d = new Array(rows).fill(0);
+      if (rows > 1) d[1] = b[1] > d[0] ? b[1] : d[0] * decay;
+      for (let i = 2; i < rows; i++) d[i] = b[i] > c[i] ? c[i] : d[i - 1] * decay;
+      const e = b.map((x, i) => (x > c[i] ? c[i] : x < d[i] ? d[i] : x)); e[0] = NaN;
+      return { t, rect: b, charge: c, cap: d, final: e, C: cap, tau };
+    },
+    excelGauges: (freq, amp) => ({ speed: freq * 4 / 100, power: amp / 1500 }),
+  };
+
+  // FFT radix-2 (n potência de 2) -> módulo do rfft
+  function rfftMag(x) {
+    const n = x.length, re = Float64Array.from(x), im = new Float64Array(n);
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) { [re[i], re[j]] = [re[j], re[i]]; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const a = i + k, b = a + len / 2;
+          const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+          const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+        }
+      }
+    }
+    const out = new Float64Array(n / 2 + 1);
+    for (let k = 0; k <= n / 2; k++) out[k] = Math.hypot(re[k], im[k]);
+    return out;
+  }
+
+  // ================================================================ engine
+  const STEPS = [
+    "Levantar pantógrafo", "Fechar disjuntor principal (MCB)", "Pré-carga do DC link (ChCt + Rpre)",
+    "Fechar contator de linha (CtL) / abrir ChCt", "Estabilização do DC link", "Conversão DC → AC (inversor)",
+    "Potência aos motores de tração",
+  ];
+
+  function newConfig() {
+    return {
+      supply: "DC", levels: 2, pwm_method: "excel", v_cat_dc: 3000, v_sec_peak_ac: 2700, vdc_ref_ac: 3000,
+      f_grid: 50, c_dc: 1e-3, r_pre: 1000, r_line: 0.08, l_line: 0.01, r_ac_eq: 0.5, r_dis: 10000,
+      precharge_pct: 95, inrush_trip_a: 600, fc_2l: 400, fc_3l: 600, mass_t: 200, rot_factor: 1.08,
+      f_max_kn: 120, f_brake_kn: 120, p_max_mw: 1.2, davis_a: 2000, davis_b: 30, davis_c: 6, v_max_kmh: 140,
+      gear: 4.8, wheel_d: 0.92, pole_pairs: 2, slip_nom_hz: 2, eta: 0.92, i_mag: 80, i_rated: 400,
+      f_inv_max: 160, target_kmh: 100, time_scale: 1,
+    };
+  }
+  const vnom = (c) => (c.supply === "DC" ? c.v_cat_dc : c.vdc_ref_ac);
+  const fcOf = (c) => (c.levels === 2 ? c.fc_2l : c.fc_3l);
+  const fRotor = (c, v) => v * c.gear / (PI * c.wheel_d) * c.pole_pairs;
+  const fBase = (c) => fRotor(c, c.p_max_mw * 1e6 / (c.f_max_kn * 1e3));
+
+  function newState() {
+    return {
+      t: 0, mode: "auto", phase: "OFF", phase_t: 0, panto_cmd: false, panto_pos: 0, mcb: false, chct: false,
+      ctl: false, qc_on: false, inv_on: false, flux: 0, vdc: 0, v_src: 0, i_src: 0, i_dc: 0, i_vlu: 0, p_vlu: 0,
+      speed: 0, pos: 0, f_s: 0, m: 0, force: 0, force_mech: 0, p_elec: 0, i_phase: 0, phi: 0, ctrl: "throttle",
+      throttle: 0, throttle_out: 0, f_cmd: 0, m_cmd: 0.5, vf_auto: true, steps: STEPS.map(() => 0), faults: [],
+      spark: 0, pc_done_t: -1, stop_req: false, emergency: false,
+    };
+  }
+
+  class Simulator {
+    constructor() { this.cfg = newConfig(); this.s = newState(); this.events = []; this.seq = 0; this.TICK = 0.02; }
+
+    start() {
+      if (this.timer) return;
+      let last = performance.now(), acc = 0;
+      this.timer = setInterval(() => {
+        const now = performance.now();
+        acc += Math.min(0.5, (now - last) / 1000);
+        last = now;
+        while (acc >= this.TICK) { this.step(this.TICK * this.cfg.time_scale); acc -= this.TICK; }
+      }, 20);
+    }
+
+    log(msg, level = "info") {
+      this.seq++;
+      this.events.push({ id: this.seq, t: Math.round(this.s.t * 100) / 100, msg, level });
+      if (this.events.length > 200) this.events.shift();
+    }
+    fault(msg) { if (!this.s.faults.includes(msg)) this.s.faults.push(msg); this.log(msg, "fault"); }
+    goto(p) { this.s.phase = p; this.s.phase_t = 0; }
+
+    // ------------------------------------------------------------ comandos
+    command(cmd, value) {
+      const s = this.s;
+      if (cmd === "start") {
+        if (s.faults.length) { this.log("Reconheça as falhas (RESET) antes de partir", "warn"); return; }
+        s.mode = "auto"; s.stop_req = false;
+        if (["OFF", "MANUAL", "SHUTDOWN"].includes(s.phase)) { this.goto("RAISE_PANTO"); this.log("START — sequência automática iniciada"); }
+        else if (s.phase === "BRAKING") this.goto("TRACTION");
+      } else if (cmd === "stop") {
+        if (s.mode === "auto" && !["OFF", "SHUTDOWN", "BRAKING"].includes(s.phase)) {
+          this.goto(s.inv_on ? "BRAKING" : "SHUTDOWN");
+          this.log("STOP — frenagem e desligamento");
+        } else if (s.mode === "manual") s.throttle = s.speed > 0.1 ? -1 : 0;
+      } else if (cmd === "emergency") this.emergency();
+      else if (cmd === "reset") this.reset(true);
+      else if (cmd === "mode") {
+        if (value === "manual" && s.mode !== "manual") {
+          s.mode = "manual"; s.phase = "MANUAL"; s.throttle = 0; s.f_cmd = s.f_s;
+          this.log("Modo MANUAL — controle os contatores clicando no esquema");
+        } else if (value === "auto" && s.mode !== "auto") {
+          s.mode = "auto";
+          if (s.inv_on && s.ctl && s.mcb && s.panto_pos >= 1) this.goto("TRACTION");
+          else if (s.vdc < 50 && !(s.mcb || s.ctl || s.chct || s.panto_cmd)) this.goto("OFF");
+          else this.goto("SHUTDOWN");
+          this.log("Modo AUTOMÁTICO");
+        }
+      } else if (cmd === "toggle") this.toggle(String(value));
+      else if (cmd === "set") this.set(value || {});
+      else if (cmd === "config") this.config(value || {});
+    }
+
+    set(kv) {
+      const s = this.s, c = this.cfg;
+      for (const [k, v] of Object.entries(kv)) {
+        if (k === "throttle") s.throttle = clip(+v, -1, 1);
+        else if (k === "f_cmd") s.f_cmd = clip(+v, 0, c.f_inv_max);
+        else if (k === "m_cmd") s.m_cmd = clip(+v, 0, 1.15);
+        else if (k === "vf_auto") s.vf_auto = !!v;
+        else if (k === "ctrl" && (v === "throttle" || v === "freq")) { if (v === "freq") s.f_cmd = s.f_s; s.ctrl = v; }
+        else if (k === "target_kmh") c.target_kmh = clip(+v, 0, c.v_max_kmh);
+        else if (k === "time_scale") c.time_scale = clip(+v, 0.25, 10);
+      }
+    }
+
+    config(kv) {
+      const c = this.cfg;
+      let topo = false;
+      for (const [k, v] of Object.entries(kv)) {
+        if (k === "supply" && (v === "DC" || v === "AC") && v !== c.supply) { c.supply = v; topo = true; }
+        else if (k === "levels" && (+v === 2 || +v === 3)) c.levels = +v;
+        else if (k === "pwm_method" && (v === "excel" || v === "classic")) c.pwm_method = v;
+        else if (["fc_2l", "fc_3l", "v_cat_dc", "precharge_pct", "r_pre", "c_dc", "mass_t", "p_max_mw"].includes(k)) c[k] = +v;
+      }
+      if (topo) {
+        this.reset(true);
+        this.log("Topologia de alimentação: " + (c.supply === "AC" ? "25 kV 50 Hz AC (trafo + 4QC)" : "3 kV DC"));
+      }
+    }
+
+    toggle(what) {
+      const s = this.s, c = this.cfg;
+      if (s.mode !== "manual") { this.log("Mude para o modo MANUAL para operar os contatores", "warn"); return; }
+      if (what === "panto") {
+        s.panto_cmd = !s.panto_cmd;
+        if (!s.panto_cmd && s.mcb && Math.abs(s.i_src) > 20) { this.log("Pantógrafo baixado sob carga — arco elétrico!", "warn"); s.spark = 1; }
+        this.log("Pantógrafo " + (s.panto_cmd ? "subindo" : "descendo"));
+      } else if (what === "mcb") {
+        if (!s.mcb && s.faults.length) { this.log("MCB bloqueado: existem falhas ativas (RESET)", "warn"); return; }
+        s.mcb = !s.mcb;
+        this.log("MCB " + (s.mcb ? "FECHADO" : "ABERTO"));
+        if (!s.mcb) s.qc_on = false;
+      } else if (what === "chct") {
+        s.chct = !s.chct;
+        this.log("ChCt (pré-carga) " + (s.chct ? "FECHADO" : "ABERTO"));
+      } else if (what === "ctl") {
+        if (!s.ctl) this.closeCtl();
+        else { s.ctl = false; s.qc_on = false; this.log("CtL ABERTO"); }
+      } else if (what === "qc") {
+        if (c.supply !== "AC") return;
+        if (!s.qc_on && !(s.ctl && s.mcb && s.panto_pos >= 1 && s.vdc > 0.8 * s.v_src)) { this.log("4QC exige CtL fechado e DC link carregado", "warn"); return; }
+        s.qc_on = !s.qc_on;
+        this.log("4QC " + (s.qc_on ? "LIGADO" : "DESLIGADO"));
+      } else if (what === "inv") {
+        if (!s.inv_on) {
+          if (s.vdc < 0.6 * vnom(c)) { this.log(`Inversor bloqueado: DC link em ${s.vdc.toFixed(0)} V (< 60 %)`, "warn"); return; }
+          s.inv_on = true; s.f_cmd = s.f_s;
+          this.log("Inversor HABILITADO (pulsos liberados)");
+        } else { s.inv_on = false; this.log("Inversor DESABILITADO"); }
+      }
+    }
+
+    closeCtl() {
+      const s = this.s, c = this.cfg;
+      s.ctl = true;
+      this.log("CtL FECHADO");
+      if (s.panto_pos >= 1 && s.mcb) {
+        const dv = s.v_src - s.vdc, ipk = dv / Math.sqrt(c.l_line / c.c_dc);
+        if (ipk > 100) this.log(`Corrente de inrush ao fechar CtL: ${ipk.toFixed(0)} A (ΔV = ${dv.toFixed(0)} V)`, ipk < c.inrush_trip_a ? "warn" : "fault");
+        if (ipk > c.inrush_trip_a) {
+          s.mcb = false; s.vdc += 0.5 * dv;
+          this.fault(`MCB desarmou por sobrecorrente de inrush (${ipk.toFixed(0)} A) — faça a pré-carga antes!`);
+        }
+      }
+    }
+
+    emergency() {
+      const s = this.s;
+      s.emergency = true;
+      s.inv_on = s.qc_on = s.ctl = s.chct = s.mcb = false;
+      s.panto_cmd = false; s.throttle = 0;
+      if (s.mode === "auto") s.phase = "EMERGENCY";
+      this.fault("EMERGÊNCIA — tudo aberto, freio mecânico máximo");
+    }
+
+    reset(keepMode) {
+      const mode = this.s.mode, pos = this.s.pos;
+      if (this.s.speed > 0.1) { this.log("RESET só é possível com o trem parado", "warn"); return; }
+      this.s = newState();
+      this.s.pos = pos;
+      if (keepMode) { this.s.mode = mode; this.s.phase = mode === "manual" ? "MANUAL" : "OFF"; }
+      this.log("RESET");
+    }
+
+    // ----------------------------------------------------------- sequência
+    sequence(dt) {
+      const s = this.s, c = this.cfg;
+      s.phase_t += dt;
+      const p = s.phase, pt = s.phase_t, st = s.steps;
+      if (p === "RAISE_PANTO") {
+        s.panto_cmd = true; st[0] = s.panto_pos * 100;
+        if (s.panto_pos >= 1 && pt > 3.2) { this.log("Pantógrafo em contato com a catenária"); this.goto("CLOSE_MCB"); }
+      } else if (p === "CLOSE_MCB") {
+        if (pt >= 1 && !s.mcb) { s.mcb = true; st[1] = 100; this.log("MCB FECHADO"); }
+        if (pt >= 2) this.goto("PRECHARGE");
+      } else if (p === "PRECHARGE") {
+        if (!s.chct) { s.chct = true; this.log(`ChCt FECHADO — pré-carga via Rpre = ${c.r_pre.toFixed(0)} Ω (τ = ${(c.r_pre * c.c_dc).toFixed(2)} s)`); }
+        const target = c.precharge_pct / 100 * s.v_src;
+        st[2] = Math.min(100, s.vdc / Math.max(target, 1) * 100);
+        if (s.vdc >= target) {
+          if (s.pc_done_t < 0) {
+            s.pc_done_t = pt;
+            this.log(`DC link pré-carregado: ${s.vdc.toFixed(0)} V (${(s.vdc / s.v_src * 100).toFixed(1)} %) em ${pt.toFixed(2)} s`);
+          }
+          if (pt - s.pc_done_t >= 0.5) { s.pc_done_t = -1; this.goto("CLOSE_CTL"); }
+        } else if (pt > 20) this.fault("Timeout de pré-carga (verifique Rpre / tensão da linha)");
+      } else if (p === "CLOSE_CTL") {
+        if (!s.ctl) { this.closeCtl(); st[3] = 50; }
+        if (pt >= 0.6 && s.chct) { s.chct = false; st[3] = 100; this.log("ChCt ABERTO — Rpre fora do circuito"); }
+        if (pt >= 1.2) this.goto("STABILIZE");
+      } else if (p === "STABILIZE") {
+        if (c.supply === "AC" && !s.qc_on) { s.qc_on = true; this.log(`4QC ligado — regulando DC link em ${c.vdc_ref_ac.toFixed(0)} V`); }
+        const err = c.supply === "AC" ? Math.abs(s.vdc - vnom(c)) / vnom(c) : 0;
+        st[4] = Math.min(100, pt / 1.5 * 100);
+        if (pt >= 1.5 && err < 0.02) { st[4] = 100; this.log(`DC link estável em ${s.vdc.toFixed(0)} V`); this.goto("INVERTER"); }
+      } else if (p === "INVERTER") {
+        if (!s.inv_on) { s.inv_on = true; this.log("Inversor habilitado — magnetizando motores"); }
+        st[5] = s.flux * 100;
+        if (s.flux >= 0.99) { this.goto("TRACTION"); this.log(`Tração liberada — alvo ${c.target_kmh.toFixed(0)} km/h`); }
+      } else if (p === "TRACTION") {
+        st[5] = 100; st[6] = 100;
+        const want = clip((c.target_kmh - s.speed * 3.6) / 4, -0.7, 1);
+        s.throttle += clip(want - s.throttle, -0.6 * dt, 0.6 * dt);
+      } else if (p === "BRAKING") {
+        st[6] = 0;
+        s.throttle += clip(-0.8 - s.throttle, -0.6 * dt, 0.6 * dt);
+        if (s.speed < 0.05) { s.throttle = 0; this.log("Trem parado"); this.goto("SHUTDOWN"); }
+      } else if (p === "SHUTDOWN") {
+        s.throttle = 0;
+        if (s.inv_on || s.qc_on) { s.inv_on = s.qc_on = false; this.log("Inversor e 4QC desligados"); }
+        if (pt >= 0.6 && s.ctl) { s.ctl = false; this.log("CtL ABERTO"); }
+        if (pt >= 1.4 && s.mcb) { s.mcb = false; this.log("MCB ABERTO"); }
+        if (pt >= 2.2) s.panto_cmd = false;
+        s.steps = pt >= 2.2 ? STEPS.map(() => 0) : st.map((x, i) => (i < 5 ? x : 0));
+        if (pt >= 2.2 && s.panto_pos <= 0) { this.log("Pantógrafo abaixado — sistema desligado"); this.goto("OFF"); }
+      }
+    }
+
+    // --------------------------------------------------------------- física
+    step(dt) {
+      const s = this.s, c = this.cfg;
+      s.t += dt;
+      if (s.mode === "auto") this.sequence(dt);
+      s.spark = Math.max(0, s.spark - dt * 2);
+      s.panto_pos = s.panto_cmd ? Math.min(1, s.panto_pos + dt / 3) : Math.max(0, s.panto_pos - dt / 2);
+      const live = s.panto_pos >= 1 && s.mcb;
+      if (s.mcb && s.panto_pos < 1 && s.panto_cmd === false && Math.abs(s.i_src) > 20) s.spark = 1;
+      s.v_src = live ? (c.supply === "DC" ? c.v_cat_dc : c.v_sec_peak_ac) : 0;
+      if (c.supply === "AC" && s.qc_on && !(live && s.ctl)) { s.qc_on = false; this.log("4QC desligado (perda de alimentação)", "warn"); }
+      s.flux = s.inv_on ? Math.min(1, s.flux + dt) : Math.max(0, s.flux - dt / 0.3);
+      this.traction(dt);
+      s.i_dc = s.vdc > 100 ? s.p_elec / s.vdc : 0;
+      this.dcLink(dt);
+      if (s.inv_on && s.vdc < 0.5 * vnom(c)) { s.inv_on = false; this.fault(`Subtensão no DC link (${s.vdc.toFixed(0)} V) — inversor bloqueado`); }
+      if (s.emergency && s.panto_pos <= 0 && s.speed <= 0) s.emergency = false;
+    }
+
+    mVf(f) { const fb = fBase(this.cfg), m0 = 0.03; return fb ? Math.min(1, m0 + (1 - m0) * f / fb) : 0; }
+
+    traction(dt) {
+      const s = this.s, c = this.cfg, v = s.speed, fr = fRotor(c, v), fmax = c.f_max_kn * 1e3, fb = fBase(c);
+      const vn = vnom(c), vratio = vn ? clip(s.vdc / vn, 0, 1.1) : 0;
+      const pAvail = c.p_max_mw * 1e6 * Math.min(1, vratio), fAvail = Math.min(fmax, pAvail / Math.max(v, 0.1));
+      let fe = 0, fm = 0;
+      const ok = s.inv_on && s.flux > 0.05;
+      if (s.mode === "manual" && s.ctrl === "freq") {
+        if (ok) s.f_s += clip(s.f_cmd - s.f_s, -10 * dt, 10 * dt);
+        else s.f_s = s.inv_on ? fr : 0;
+        const mvf = this.mVf(s.f_s);
+        s.m = s.vf_auto ? mvf : s.m_cmd;
+        const fluxRatio = clip(s.m / Math.max(mvf, 1e-3), 0, 1.3) * s.flux;
+        const slip = s.f_s - fr;
+        if (ok) {
+          fe = fmax * clip(slip / c.slip_nom_hz, -1.3, 1.3) * Math.min(1, fluxRatio) ** 2;
+          fe = clip(fe, -fAvail * 1.1, fAvail * 1.1);
+        }
+        s.throttle_out = fe / fmax;
+      } else {
+        let thr = s.throttle;
+        if (s.mode === "manual" && v * 3.6 >= c.v_max_kmh && thr > 0) thr = 0;
+        if (s.emergency) fm = -1.2 * c.mass_t * 1e3;
+        else if (ok && thr >= 0) fe = thr * fAvail * s.flux;
+        else if (thr < 0) {
+          const demand = -thr * c.f_brake_kn * 1e3, fade = clip(v / 1.5, 0, 1);
+          const ep = ok ? Math.min(demand, Math.min(c.f_brake_kn * 1e3, pAvail / Math.max(v, 0.1))) * fade : 0;
+          fe = -ep; fm = -(demand - ep);
+        }
+        s.throttle_out = thr;
+        const slip = ok ? c.slip_nom_hz * (fe / fmax) * Math.max(1, fr / fb) : 0;
+        if (s.inv_on) { s.f_s = ok ? Math.max(0, fr + slip) : 0; s.m = this.mVf(s.f_s) * s.flux; }
+        else { s.f_s = 0; s.m = 0; }
+      }
+      if (!s.inv_on) { s.f_s = 0; s.m = 0; fe = 0; }
+      const resist = v > 0.01 ? c.davis_a + c.davis_b * v + c.davis_c * v * v : 0;
+      const mEff = c.mass_t * 1e3 * c.rot_factor;
+      let ft = fe + fm - resist;
+      if (v <= 0 && ft < 0) ft = 0;
+      const vNew = Math.max(0, v + ft / mEff * dt);
+      s.pos += 0.5 * (v + vNew) * dt;
+      s.speed = vNew; s.force = fe; s.force_mech = fm;
+      const pm = fe * v, ploss = s.inv_on ? 12e3 * s.flux : 0;
+      s.p_elec = (pm >= 0 ? pm / c.eta : pm * c.eta) + ploss;
+      const fw = fb ? Math.max(1, s.f_s / fb) : 1;
+      const it = c.i_rated * (fe / fmax) * fw, im = s.inv_on ? c.i_mag * s.flux / fw : 0;
+      s.i_phase = Math.hypot(it, im);
+      s.phi = s.i_phase > 1 ? Math.atan2(im, it) : 0;
+    }
+
+    dcLink(dt) {
+      const s = this.s, c = this.cfg, C = c.c_dc, iL = s.i_dc, live = s.v_src > 0;
+      let r = null;
+      if (live && (s.ctl || s.chct)) {
+        if (s.ctl && c.supply === "DC") r = !s.chct ? c.r_line : (c.r_line * c.r_pre) / (c.r_line + c.r_pre);
+        else if (s.ctl && c.supply === "AC") r = c.r_ac_eq;
+        else r = c.r_pre;
+      }
+      const v0 = s.vdc;
+      if (c.supply === "AC" && s.qc_on) {
+        s.vdc = c.vdc_ref_ac + (s.vdc - c.vdc_ref_ac) * Math.exp(-dt / 0.15);
+        s.i_src = iL + C * (s.vdc - v0) / dt;
+      } else if (r !== null) {
+        const vInf = s.v_src - iL * r;
+        if (c.supply === "AC" && vInf < s.vdc) { s.vdc = Math.max(0, s.vdc - iL * dt / C); s.i_src = 0; }
+        else { s.vdc = vInf + (s.vdc - vInf) * Math.exp(-dt / (r * C)); s.i_src = (s.v_src - s.vdc) / r; }
+      } else {
+        s.vdc = Math.max(0, s.vdc * Math.exp(-dt / (c.r_dis * C)) - iL * dt / C);
+        s.i_src = 0;
+      }
+      const vLim = 1.17 * vnom(c);
+      if (s.vdc > vLim) {
+        s.p_vlu = 0.5 * C * (s.vdc ** 2 - vLim ** 2) / dt;
+        s.i_vlu = s.p_vlu / vLim;
+        s.vdc = vLim;
+      } else { s.p_vlu = 0; s.i_vlu = 0; }
+    }
+
+    // -------------------------------------------------------------- snapshot
+    snapshot(wave) {
+      const s = this.s, c = this.cfg;
+      const d = JSON.parse(JSON.stringify(s));
+      d.steps = s.steps.map((x) => Math.round(x * 10) / 10);
+      d.step_names = STEPS;
+      d.speed_kmh = s.speed * 3.6;
+      d.f_rotor = fRotor(c, s.speed);
+      d.p_src = c.supply === "DC" ? s.v_src * s.i_src : s.vdc * s.i_src;
+      d.cfg = { ...c, vnom: vnom(c), fc: fcOf(c), f_base: fBase(c) };
+      d.excel = EM.excelGauges(s.f_s, s.m * 1500);
+      d.events = this.events.slice(-40);
+      if (wave) d.wave = this.waves();
+      return d;
+    }
+
+    modulate(ref, t, car, V) {
+      const c = this.cfg;
+      if (c.pwm_method === "excel") return c.levels === 2 ? EM.pwmLevel2Excel(ref, car, V) : EM.pwmLevel3Excel(ref, car, V);
+      if (c.levels === 2) return EM.pwmBipolar(ref, t, fcOf(c), V);
+      return ref.map((r, i) => (r > car[i] ? V : r < car[i] - V ? -V : 0));
+    }
+
+    waves() {
+      const s = this.s, c = this.cfg, V = s.vdc / 2, f = s.f_s, fc = fcOf(c);
+      const W = f < 21 ? 0.1 : Math.min(0.1, Math.max(0.02, 2.1 / f)), n = 2000;
+      const t = linspace(0, W, n);
+      const amp = s.inv_on ? s.m * V : 0;
+      const refs = [0, 1, 2].map((k) => EM.sineReference(t, f, amp, -k * 2 * PI / 3));
+      const car = EM.triangleCarrier(t, fc, V);
+      const pwms = s.inv_on ? refs.map((r) => this.modulate(r, t, car, V)) : [0, 1, 2].map(() => new Array(n).fill(0));
+      const uab = pwms[0].map((x, i) => x - pwms[1][i]);
+      const ipk = s.i_phase * Math.SQRT2, L = 0.01, dtt = t[1] - t[0];
+      const cur = [0, 1, 2].map((k) => {
+        const base = t.map((x) => ipk * Math.sin(2 * PI * f * x - k * 2 * PI / 3 - s.phi));
+        if (s.inv_on && amp > 0) {
+          const rip = new Array(n);
+          let acc = 0;
+          for (let i = 0; i < n; i++) { acc += (pwms[k][i] - refs[k][i]) * dtt; rip[i] = acc / L; }
+          // rip -= média móvel de 51 amostras (np.convolve mode="same", bordas com zero)
+          const pre = new Float64Array(n + 1);
+          for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + rip[i];
+          for (let i = 0; i < n; i++) {
+            const a = Math.max(0, i - 25), b = Math.min(n, i + 26);
+            base[i] += 0.5 * (rip[i] - (pre[b] - pre[a]) / 51);
+          }
+        }
+        return base;
+      });
+      const spec = s.inv_on && f >= 1 ? this.spectrum(V, s.m * V, f) : null;
+      const [dct, dcv] = this.dcZoom();
+      const r = (a, nd = 1) => { const p = 10 ** nd; return a.map((x) => Math.round(x * p) / p); };
+      return {
+        t: r(t.map((x) => x * 1000), 3), ref: r(refs[0]), carrier: r(car), pwm: r(pwms[0]), uab: r(uab),
+        ia: r(cur[0]), ib: r(cur[1]), ic: r(cur[2]), spec, dct: r(dct.map((x) => x * 1000), 3), dcv: r(dcv),
+      };
+    }
+
+    spectrum(V, amp, f) {
+      const c = this.cfg, fc = fcOf(c);
+      const periods = Math.max(1, Math.round(0.2 * f)), T = periods / f, n = 16384;
+      const t = Array.from({ length: n }, (_, i) => i * T / n);
+      const car = EM.triangleCarrier(t, fc, V);
+      const pa = this.modulate(EM.sineReference(t, f, amp), t, car, V);
+      const pb = this.modulate(EM.sineReference(t, f, amp, -2 * PI / 3), t, car, V);
+      const mag = (x) => { const X = rfftMag(x); for (let i = 0; i < X.length; i++) X[i] *= 2 / n; X[0] /= 2; return X; };
+      const A = mag(pa.map((x, i) => x - pb[i])), P = mag(pa), k = periods;
+      const thd = (X) => {
+        if (X[k] < 1e-6) return null;
+        let s2 = 0;
+        for (let i = 1; i < X.length; i++) s2 += X[i] * X[i];
+        return Math.sqrt(Math.max(0, s2 - X[k] * X[k])) / X[k] * 100;
+      };
+      const df = 1 / T, nb = Math.floor(Math.min(3.3 * fc, (n / 2 - 1) * df) / df);
+      const fr = [], a = [];
+      for (let i = 1; i < nb; i++) { fr.push(Math.round(i * df * 100) / 100); a.push(Math.round(A[i] * 10) / 10); }
+      return { f: fr, a, thd_uab: thd(A), thd_pwm: thd(P), fund_uab: A[k], fund_pwm: P[k] };
+    }
+
+    dcZoom() {
+      const s = this.s, c = this.cfg, n = 2000, W = 0.04, dt = W / n, v0 = s.vdc;
+      const t = linspace(0, W, n);
+      if (c.supply === "AC" && s.v_src > 0 && (s.ctl || s.chct) && !s.qc_on) {
+        const r = s.ctl ? c.r_ac_eq : c.r_pre;
+        const vs = t.map((x) => s.v_src * Math.abs(Math.sin(2 * PI * c.f_grid * x)));
+        const v = new Array(n);
+        let x = v0;
+        for (let pass = 0; pass < 2; pass++) {
+          for (let i = 0; i < n; i++) {
+            x += (Math.max(0, vs[i] - x) / (r * c.c_dc) - s.i_dc / c.c_dc) * dt;
+            x = Math.max(x, 0);
+            v[i] = x;
+          }
+          if (r > 10) break;
+          x = Math.abs(v[n - 1] - v0) < 0.2 * Math.max(v0, 1) ? v[n - 1] : v0;
+        }
+        return [t, v];
+      }
+      if (c.supply === "AC" && s.qc_on) {
+        const w = 2 * PI * c.f_grid;
+        const dv = Math.min(Math.abs(s.p_elec) / (2 * w * c.c_dc * Math.max(v0, 1)), 0.3 * v0) + 0.004 * v0;
+        return [t, t.map((x) => v0 + dv * Math.sin(2 * w * x) + (s.inv_on ? 0.002 * v0 * Math.sin(2 * PI * 2 * fcOf(c) * x) : 0))];
+      }
+      if (v0 > 1 && s.inv_on) {
+        const a6 = 0.003 * v0 * Math.abs(s.p_elec) / (c.p_max_mw * 1e6);
+        return [t, t.map((x) => v0 + a6 * Math.sin(2 * PI * 6 * Math.max(s.f_s, 1) * x) + 0.0015 * v0 * Math.sin(2 * PI * 2 * fcOf(c) * x))];
+      }
+      return [t, new Array(n).fill(v0)];
+    }
+  }
+
+  // =============== API local: mesmas rotas do app.py, sem servidor
+  function makeLocalApi(sim) {
+    const num = (q, k, d, lo, hi) => { const v = parseFloat(q.get(k)); return clip(Number.isFinite(v) ? v : d, lo, hi); };
+    const r = (a, nd) => { const p = 10 ** nd; return Array.from(a, (x) => (Number.isFinite(x) ? Math.round(x * p) / p : 0)); };
+    return {
+      get(url) {
+        const [path, qs] = url.split("?");
+        const q = new URLSearchParams(qs || "");
+        if (path === "/api/state") return sim.snapshot(q.get("wave") === "1");
+        if (path === "/api/lab/pwm") {
+          const level = q.get("level") === "3" ? 3 : 2;
+          const o = EM.pwmSheet(level, num(q, "freq", 21, 0, 200), num(q, "amp", 1500, 0, 3000),
+            num(q, "fc", level === 2 ? 400 : 600, 50, 5000), num(q, "carrier_amp", 1500, 1, 3000));
+          return { t: r(o.t, 6), ref: r(o.ref, 2), carrier: r(o.carrier, 2), pwm: r(o.pwm, 2) };
+        }
+        if (path === "/api/lab/precharge") {
+          const o = EM.prechargeSheet(num(q, "vmax", 3000, 1, 50000), num(q, "r", 1000, 0.01, 1e6), num(q, "c", 0.001, 1e-6, 10), num(q, "percent", 100, 0, 100));
+          return { ...o, t: r(o.t, 4), v: r(o.v, 4), pct: r(o.pct, 4) };
+        }
+        if (path === "/api/lab/ripple") {
+          const o = EM.rippleSheet(num(q, "r", 325, 1, 10000), num(q, "c_step", 4, 0.1, 100), num(q, "vmax", 3000, 0, 50000), num(q, "dt_step", 7, 0.1, 100));
+          const half = (a, nd) => r(a.filter((_, i) => i % 2 === 0), nd);
+          return { t: half(o.t, 6), rect: half(o.rect, 2), charge: half(o.charge, 2), cap: half(o.cap, 2), final: half(o.final, 2), C: o.C, tau: o.tau };
+        }
+        throw new Error("rota desconhecida: " + url);
+      },
+      command(cmd, value) { sim.command(cmd, value); },
+    };
+  }
+
+  global.TractionSim = { EM, Simulator, makeLocalApi, rfftMag, STEPS };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+
+(function () {
+  const sim = new TractionSim.Simulator();
+  const api = TractionSim.makeLocalApi(sim);
+  sim.start();
+  window.apiGet = async (url) => api.get(url);
+  window.apiCmd = async (cmd, value) => { api.command(cmd, value); return { ok: true }; };
+})();
+
+</script>
+  <script>
+// Mostradores circulares em SVG (arco de 240°)
+class Gauge {
+  constructor(svg, { min, max, label, unit, digits = 0, color = "#22d3ee", zones = [], bipolar = false, mark }) {
+    Object.assign(this, { svg, min, max, label, unit, digits, color, bipolar });
+    svg.setAttribute("viewBox", "0 0 200 150");
+    this.cx = 100; this.cy = 92; this.r = 70;
+    this.a0 = -210; this.a1 = 30;
+    const track = svgEl("path", { d: this.arc(min, max), stroke: "#1d2940", "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
+    for (const z of zones) svgEl("path", { d: this.arc(z[0], z[1], this.r + 10), stroke: z[2], "stroke-width": 3, fill: "none", opacity: 0.9 }, svg);
+    // marcações
+    for (let i = 0; i <= 10; i++) {
+      const v = min + (max - min) * i / 10, a = this.ang(v) * Math.PI / 180;
+      const r1 = this.r - 12, r2 = this.r - (i % 5 === 0 ? 20 : 16);
+      svgEl("line", { x1: this.cx + r1 * Math.cos(a), y1: this.cy + r1 * Math.sin(a), x2: this.cx + r2 * Math.cos(a), y2: this.cy + r2 * Math.sin(a), stroke: "#3a4966", "stroke-width": 1.5 }, svg);
+      if (i % 5 === 0) {
+        const t = svgEl("text", { x: this.cx + (this.r - 30) * Math.cos(a), y: this.cy + (this.r - 30) * Math.sin(a) + 3, "text-anchor": "middle", fill: "#56627a", "font-size": 9, "font-family": "ui-monospace,monospace" }, svg);
+        t.textContent = Math.abs(v) >= 1000 ? (v / 1000) + "k" : v;
+      }
+    }
+    if (mark !== undefined) {
+      const a = this.ang(mark) * Math.PI / 180;
+      svgEl("line", { x1: this.cx + (this.r + 8) * Math.cos(a), y1: this.cy + (this.r + 8) * Math.sin(a), x2: this.cx + (this.r - 8) * Math.cos(a), y2: this.cy + (this.r - 8) * Math.sin(a), stroke: "#e6ecf5", "stroke-width": 2 }, svg);
+    }
+    this.val = svgEl("path", { stroke: color, "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
+    this.glow = svgEl("circle", { r: 5, fill: "#fff" }, svg);
+    this.txt = svgEl("text", { x: 100, y: 98, "text-anchor": "middle", fill: "#e6ecf5", "font-size": 26, "font-weight": 700, "font-family": "ui-monospace,monospace" }, svg);
+    const u = svgEl("text", { x: 100, y: 116, "text-anchor": "middle", fill: "#8b97ad", "font-size": 11 }, svg); u.textContent = unit;
+    const l = svgEl("text", { x: 100, y: 143, "text-anchor": "middle", fill: "#cfd8e6", "font-size": 12, "font-weight": 600 }, svg); l.textContent = label;
+    this.shown = bipolar ? 0 : min;
+    this.set(this.shown);
+  }
+  ang(v) { return this.a0 + (this.a1 - this.a0) * (clamp(v, this.min, this.max) - this.min) / (this.max - this.min); }
+  arc(v0, v1, r = this.r) {
+    const p = (v) => { const a = this.ang(v) * Math.PI / 180; return [this.cx + r * Math.cos(a), this.cy + r * Math.sin(a)]; };
+    const [x0, y0] = p(v0), [x1, y1] = p(v1);
+    const large = Math.abs(this.ang(v1) - this.ang(v0)) > 180 ? 1 : 0;
+    const sweep = this.ang(v1) > this.ang(v0) ? 1 : 0;
+    return `M${x0},${y0} A${r},${r} 0 ${large} ${sweep} ${x1},${y1}`;
+  }
+  set(v, color) {
+    this.shown += (v - this.shown) * 0.35; // suavização visual
+    const from = this.bipolar ? 0 : this.min;
+    const s = this.shown;
+    this.val.setAttribute("d", Math.abs(s - from) < 1e-9 ? "" : (s >= from ? this.arc(from, s) : this.arc(s, from)));
+    if (color) this.val.setAttribute("stroke", color);
+    const a = this.ang(s) * Math.PI / 180;
+    this.glow.setAttribute("cx", this.cx + this.r * Math.cos(a));
+    this.glow.setAttribute("cy", this.cy + this.r * Math.sin(a));
+    this.txt.textContent = fmt(v, this.digits);
+  }
+}
+
+</script>
+  <script>
+// Cena lateral animada: trem, catenária, pantógrafo e paisagem em paralaxe
+class TrainScene {
+  constructor(svg) {
+    this.svg = svg;
+    this.PX = 10; // pixels por metro (camada dos trilhos)
+    const d = svgEl("defs", {}, svg);
+    d.innerHTML = `
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#070b16"/><stop offset=".65" stop-color="#132341"/><stop offset="1" stop-color="#2a3557"/>
+      </linearGradient>
+      <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e9eef6"/><stop offset=".55" stop-color="#c3ccda"/><stop offset="1" stop-color="#8a95a8"/>
+      </linearGradient>
+      <radialGradient id="beam" cx="0" cy=".5" r="1">
+        <stop offset="0" stop-color="#fff7d6" stop-opacity=".55"/><stop offset="1" stop-color="#fff7d6" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+    svgEl("rect", { width: 1200, height: 190, fill: "url(#sky)" }, svg);
+    // estrelas
+    const stars = svgEl("g", { opacity: 0.7 }, svg);
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 70; i++) svgEl("circle", { cx: rnd() * 1200, cy: rnd() * 90, r: rnd() * 1.1 + 0.2, fill: "#cfe1ff" }, stars);
+    svgEl("circle", { cx: 1060, cy: 40, r: 14, fill: "#f4f1de", opacity: 0.85, filter: "url(#glow)" }, svg);
+    // montanhas (paralaxe lenta)
+    this.far = this.layer(svg, (x) => `M${x},150 L${x + 80},110 L${x + 170},135 L${x + 260},95 L${x + 380},140 L${x + 470},105 L${x + 600},150 L${x + 700},118 L${x + 830},140 L${x + 950},100 L${x + 1080},138 L${x + 1200},150 Z`, "#1a2744");
+    this.near = this.layer(svg, (x) => {
+      let p = `M${x},165 `;
+      for (let i = 0; i <= 24; i++) p += `Q${x + i * 50 + 25},${150 - (i * 37 % 13)} ${x + (i + 1) * 50},${160 - (i * 53 % 9)} `;
+      return p + `L${x + 1200},170 L${x},170 Z`;
+    }, "#121c33");
+    // postes da catenária + fio
+    this.masts = svgEl("g", {}, svg);
+    for (let i = 0; i < 10; i++) {
+      const x = i * 150;
+      svgEl("rect", { x: x, y: 6, width: 5, height: 160, fill: "#3b4762" }, this.masts);
+      svgEl("rect", { x: x - 2, y: 8, width: 70, height: 3, fill: "#3b4762" }, this.masts);
+      for (let k = 1; k < 5; k++) svgEl("line", { x1: x + k * 30, y1: 12, x2: x + k * 30, y2: 26, stroke: "#4a5878", "stroke-width": 1 }, this.masts);
+    }
+    svgEl("line", { x1: 0, y1: 12, x2: 1200, y2: 12, stroke: "#4a5878", "stroke-width": 1.2 }, svg);
+    this.wire = svgEl("line", { x1: 0, y1: 26, x2: 1200, y2: 26, stroke: "#b08a3e", "stroke-width": 2 }, svg);
+    // via
+    svgEl("rect", { x: 0, y: 168, width: 1200, height: 22, fill: "#1b2233" }, svg);
+    this.sleepers = svgEl("g", {}, svg);
+    for (let i = 0; i < 52; i++) svgEl("rect", { x: i * 24, y: 166, width: 12, height: 6, fill: "#3a3226" }, this.sleepers);
+    svgEl("rect", { x: 0, y: 163, width: 1200, height: 3, fill: "#9aa6ba" }, svg);
+
+    // farol (atrás do trem)
+    this.beam = svgEl("path", { d: "M902,128 L1200,96 L1200,165 Z", fill: "url(#beam)", opacity: 0 }, svg);
+    // trem
+    const tr = svgEl("g", {}, svg);
+    svgEl("path", { d: "M300,82 Q300,76 306,76 L840,76 Q872,76 892,100 L906,124 Q910,146 896,148 L306,148 Q300,148 300,142 Z", fill: "url(#body)", stroke: "#5b6780", "stroke-width": 1.5 }, tr);
+    svgEl("path", { d: "M852,84 Q874,86 888,104 L896,118 L856,118 Z", fill: "#0d1526", stroke: "#5b6780" }, tr); // para-brisa
+    svgEl("rect", { x: 300, y: 126, width: 600, height: 6, fill: "#0891b2" }, tr);
+    svgEl("rect", { x: 300, y: 134, width: 604, height: 2, fill: "#f43f5e" }, tr);
+    this.windows = [];
+    for (let x = 330; x < 830; x += 46) {
+      if (x > 520 && x < 560) { svgEl("rect", { x: x + 4, y: 88, width: 22, height: 54, rx: 2, fill: "#9aa6ba", stroke: "#5b6780" }, tr); continue; }
+      this.windows.push(svgEl("rect", { x, y: 90, width: 34, height: 22, rx: 3, fill: "#1b2438" }, tr));
+    }
+    svgEl("rect", { x: 520, y: 70, width: 130, height: 7, rx: 2, fill: "#6b778f" }, tr); // equipamento de teto
+    this.headlight = svgEl("circle", { cx: 899, cy: 130, r: 3.5, fill: "#3a4256" }, tr);
+    this.tail = svgEl("circle", { cx: 303, cy: 130, r: 3, fill: "#3a1a22" }, tr);
+    this.wheels = [];
+    for (const bx of [370, 430, 770, 830]) {
+      const g = svgEl("g", { transform: `translate(${bx},156)` }, tr);
+      svgEl("circle", { r: 11, fill: "#20283a", stroke: "#8a95a8", "stroke-width": 2 }, g);
+      const sp = svgEl("g", {}, g);
+      svgEl("line", { x1: -9, y1: 0, x2: 9, y2: 0, stroke: "#8a95a8", "stroke-width": 2 }, sp);
+      svgEl("line", { x1: 0, y1: -9, x2: 0, y2: 9, stroke: "#8a95a8", "stroke-width": 2 }, sp);
+      this.wheels.push(sp);
+    }
+    for (const bx of [400, 800]) svgEl("rect", { x: bx - 46, y: 146, width: 92, height: 8, rx: 3, fill: "#2b3448" }, tr);
+    // pantógrafo
+    this.panto = svgEl("g", {}, svg);
+    this.pArm = svgEl("path", { fill: "none", stroke: "#cfd8e6", "stroke-width": 3, "stroke-linejoin": "round", "stroke-linecap": "round" }, this.panto);
+    this.pHead = svgEl("path", { fill: "none", stroke: "#e6ecf5", "stroke-width": 3.5, "stroke-linecap": "round" }, this.panto);
+    svgEl("rect", { x: 562, y: 72, width: 46, height: 5, rx: 2, fill: "#3b4762" }, this.panto);
+    this.spark = svgEl("g", { filter: "url(#glow)", opacity: 0 }, svg);
+    for (let i = 0; i < 6; i++) svgEl("line", { x1: 0, y1: 0, x2: 0, y2: 0, stroke: "#bfe9ff", "stroke-width": 1.6 }, this.spark);
+    this.setPanto(0);
+  }
+
+  layer(svg, pathFn, fill) {
+    const g = svgEl("g", {}, svg);
+    svgEl("path", { d: pathFn(0), fill }, g);
+    svgEl("path", { d: pathFn(1200), fill }, g);
+    return g;
+  }
+
+  setPanto(p) {
+    // p = 0 (abaixado) .. 1 (em contato com o fio de contato, y = 26)
+    const base = 72, yh = 64 - 36 * p;
+    const knee = [622 - 10 * p, (base + yh) / 2 + 4];
+    this.pArm.setAttribute("d", `M572,${base} L${knee[0]},${knee[1]} L585,${yh + 2}`);
+    this.pHead.setAttribute("d", `M556,${yh - 3} Q560,${yh} 566,${yh} L604,${yh} Q610,${yh} 614,${yh - 3}`);
+    this.headY = yh;
+  }
+
+  update(s, pos) {
+    const W = 1200;
+    const mod = (a, b) => ((a % b) + b) % b;
+    this.far.setAttribute("transform", `translate(${-mod(pos * 0.6, W)},0)`);
+    this.near.setAttribute("transform", `translate(${-mod(pos * 2.2, W)},0)`);
+    this.masts.setAttribute("transform", `translate(${-mod(pos * this.PX, 150)},0)`);
+    this.sleepers.setAttribute("transform", `translate(${-mod(pos * this.PX, 24)},0)`);
+    const ang = (pos / 0.46) * 180 / Math.PI;
+    for (const w of this.wheels) w.setAttribute("transform", `rotate(${ang % 360})`);
+    this.setPanto(s.panto_pos);
+
+    const vnom = s.cfg.vnom;
+    const aux = s.vdc > 0.5 * vnom;
+    for (const w of this.windows) w.setAttribute("fill", aux ? "#f6dd9a" : "#1b2438");
+    this.headlight.setAttribute("fill", aux ? "#fffbe6" : "#3a4256");
+    this.tail.setAttribute("fill", aux ? "#ff3b5c" : "#3a1a22");
+    this.beam.setAttribute("opacity", aux ? 0.9 : 0);
+    const live = s.panto_pos >= 1;
+    this.wire.setAttribute("stroke", live && s.mcb ? "#f5a524" : "#b08a3e");
+
+    // faíscas no contato: arco ao baixar sob carga, ou cintilação proporcional à corrente
+    const iRatio = Math.abs(s.i_src) / 600;
+    const flick = s.spark > 0 ? s.spark : (live && Math.random() < iRatio * 0.25 ? 0.7 : 0);
+    this.spark.setAttribute("opacity", flick);
+    if (flick > 0) {
+      const lines = this.spark.children;
+      for (const l of lines) {
+        const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 9;
+        l.setAttribute("x1", 585); l.setAttribute("y1", this.headY);
+        l.setAttribute("x2", 585 + r * Math.cos(a)); l.setAttribute("y2", this.headY + r * Math.sin(a));
+      }
+    }
+  }
+}
+
+</script>
+  <script>
+// Esquema unifilar animado. Reconstruído quando a topologia muda (DC/AC, 2L/3L).
+class Schematic {
+  constructor(svg, onToggle) {
+    this.svg = svg;
+    this.onToggle = onToggle;
+    this.key = "";
+    this.rotor = 0;
+  }
+
+  build(supply, levels) {
+    const key = supply + levels;
+    if (key === this.key) return;
+    this.key = key;
+    const svg = this.svg;
+    svg.innerHTML = "";
+    this.w = {};
+    this.sw = {};
+    this.t = {};
+    const AC = supply === "AC";
+    const YP = 190, YN = 330;
+
+    const g = svgEl("g", {}, svg);
+    const text = (x, y, s, cls = "", anchor = "middle") => {
+      const e = svgEl("text", { x, y, class: cls, "text-anchor": anchor }, g);
+      e.textContent = s; return e;
+    };
+    const wire = (id, d) => {
+      const base = svgEl("path", { d, class: "wire" }, g);
+      const flow = svgEl("path", { d, class: "flow" }, g);
+      (this.w[id] ||= []).push({ base, flow });
+    };
+    const sw = (id, x, y, label, sub) => {
+      const grp = svgEl("g", { class: "sw clickable", "data-id": id }, g);
+      svgEl("rect", { x: x - 12, y: y - 34, width: 80, height: 50, rx: 8, class: "hit" }, grp);
+      svgEl("circle", { cx: x, cy: y, r: 4, class: "term" }, grp);
+      svgEl("circle", { cx: x + 56, cy: y, r: 4, class: "term" }, grp);
+      const lev = svgEl("line", { x1: x, y1: y, x2: x + 54, y2: y, class: "lever" }, grp);
+      lev.style.transformOrigin = `${x}px ${y}px`;
+      const l = svgEl("text", { x: x + 28, y: sub === "" ? y + 24 : y - 22, class: "ttl", "text-anchor": "middle" }, grp); l.textContent = label;
+      if (sub) { const s2 = svgEl("text", { x: x + 28, y: y + 26, "text-anchor": "middle", "font-size": 10 }, grp); s2.textContent = sub; }
+      grp.addEventListener("click", () => this.onToggle(id));
+      this.sw[id] = { grp, lev };
+    };
+
+    // catenária / fonte
+    wire("cat", "M20,36 L250,36");
+    text(250, 26, AC ? "Catenária 25 kV 50 Hz" : "Catenária 3 kV DC", "ttl", "end");
+    this.t.vline = text(20, 26, "", "val", "start");
+
+    // pantógrafo (símbolo)
+    const pg = svgEl("g", { class: "clickable", "data-id": "panto" }, g);
+    svgEl("rect", { x: 40, y: 34, width: 80, height: 84, rx: 8, class: "hit" }, pg);
+        this.pantoArm = svgEl("path", { class: "sym", "stroke-width": 3 }, pg);
+    this.pantoHead = svgEl("path", { class: "sym", "stroke-width": 3.5 }, pg);
+    svgEl("line", { x1: 60, y1: 112, x2: 100, y2: 112, class: "sym", "stroke-width": 4 }, pg);
+    pg.addEventListener("click", () => this.onToggle("panto"));
+    text(130, 100, "Pantógrafo", "ttl", "start");
+    this.t.panto = text(130, 116, "", "", "start");
+    wire("panto", `M80,114 L80,${YP} L140,${YP}`);
+
+    sw("mcb", 140, YP, "MCB", "disjuntor principal");
+    this.t.isrc = text(168, YP + 44, "", "val");
+
+    if (!AC) {
+      wire("mcb", `M196,${YP} L222,${YP} a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 L330,${YP}`);
+      text(262, YP - 22, "Filtro L", "ttl");
+    } else {
+      wire("mcb", `M196,${YP} L232,${YP}`);
+      svgEl("circle", { cx: 252, cy: YP, r: 20, class: "sym" }, g);
+      svgEl("circle", { cx: 278, cy: YP, r: 20, class: "sym" }, g);
+      text(265, YP - 30, "Trafo T1", "ttl");
+      wire("pri", `M252,${YP + 20} L252,${YN}`);
+      wire("sec", `M298,${YP} L330,${YP}`);
+      wire("sec2", `M278,${YP + 20} L278,295 L560,295`);
+    }
+    // contator de linha e ramo de pré-carga
+    wire("node", `M330,${YP} L380,${YP}`);
+    sw("ctl", 380, YP, "CtL", "contator de linha (K110)");
+    wire("ctl", `M436,${YP} L520,${YP}`);
+    wire("pre1", `M330,${YP} L330,262 L360,262`);
+    sw("chct", 360, 262, "ChCt", "");
+    wire("pre2", `M416,262 L430,262 l5,-8 l10,16 l10,-16 l10,16 l10,-16 l10,16 l5,-8 L520,262 L520,${YP}`);
+    text(465, 292, "Rpre (K111)", "", "middle");
+    this.t.rpre = text(465, 306, "", "val");
+
+    let xDC0 = 520;
+    if (AC) {
+      wire("ac2", `M520,${YP} L560,${YP}`);
+      const qg = svgEl("g", { class: "clickable", "data-id": "qc" }, g);
+      this.qcBox = svgEl("rect", { x: 560, y: 170, width: 80, height: 140, rx: 6, class: "box" }, qg);
+      svgEl("line", { x1: 560, y1: 310, x2: 640, y2: 170, class: "sym", "stroke-width": 1.5 }, qg);
+      const a = svgEl("text", { x: 578, y: 200, "font-size": 22, fill: "#cfd8e6" }, qg); a.textContent = "~";
+      const b = svgEl("text", { x: 606, y: 296, "font-size": 22, fill: "#cfd8e6" }, qg); b.textContent = "=";
+      const l = svgEl("text", { x: 600, y: 160, class: "ttl", "text-anchor": "middle" }, qg); l.textContent = "4QC (AC/DC)";
+      qg.addEventListener("click", () => this.onToggle("qc"));
+      xDC0 = 640;
+      wire("dcn", `M640,${YN} L860,${YN}`);
+    } else {
+      wire("dcn", `M80,${YN} L860,${YN}`);
+      // retorno pelo trilho
+      svgEl("path", { d: `M66,${YN} L94,${YN} M71,${YN + 6} L89,${YN + 6} M76,${YN + 12} L84,${YN + 12}`, class: "sym" }, g);
+      text(80, YN + 30, "trilho (retorno)");
+    }
+    wire("dcp", `M${xDC0},${YP} L860,${YP}`);
+
+    // DC link (1 ou 2 capacitores)
+    const cx = 700;
+    if (levels === 3) {
+      wire("cap", `M${cx},${YP} L${cx},226 M${cx},238 L${cx},292 M${cx},304 L${cx},${YN}`);
+      for (const y of [226, 238, 292, 304]) svgEl("line", { x1: cx - 18, y1: y, x2: cx + 18, y2: y, class: "sym", "stroke-width": 3 }, g);
+      wire("np", `M${cx},265 L860,265`);
+      text(838, 258, "NP", "", "middle");
+    } else {
+      wire("cap", `M${cx},${YP} L${cx},254 M${cx},266 L${cx},${YN}`);
+      for (const y of [254, 266]) svgEl("line", { x1: cx - 20, y1: y, x2: cx + 20, y2: y, class: "sym", "stroke-width": 3 }, g);
+    }
+    text(cx - 30, 212, "DC link", "ttl", "end");
+    svgEl("rect", { x: cx + 28, y: 200, width: 10, height: 120, rx: 3, fill: "#0e1626", stroke: "#2b3956" }, g);
+    this.capFill = svgEl("rect", { x: cx + 28, y: 320, width: 10, height: 0, rx: 3, fill: "url(#capgrad)", class: "capfill" }, g);
+    const defs = svgEl("defs", {}, svg);
+    defs.innerHTML = `<linearGradient id="capgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0e7490"/><stop offset="1" stop-color="#67e8f9"/></linearGradient>`;
+    this.t.vdc = text(cx, YN + 30, "", "val");
+
+    // VLU (chopper de frenagem)
+    const vx = 795;
+    wire("vlu", `M${vx},${YP} L${vx},214 M${vx},258 L${vx},${YN}`);
+    this.vluR = svgEl("rect", { x: vx - 8, y: 214, width: 16, height: 44, rx: 2, class: "sym" }, g);
+    text(vx, YN + 30, "VLU");
+
+    // inversor
+    const ig = svgEl("g", { class: "clickable", "data-id": "inv" }, g);
+    this.invBox = svgEl("rect", { x: 860, y: 170, width: 90, height: 180, rx: 6, class: "box" }, ig);
+    svgEl("line", { x1: 860, y1: 350, x2: 950, y2: 170, class: "sym", "stroke-width": 1.5 }, ig);
+    const e1 = svgEl("text", { x: 874, y: 206, "font-size": 22, fill: "#cfd8e6" }, ig); e1.textContent = "=";
+    const e2 = svgEl("text", { x: 918, y: 334, "font-size": 22, fill: "#cfd8e6" }, ig); e2.textContent = "~";
+    const il = svgEl("text", { x: 905, y: 160, class: "ttl", "text-anchor": "middle" }, ig);
+    il.textContent = levels === 3 ? "Inversor 3L NPC" : "Inversor 2L";
+    ig.addEventListener("click", () => this.onToggle("inv"));
+    this.t.idc = text(775, YP - 12, "", "val");
+
+    // motor
+    wire("mot", "M950,230 L1009,230 M950,260 L1006,260 M950,290 L1009,290");
+    svgEl("circle", { cx: 1040, cy: 260, r: 34, class: "box" }, g);
+    this.rotorG = svgEl("g", { transform: "translate(1040,260)" }, g);
+    for (let k = 0; k < 3; k++) svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -26, class: "rotor", transform: `rotate(${k * 120})`, opacity: 0.35 }, this.rotorG);
+    const mt = svgEl("text", { x: 1040, y: 265, "text-anchor": "middle", class: "ttl", "font-size": 15 }, g); mt.textContent = "M 3~";
+    text(1040, 212, "Motor de tração", "ttl");
+    this.t.mot = text(1040, 316, "", "val");
+    this.t.mot2 = text(1040, 332, "", "val");
+  }
+
+  setWire(id, cls, flow = 0, rev = false) {
+    for (const { base, flow: f } of this.w[id] || []) {
+      base.setAttribute("class", "wire " + (cls || ""));
+      f.classList.toggle("on", flow > 0);
+      f.classList.toggle("rev", rev);
+      if (flow > 0) f.style.animationDuration = clamp(1.6 - flow / 300, 0.22, 1.6) + "s";
+    }
+  }
+
+  setSwitch(id, closed) {
+    const s = this.sw[id];
+    if (!s) return;
+    s.grp.classList.toggle("closed", closed);
+    s.lev.style.transform = closed ? "rotate(0deg)" : "rotate(-28deg)";
+  }
+
+  update(s, dt) {
+    const c = s.cfg, AC = c.supply === "AC";
+    this.build(c.supply, c.levels);
+    this.svg.classList.toggle("manual", s.mode === "manual");
+
+    // pantógrafo
+    const yh = 78 - 40 * s.panto_pos;
+    this.pantoArm.setAttribute("d", `M66,112 L100,${(112 + yh) / 2} L76,${yh + 2}`);
+    this.pantoHead.setAttribute("d", `M58,${yh} L102,${yh}`);
+    this.t.panto.textContent = s.panto_pos >= 1 ? "em contato" : s.panto_cmd ? "subindo…" : s.panto_pos > 0 ? "descendo…" : "abaixado";
+
+    const pUp = s.panto_pos >= 1, up = pUp && s.mcb;
+    const iS = Math.abs(s.i_src), iD = Math.abs(s.i_dc);
+    const dcCls = s.vdc > 50 ? "dc" : "";
+    this.setWire("cat", "line");
+    this.setWire("panto", pUp ? "line" : "", up ? iS : 0, s.i_src < 0);
+    this.setWire("mcb", up ? "line" : "", up ? iS : 0, s.i_src < 0);
+    this.setWire("pri", up ? "line" : "");
+    this.setWire("sec", up ? "line" : "", up ? iS : 0);
+    this.setWire("sec2", up ? "line" : "");
+    this.setWire("node", up ? "line" : "", up && s.ctl ? iS : 0, s.i_src < 0);
+    this.setWire("ctl", up && s.ctl ? "line" : "", up && s.ctl ? iS : 0, s.i_src < 0);
+    this.setWire("pre1", up ? "line" : "", up && s.chct && !s.ctl ? iS : 0);
+    this.setWire("pre2", up && s.chct ? "line" : "", up && s.chct && !s.ctl ? iS : 0);
+    this.setWire("ac2", up && (s.ctl || s.chct) ? "line" : "", up ? iS : 0);
+    const iBus = AC ? iD : Math.max(iS, iD);
+    this.setWire("dcp", dcCls, iBus > 1 ? iBus : 0, s.i_dc < 0 && iS < 1);
+    this.setWire("dcn", dcCls);
+    this.setWire("cap", dcCls);
+    this.setWire("np", dcCls);
+    this.setWire("vlu", s.p_vlu > 0 ? "dc" : dcCls, s.i_vlu);
+    this.setWire("mot", s.inv_on ? "ac" : "", s.inv_on ? s.i_phase : 0, s.force < 0);
+
+    this.setSwitch("mcb", s.mcb);
+    this.setSwitch("ctl", s.ctl);
+    this.setSwitch("chct", s.chct);
+    if (this.qcBox) this.qcBox.setAttribute("class", "box" + (s.qc_on ? " live" : ""));
+    this.invBox.setAttribute("class", "box" + (s.inv_on ? " livea" : ""));
+    this.vluR.setAttribute("class", "sym" + (s.p_vlu > 0 ? " vlu-on" : ""));
+
+    const h = clamp(s.vdc / (1.2 * c.vnom), 0, 1) * 120;
+    this.capFill.setAttribute("y", 320 - h);
+    this.capFill.setAttribute("height", h);
+
+    this.t.vline.textContent = AC ? "U = 25 kV ~" : `U = ${fmt(c.v_cat_dc)} V`;
+    this.t.isrc.textContent = up ? `I = ${fmt(s.i_src)} A` : "";
+    this.t.rpre.textContent = `${fmt(c.r_pre)} Ω`;
+    this.t.vdc.textContent = `${fmt(s.vdc)} V`;
+    this.t.idc.textContent = s.inv_on ? `${fmt(s.i_dc)} A` : "";
+    const rpm = s.f_rotor / c.pole_pairs * 60;
+    this.t.mot.textContent = s.inv_on ? `${fmt(s.f_s, 1)} Hz` : "parado";
+    this.t.mot2.textContent = `${fmt(rpm)} rpm`;
+    this.rotor = (this.rotor + 360 * (s.f_rotor / c.pole_pairs) * dt * 0.25) % 360; // 1/4 da rotação real p/ ser visível
+    this.rotorG.setAttribute("transform", `translate(1040,260) rotate(${this.rotor})`);
+  }
+}
+
+</script>
+  <script>
+// Gráficos com uPlot (rápido o bastante para atualizar a ~10 Hz)
+const COL = {
+  dc: "#22d3ee", line: "#f5a524", ac: "#a78bfa", ok: "#34d399", bad: "#f43f5e",
+  grid: "#1a2540", axis: "#8b97ad", dim: "#56627a", ia: "#fb7185", ib: "#4ade80", ic: "#60a5fa", force: "#fb923c",
+};
+
+const axisX = (label) => ({ stroke: COL.axis, grid: { stroke: COL.grid, width: 1 }, ticks: { stroke: COL.grid }, label, labelSize: 18, size: 36 });
+const axisY = (label, scale, side = 3, extra = {}) => ({
+  scale, side, label, stroke: COL.axis, labelSize: 18, size: 56,
+  grid: { show: side === 3, stroke: COL.grid, width: 1 }, ticks: { stroke: COL.grid }, ...extra,
+});
+
+class Chart {
+  constructor(el, opts, nSeries) {
+    this.el = el;
+    const w = Math.max(300, el.clientWidth);
+    this.u = new uPlot({
+      width: w, height: opts.height || 230,
+      cursor: { drag: { x: true, y: false } },
+      legend: { live: true },
+      ...opts,
+    }, Array.from({ length: nSeries }, () => []), el);
+    new ResizeObserver(() => {
+      const w2 = Math.max(300, el.clientWidth);
+      if (Math.abs(w2 - this.u.width) > 2) this.u.setSize({ width: w2, height: this.u.height });
+    }).observe(el);
+  }
+  set(data, resetScales = true) { this.u.setData(data, resetScales); }
+}
+
+function makeCharts() {
+  const C = {};
+  C.dc = new Chart($("#c-dc"), {
+    scales: { x: { time: false }, V: { range: (u, a, b) => [0, Math.max(3600, b * 1.05)] }, A: { auto: true } },
+    axes: [axisX("t [s]"), axisY("V", "V"), axisY("A", "A", 1)],
+    series: [{ label: "t", value: (u, v) => v == null ? "—" : v.toFixed(1) + " s" },
+      { label: "Vdc", stroke: COL.dc, width: 2, scale: "V", fill: "rgba(34,211,238,.08)", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
+      { label: "V fonte", stroke: COL.line, width: 1.5, dash: [6, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
+      { label: "Limiar pré-carga", stroke: COL.dim, width: 1, dash: [3, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
+      { label: "I DC", stroke: COL.ia, width: 1.5, scale: "A", value: (u, v) => v == null ? "—" : v.toFixed(0) + " A" }],
+  }, 5);
+
+  C.pwm = new Chart($("#c-pwm"), {
+    scales: { x: { time: false }, y: { auto: true } },
+    axes: [axisX("t [ms]"), axisY("V", "y")],
+    series: [{ label: "t" },
+      { label: "PWM", stroke: COL.ac, width: 1.5, fill: "rgba(167,139,250,.18)", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "Referência", stroke: COL.line, width: 2 },
+      { label: "Portadora", stroke: "#64748b", width: 1 },
+      { label: "−Portadora", stroke: "#475569", width: 1 }],
+  }, 5);
+
+  C.uab = new Chart($("#c-uab"), {
+    scales: { x: { time: false }, V: { auto: true }, A: { auto: true } },
+    axes: [axisX("t [ms]"), axisY("V", "V"), axisY("A", "A", 1)],
+    series: [{ label: "t" },
+      { label: "U–V", stroke: "rgba(34,211,238,.55)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "iU", stroke: COL.ia, width: 2, scale: "A" },
+      { label: "iV", stroke: COL.ib, width: 2, scale: "A" },
+      { label: "iW", stroke: COL.ic, width: 2, scale: "A" }],
+  }, 5);
+
+  C.spec = new Chart($("#c-spec"), {
+    scales: { x: { time: false }, y: { auto: true } },
+    axes: [axisX("f [Hz]"), axisY("V (pico)", "y")],
+    series: [{ label: "f", value: (u, v) => v == null ? "—" : v.toFixed(1) + " Hz" },
+      { label: "|U–V|", stroke: COL.dc, fill: "rgba(34,211,238,.6)", width: 0, paths: uPlot.paths.bars({ size: [1, 3] }), points: { show: false },
+        value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" }],
+  }, 2);
+
+  C.train = new Chart($("#c-train"), {
+    scales: { x: { time: false }, v: { range: (u, a, b) => [0, Math.max(40, b * 1.1)] }, F: { auto: true }, P: { auto: true } },
+    axes: [axisX("t [s]"), axisY("km/h", "v"), axisY("kN", "F", 1), axisY("MW", "P", 1, { size: 44 })],
+    series: [{ label: "t", value: (u, v) => v == null ? "—" : v.toFixed(1) + " s" },
+      { label: "Velocidade", stroke: COL.ok, width: 2.5, scale: "v", value: (u, v) => v == null ? "—" : v.toFixed(1) + " km/h" },
+      { label: "Esforço elétrico", stroke: COL.force, width: 1.5, scale: "F", value: (u, v) => v == null ? "—" : v.toFixed(1) + " kN" },
+      { label: "Potência DC", stroke: COL.ac, width: 1.5, scale: "P", dash: [5, 3], value: (u, v) => v == null ? "—" : v.toFixed(2) + " MW" }],
+  }, 4);
+
+  C.zoom = new Chart($("#c-zoom"), {
+    scales: { x: { time: false }, y: { auto: true } },
+    axes: [axisX("t [ms]"), axisY("V", "y")],
+    series: [{ label: "t" }, { label: "Vdc", stroke: COL.dc, width: 1.8, fill: "rgba(34,211,238,.06)" }],
+  }, 2);
+  return C;
+}
+
+// Buffer circular simples para os históricos
+class History {
+  constructor(n, window) { this.n = n; this.window = window; this.cols = Array.from({ length: n }, () => []); }
+  push(row) {
+    const t = row[0], x = this.cols[0];
+    if (x.length && t < x[x.length - 1]) this.clear(); // reset da simulação
+    row.forEach((v, i) => this.cols[i].push(v));
+    while (x.length && x[0] < t - this.window) this.cols.forEach((c) => c.shift());
+  }
+  clear() { this.cols.forEach((c) => (c.length = 0)); }
+}
+
+</script>
+  <script>
+// Aba "Laboratório Excel": cada cartão chama a API que reproduz uma aba da planilha
+function initLab() {
+  const L = {};
+  L.pwm = new Chart($("#lc-pwm"), {
+    height: 260,
+    scales: { x: { time: false }, y: { auto: true } },
+    axes: [axisX("t [s]"), axisY("V", "y")],
+    series: [{ label: "A (t)" },
+      { label: "D — PWM", stroke: COL.ac, width: 1.5, fill: "rgba(167,139,250,.2)", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "B — senoide", stroke: COL.line, width: 2 },
+      { label: "C — portadora", stroke: "#64748b", width: 1 }],
+  }, 4);
+  L.pre = new Chart($("#lc-pre"), {
+    height: 260,
+    scales: { x: { time: false }, y: { auto: true } },
+    axes: [axisX("Time [s]"), axisY("Voltage (V)", "y")],
+    series: [{ label: "A (t)", value: (u, v) => v == null ? "—" : v.toFixed(2) + " s" },
+      { label: "B — tensão", stroke: COL.dc, width: 2.5, fill: "rgba(34,211,238,.08)" },
+      { label: "E2 — alvo", stroke: COL.line, width: 1.5, dash: [6, 4] },
+      { label: "D2 — instante", stroke: COL.bad, width: 0, points: { show: true, size: 10, fill: COL.bad } }],
+  }, 4);
+  L.rip = new Chart($("#lc-rip"), {
+    height: 260,
+    scales: { x: { time: false }, y: { auto: true } },
+    axes: [axisX("Tempo [s]"), axisY("V", "y")],
+    series: [{ label: "A (t)", value: (u, v) => v == null ? "—" : (v * 1000).toFixed(2) + " ms" },
+      { label: "E — curva final", stroke: COL.dc, width: 2.5 },
+      { label: "B — retificada", stroke: "rgba(245,165,36,.45)", width: 1 },
+      { label: "C — carga RC", stroke: COL.ok, width: 1, dash: [5, 4] }],
+  }, 4);
+
+  let level = 2;
+  const bind = (id, out, f, cb) => {
+    const el = $(id);
+    const h = () => { $(out).textContent = f(+el.value); cb(); };
+    el.addEventListener("input", h);
+    $(out).textContent = f(+el.value);
+  };
+
+  const runPwm = debounce(async () => {
+    const q = new URLSearchParams({ level, freq: $("#li-freq").value, amp: $("#li-amp").value, fc: $("#li-fc").value, carrier_amp: $("#li-ca").value });
+    const d = await apiGet("/api/lab/pwm?" + q);
+    L.pwm.set([d.t, d.pwm, d.ref, d.carrier]);
+    const g = { speed: $("#li-freq").value * 4 / 100, power: $("#li-amp").value / 1500 };
+    $("#lf-pwm").innerHTML = (level === 2
+      ? `D = IF(B>0, IF(|B|>|C|, <b>1500</b>, 0), IF(|B|>|C|, <b>−1500</b>, 0))`
+      : `D = IF(B>0, IF(B≥750, IF(|B|>|C|,<b>1500</b>,<b>750</b>), IF(|B|>|C|,<b>750</b>,0)),\n        IF(|B|≥750, IF(|B|>|C|,<b>−1500</b>,<b>−750</b>), IF(|B|>|C|,<b>−750</b>,0)))`)
+      + `\nB = Amp·sin(2π·f·t)   C = E2·(1 − 2·|frac(t·fc) − 0.5|)   passo 0.0001 s, 1001 linhas`
+      + `\nIndicadores da aba principal:  Speed = B2·4/100 = <b>${g.speed.toFixed(2)}</b>   Power = C2/1500 = <b>${g.power.toFixed(2)}</b>`;
+  }, 60);
+
+  const runPre = debounce(async () => {
+    const vmax = +$("#li-pvmax").value, r = +$("#li-pr").value, c = $("#li-pc").value / 1000, pct = +$("#li-pp").value;
+    const d = await apiGet("/api/lab/precharge?" + new URLSearchParams({ vmax, r, c, percent: pct }));
+    const tgt = d.t.map(() => d.target_v);
+    const mark = d.t.map(() => null);
+    let k = d.t.findIndex((t) => t >= d.target_t);
+    if (k >= 0) mark[k] = d.target_v;
+    L.pre.set([d.t, d.v, tgt, mark]);
+    $("#lf-pre").innerHTML = `B = ROUND(H1·(1 − e^(−t/(H2·H3))), 0)     τ = R·C = <b>${d.tau.toFixed(3)} s</b>`
+      + `\nD2 = IF(E2=H1, 8.5, −R·C·ln(1 − E2/H1))  →  tempo para ${pct}% (${d.target_v.toFixed(0)} V) = <b>${d.target_t.toFixed(3)} s</b>`
+      + `\nNo simulador o CtL fecha quando o DC link atinge o limiar de pré-carga (95 % por padrão).`;
+  }, 60);
+
+  const runRip = debounce(async () => {
+    const q = { r: $("#li-rr").value, c_step: $("#li-rc").value, vmax: $("#li-rv").value, dt_step: $("#li-rd").value };
+    const d = await apiGet("/api/lab/ripple?" + new URLSearchParams(q));
+    L.rip.set([d.t, d.final, d.rect, d.charge]);
+    $("#lf-rip").innerHTML = `B = G4·|sin(2π·100·t)|   C = G4·(1 − e^(−t/(G2·G3)))   D = IF(B>C, C, D₋₁·e^(−Δt/(G2·G3)))`
+      + `\nE = IF(B>C, C, IF(B&lt;D, D, B))      C = <b>${(d.C * 1e6).toFixed(0)} µF</b>   τ = <b>${(d.tau * 1000).toFixed(2)} ms</b>   passo 10 µs, 5000 linhas`;
+  }, 60);
+
+  bind("#li-freq", "#lv-freq", (v) => v + " Hz", runPwm);
+  bind("#li-amp", "#lv-amp", (v) => v + " V", runPwm);
+  bind("#li-fc", "#lv-fc", (v) => v + " Hz", runPwm);
+  bind("#li-ca", "#lv-ca", (v) => v + " V", runPwm);
+  bind("#li-pvmax", "#lv-pvmax", (v) => v + " V", runPre);
+  bind("#li-pr", "#lv-pr", (v) => v + " Ω", runPre);
+  bind("#li-pc", "#lv-pc", (v) => v.toFixed(1) + " mF", runPre);
+  bind("#li-pp", "#lv-pp", (v) => v + " %", runPre);
+  bind("#li-rr", "#lv-rr", (v) => v + " Ω", runRip);
+  bind("#li-rc", "#lv-rc", (v) => v + "  (" + v * 10 + " µF)", runRip);
+  bind("#li-rv", "#lv-rv", (v) => v + " V", runRip);
+  bind("#li-rd", "#lv-rd", (v) => v + "  (" + (v / 10).toFixed(1) + " µs)", runRip);
+
+  $$("#lab-level button").forEach((b) => b.addEventListener("click", () => {
+    level = +b.dataset.l;
+    $$("#lab-level button").forEach((x) => x.classList.toggle("on", x === b));
+    $("#li-fc").value = level === 2 ? 400 : 600;
+    $("#lv-fc").textContent = $("#li-fc").value + " Hz";
+    runPwm();
+  }));
+
+  L.refresh = () => { runPwm(); runPre(); runRip(); };
+  return L;
+}
+
+</script>
+  <script>
+// Aplicação principal: polling do estado da simulação (Python) e renderização
+const PHASES = {
+  OFF: ["DESLIGADO", ""], RAISE_PANTO: ["SUBINDO PANTÓGRAFO", "seq"], CLOSE_MCB: ["FECHANDO MCB", "seq"],
+  PRECHARGE: ["PRÉ-CARGA DC LINK", "seq"], CLOSE_CTL: ["FECHANDO CtL", "seq"], STABILIZE: ["ESTABILIZANDO", "seq"],
+  INVERTER: ["MAGNETIZANDO", "seq"], TRACTION: ["EM TRAÇÃO", "run"], BRAKING: ["FRENANDO", "seq"],
+  SHUTDOWN: ["DESLIGANDO", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGÊNCIA", "bad"],
+};
+const TS = [1, 2, 3, 5, 8, 10];
+
+const scene = new TrainScene($("#scene"));
+const schem = new Schematic($("#schem"), (id) => apiCmd("toggle", id));
+const charts = makeCharts();
+const lab = initLab();
+const G = {
+  speed: new Gauge($("#g-speed"), { min: 0, max: 160, label: "Velocidade", unit: "km/h", color: COL.ok, zones: [[140, 160, COL.bad]] }),
+  freq: new Gauge($("#g-freq"), { min: 0, max: 160, label: "Frequência do motor", unit: "Hz", digits: 1, color: COL.ac }),
+  vdc: new Gauge($("#g-vdc"), { min: 0, max: 4000, label: "Tensão DC link", unit: "V", color: COL.dc, zones: [[3510, 4000, COL.bad]], mark: 3000 }),
+  power: new Gauge($("#g-power"), { min: -1.5, max: 1.5, label: "Potência (tração / regeneração)", unit: "MW", digits: 2, color: COL.line, bipolar: true }),
+};
+const hDC = new History(5, 60);
+const hTrain = new History(4, 120);
+
+let S = null, tState = 0, lastEvent = 0, lastFrame = performance.now(), online = true;
+
+// ------------------------------------------------------------------ controles
+function bindControls() {
+  $$(".tab").forEach((b) => b.addEventListener("click", () => {
+    $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
+    $("#tab-sim").hidden = b.dataset.tab !== "sim";
+    $("#tab-lab").hidden = b.dataset.tab !== "lab";
+    if (b.dataset.tab === "lab") lab.refresh();
+    window.dispatchEvent(new Event("resize"));
+  }));
+  $$("#mode-seg button").forEach((b) => b.addEventListener("click", () => apiCmd("mode", b.dataset.mode)));
+  $("#btn-start").onclick = () => apiCmd("start");
+  $("#btn-stop").onclick = () => apiCmd("stop");
+  $("#btn-emerg").onclick = () => apiCmd("emergency");
+  $("#btn-reset").onclick = () => { apiCmd("reset"); };
+  $("#sel-supply").onchange = (e) => { hDC.clear(); apiCmd("config", { supply: e.target.value }); };
+  $("#sel-levels").onchange = (e) => apiCmd("config", { levels: +e.target.value });
+  $("#sel-pwm").onchange = (e) => apiCmd("config", { pwm_method: e.target.value });
+
+  const slide = (id, out, f, send) => {
+    const el = $(id);
+    const sendD = debounce(send, 40);
+    el.addEventListener("input", () => { $(out).textContent = f(+el.value); sendD(+el.value); });
+  };
+  slide("#in-target", "#v-target", (v) => v + " km/h", (v) => apiCmd("set", { target_kmh: v }));
+  slide("#in-ts", "#v-ts", (v) => TS[v] + "×", (v) => apiCmd("set", { time_scale: TS[v] }));
+  slide("#in-ts2", "#v-ts2", (v) => TS[v] + "×", (v) => apiCmd("set", { time_scale: TS[v] }));
+  slide("#in-thr", "#v-thr", (v) => (v > 0 ? "+" : "") + v + " %", (v) => apiCmd("set", { throttle: v / 100 }));
+  slide("#in-fcmd", "#v-fcmd", (v) => v.toFixed(1) + " Hz", (v) => apiCmd("set", { f_cmd: v }));
+  slide("#in-mcmd", "#v-mcmd", (v) => v.toFixed(2), (v) => apiCmd("set", { m_cmd: v }));
+  slide("#in-fc", "#v-fc", (v) => v + " Hz", (v) => apiCmd("config", { [S && S.cfg.levels === 3 ? "fc_3l" : "fc_2l"]: v }));
+  $("#in-vf").onchange = (e) => apiCmd("set", { vf_auto: e.target.checked });
+  $("#btn-thr0").onclick = () => { $("#in-thr").value = 0; $("#v-thr").textContent = "0 %"; apiCmd("set", { throttle: 0 }); };
+  $$("#ctrl-seg button").forEach((b) => b.addEventListener("click", () => apiCmd("set", { ctrl: b.dataset.ctrl })));
+
+  // atalhos de teclado (modo manual): ↑/↓ manipulador
+  window.addEventListener("keydown", (e) => {
+    if (!S || S.mode !== "manual" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    const el = $("#in-thr");
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      el.value = +el.value + (e.key === "ArrowUp" ? 10 : -10);
+      el.dispatchEvent(new Event("input"));
+      e.preventDefault();
+    }
+  });
+}
+
+function syncInput(el, v) {
+  if (document.activeElement !== el && +el.value !== v) el.value = v;
+}
+
+// ------------------------------------------------------------------ render
+function buildSteps(names) {
+  $("#steps").innerHTML = names.map((n) => `<li><span class="lbl">${n}</span><span class="pct">0%</span><span class="bar"><i></i></span></li>`).join("");
+}
+
+function renderState(s) {
+  const c = s.cfg;
+  // topo
+  const [ptxt, pcls] = PHASES[s.phase] || [s.phase, ""];
+  const pill = $("#phase-pill");
+  pill.textContent = s.faults.length ? "FALHA" : ptxt;
+  pill.className = "pill " + (s.faults.length ? "bad" : pcls);
+  $("#clock").textContent = `t = ${s.t.toFixed(1)} s`;
+  $("#topo-label").textContent = (c.supply === "AC" ? "25 kV 50 Hz AC · trafo + 4QC" : "3 kV DC")
+    + ` · inversor ${c.levels === 3 ? "3 níveis NPC" : "2 níveis"} · PWM ${c.pwm_method === "excel" ? "Excel" : "clássico"}`;
+
+  // modo e painéis
+  $$("#mode-seg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === s.mode));
+  $("#drive-auto").hidden = s.mode !== "auto";
+  $("#drive-manual").hidden = s.mode !== "manual";
+  $("#btn-start").disabled = s.mode !== "auto";
+  $("#schem-hint").textContent = s.mode === "manual" ? "Clique nos contatores, pantógrafo, 4QC e inversor" : "Modo automático";
+  $$("#ctrl-seg button").forEach((b) => b.classList.toggle("on", b.dataset.ctrl === s.ctrl));
+  $("#ctrl-throttle").hidden = s.ctrl !== "throttle";
+  $("#ctrl-freq").hidden = s.ctrl !== "freq";
+  if (document.activeElement !== $("#sel-supply")) $("#sel-supply").value = c.supply;
+  if (document.activeElement !== $("#sel-levels")) $("#sel-levels").value = String(c.levels);
+  if (document.activeElement !== $("#sel-pwm")) $("#sel-pwm").value = c.pwm_method;
+  syncInput($("#in-fc"), c.fc); $("#v-fc").textContent = c.fc + " Hz";
+  if (s.mode === "manual" && s.ctrl === "freq") {
+    if (document.activeElement !== $("#in-mcmd") && s.vf_auto) { $("#in-mcmd").value = s.m; $("#v-mcmd").textContent = s.m.toFixed(2); }
+    $("#in-mcmd").disabled = s.vf_auto;
+    $("#in-vf").checked = s.vf_auto;
+  }
+  if (s.mode === "manual" && s.ctrl === "throttle") {
+    syncInput($("#in-thr"), Math.round(s.throttle * 100));
+    $("#v-thr").textContent = (s.throttle > 0 ? "+" : "") + Math.round(s.throttle * 100) + " %";
+  }
+
+  // sequência
+  if (!$("#steps").children.length) buildSteps(s.step_names);
+  const lis = $("#steps").children;
+  let activeSet = false;
+  s.steps.forEach((p, i) => {
+    const li = lis[i];
+    li.querySelector("i").style.width = p + "%";
+    li.querySelector(".pct").textContent = Math.round(p) + "%";
+    li.classList.toggle("done", p >= 100);
+    const act = !activeSet && p < 100 && s.mode === "auto" && !["OFF", "EMERGENCY"].includes(s.phase);
+    li.classList.toggle("active", act);
+    if (act) activeSet = true;
+  });
+
+  // KPIs
+  $("#k-force").textContent = `${(s.force / 1e3).toFixed(1)} kN`;
+  $("#k-iph").textContent = `${s.i_phase.toFixed(0)} A rms`;
+  $("#k-idc").textContent = `${s.i_dc.toFixed(0)} A`;
+  $("#k-m").textContent = s.m.toFixed(2);
+  $("#k-mech").textContent = `${(-s.force_mech / 1e3).toFixed(1)} kN`;
+  const sp = s.wave && s.wave.spec;
+  $("#k-thd").textContent = sp && sp.thd_uab != null ? `${sp.thd_uab.toFixed(1)} %` : "—";
+  $("#hud-dist").textContent = `${(s.pos / 1000).toFixed(2)} km · ${PHASES[s.phase]?.[0] || s.phase}`;
+
+  // falhas
+  const fb = $("#fault-banner");
+  fb.hidden = !s.faults.length;
+  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Pressione RESET com o trem parado.</small>";
+
+  // log
+  const newEv = s.events.filter((e) => e.id > lastEvent);
+  if (s.events.length && s.events[s.events.length - 1].id < lastEvent) { $("#log").innerHTML = ""; lastEvent = 0; }
+  for (const e of newEv) {
+    const li = document.createElement("li");
+    li.className = e.level;
+    li.innerHTML = `<span>${e.t.toFixed(2)} s</span>${e.msg}`;
+    $("#log").prepend(li);
+    lastEvent = e.id;
+  }
+  while ($("#log").children.length > 150) $("#log").lastChild.remove();
+
+  // históricos
+  hDC.push([s.t, s.vdc, s.v_src, s.v_src > 0 ? s.v_src * c.precharge_pct / 100 : null, s.i_dc]);
+  hTrain.push([s.t, s.speed_kmh, (s.force + s.force_mech) / 1e3, s.p_elec / 1e6]);
+  charts.dc.set(hDC.cols);
+  charts.train.set(hTrain.cols);
+
+  // formas de onda calculadas em Python
+  const w = s.wave;
+  if (w) {
+    const V = s.vdc / 2;
+    let up = w.carrier, lo;
+    if (c.pwm_method === "excel") lo = w.carrier.map((x) => -x);
+    else if (c.levels === 2) { up = w.carrier.map((x) => 2 * x - V); lo = w.t.map(() => null); }
+    else lo = w.carrier.map((x) => x - V);
+    charts.pwm.set([w.t, w.pwm, w.ref, up, lo]);
+    $("#pwm-note").textContent = `${c.pwm_method === "excel" ? "Excel" : "clássica"} · ${c.levels}L · portadora ${c.fc} Hz · f = ${s.f_s.toFixed(1)} Hz · m = ${s.m.toFixed(2)}`;
+    charts.uab.set([w.t, w.uab, w.ia, w.ib, w.ic]);
+    if (w.spec) {
+      charts.spec.set([w.spec.f, w.spec.a]);
+      $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD U–V ${w.spec.thd_uab.toFixed(1)} % · THD fase ${w.spec.thd_pwm.toFixed(1)} %`;
+    } else {
+      charts.spec.set([[], []]);
+      $("#spec-note").textContent = "inversor parado";
+    }
+    charts.zoom.set([w.dct, w.dcv]);
+    const mn = Math.min(...w.dcv), mx = Math.max(...w.dcv);
+    $("#rip-note").textContent = `ripple pico-a-pico ${(mx - mn).toFixed(0)} V` + (c.supply === "AC" ? " · 100 Hz (2× rede)" : "");
+  }
+}
+
+function frame(now) {
+  const dt = Math.min(0.1, (now - lastFrame) / 1000);
+  lastFrame = now;
+  if (S) {
+    const ts = S.cfg.time_scale;
+    const pos = S.pos + S.speed * Math.min(0.3, (now - tState) / 1000) * ts; // extrapola entre amostras
+    scene.update(S, pos);
+    schem.update(S, dt * ts);
+    $("#hud-speed").textContent = S.speed_kmh.toFixed(0);
+    G.speed.set(S.speed_kmh);
+    G.freq.set(S.f_s);
+    G.vdc.set(S.vdc);
+    G.power.set(S.p_elec / 1e6, S.p_elec < 0 ? "#4ade80" : COL.line);
+  }
+  requestAnimationFrame(frame);
+}
+
+async function poll() {
+  try {
+    const s = await apiGet("/api/state?wave=1");
+    S = s; tState = performance.now();
+    if (!online) { online = true; $("#fault-banner").hidden = true; }
+    renderState(s);
+  } catch (e) {
+    online = false;
+    const fb = $("#fault-banner");
+    fb.hidden = false;
+    fb.textContent = "Sem conexão com o servidor Python (app.py). Ele está rodando?";
+  }
+  setTimeout(poll, 90);
+}
+
+bindControls();
+requestAnimationFrame(frame);
+poll();
+
+</script>
+</body>
+</html>
