@@ -1,6 +1,7 @@
-// Versão JavaScript de sim/excel_models.py + sim/engine.py, usada na versão
-// "arquivo único" (roda inteira no navegador, sem servidor Python).
-// Mantenha em sincronia com os arquivos Python: tests/test_js_port.py compara os dois.
+// JavaScript version of sim/excel_models.py + sim/engine.py, used by the
+// single-file build (runs entirely in the browser, no Python server).
+// Keep in sync with the Python files: tests/test_js_port.py compares both.
+// Author: Rafael Tavares
 (function (global) {
   "use strict";
   const PI = Math.PI;
@@ -57,7 +58,7 @@
     excelGauges: (freq, amp) => ({ speed: freq * 4 / 100, power: amp / 1500 }),
   };
 
-  // FFT radix-2 (n potência de 2) -> módulo do rfft
+  // Radix-2 FFT (n power of 2) -> rfft magnitude
   function rfftMag(x) {
     const n = x.length, re = Float64Array.from(x), im = new Float64Array(n);
     for (let i = 1, j = 0; i < n; i++) {
@@ -85,9 +86,9 @@
 
   // ================================================================ engine
   const STEPS = [
-    "Levantar pantógrafo", "Fechar disjuntor principal (MCB)", "Pré-carga do DC link (ChCt + Rpre)",
-    "Fechar contator de linha (CtL) / abrir ChCt", "Estabilização do DC link", "Conversão DC → AC (inversor)",
-    "Potência aos motores de tração",
+    "Raise pantograph", "Close main circuit breaker (MCB)", "Pre-charge DC link (ChCt + Rpre)",
+    "Close line contactor (CtL) / open ChCt", "DC link stabilization", "DC → AC conversion (inverter)",
+    "Power to traction motors",
   ];
 
   function newConfig() {
@@ -137,31 +138,31 @@
     fault(msg) { if (!this.s.faults.includes(msg)) this.s.faults.push(msg); this.log(msg, "fault"); }
     goto(p) { this.s.phase = p; this.s.phase_t = 0; }
 
-    // ------------------------------------------------------------ comandos
+    // ------------------------------------------------------------ commands
     command(cmd, value) {
       const s = this.s;
       if (cmd === "start") {
-        if (s.faults.length) { this.log("Reconheça as falhas (RESET) antes de partir", "warn"); return; }
+        if (s.faults.length) { this.log("Acknowledge the faults (RESET) before starting", "warn"); return; }
         s.mode = "auto"; s.stop_req = false;
-        if (["OFF", "MANUAL", "SHUTDOWN"].includes(s.phase)) { this.goto("RAISE_PANTO"); this.log("START — sequência automática iniciada"); }
+        if (["OFF", "MANUAL", "SHUTDOWN"].includes(s.phase)) { this.goto("RAISE_PANTO"); this.log("START — automatic sequence started"); }
         else if (s.phase === "BRAKING") this.goto("TRACTION");
       } else if (cmd === "stop") {
         if (s.mode === "auto" && !["OFF", "SHUTDOWN", "BRAKING"].includes(s.phase)) {
           this.goto(s.inv_on ? "BRAKING" : "SHUTDOWN");
-          this.log("STOP — frenagem e desligamento");
+          this.log("STOP — braking and shutdown");
         } else if (s.mode === "manual") s.throttle = s.speed > 0.1 ? -1 : 0;
       } else if (cmd === "emergency") this.emergency();
       else if (cmd === "reset") this.reset(true);
       else if (cmd === "mode") {
         if (value === "manual" && s.mode !== "manual") {
           s.mode = "manual"; s.phase = "MANUAL"; s.throttle = 0; s.f_cmd = s.f_s;
-          this.log("Modo MANUAL — controle os contatores clicando no esquema");
+          this.log("MANUAL mode — operate the contactors by clicking the diagram");
         } else if (value === "auto" && s.mode !== "auto") {
           s.mode = "auto";
           if (s.inv_on && s.ctl && s.mcb && s.panto_pos >= 1) this.goto("TRACTION");
           else if (s.vdc < 50 && !(s.mcb || s.ctl || s.chct || s.panto_cmd)) this.goto("OFF");
           else this.goto("SHUTDOWN");
-          this.log("Modo AUTOMÁTICO");
+          this.log("AUTOMATIC mode");
         }
       } else if (cmd === "toggle") this.toggle(String(value));
       else if (cmd === "set") this.set(value || {});
@@ -192,52 +193,52 @@
       }
       if (topo) {
         this.reset(true);
-        this.log("Topologia de alimentação: " + (c.supply === "AC" ? "25 kV 50 Hz AC (trafo + 4QC)" : "3 kV DC"));
+        this.log("Power supply topology: " + (c.supply === "AC" ? "25 kV 50 Hz AC (transformer + 4QC)" : "3 kV DC"));
       }
     }
 
     toggle(what) {
       const s = this.s, c = this.cfg;
-      if (s.mode !== "manual") { this.log("Mude para o modo MANUAL para operar os contatores", "warn"); return; }
+      if (s.mode !== "manual") { this.log("Switch to MANUAL mode to operate the contactors", "warn"); return; }
       if (what === "panto") {
         s.panto_cmd = !s.panto_cmd;
-        if (!s.panto_cmd && s.mcb && Math.abs(s.i_src) > 20) { this.log("Pantógrafo baixado sob carga — arco elétrico!", "warn"); s.spark = 1; }
-        this.log("Pantógrafo " + (s.panto_cmd ? "subindo" : "descendo"));
+        if (!s.panto_cmd && s.mcb && Math.abs(s.i_src) > 20) { this.log("Pantograph lowered under load — electric arc!", "warn"); s.spark = 1; }
+        this.log("Pantograph " + (s.panto_cmd ? "raising" : "lowering"));
       } else if (what === "mcb") {
-        if (!s.mcb && s.faults.length) { this.log("MCB bloqueado: existem falhas ativas (RESET)", "warn"); return; }
+        if (!s.mcb && s.faults.length) { this.log("MCB blocked: active faults present (RESET)", "warn"); return; }
         s.mcb = !s.mcb;
-        this.log("MCB " + (s.mcb ? "FECHADO" : "ABERTO"));
+        this.log("MCB " + (s.mcb ? "CLOSED" : "OPEN"));
         if (!s.mcb) s.qc_on = false;
       } else if (what === "chct") {
         s.chct = !s.chct;
-        this.log("ChCt (pré-carga) " + (s.chct ? "FECHADO" : "ABERTO"));
+        this.log("ChCt (pre-charge) " + (s.chct ? "CLOSED" : "OPEN"));
       } else if (what === "ctl") {
         if (!s.ctl) this.closeCtl();
-        else { s.ctl = false; s.qc_on = false; this.log("CtL ABERTO"); }
+        else { s.ctl = false; s.qc_on = false; this.log("CtL OPEN"); }
       } else if (what === "qc") {
         if (c.supply !== "AC") return;
-        if (!s.qc_on && !(s.ctl && s.mcb && s.panto_pos >= 1 && s.vdc > 0.8 * s.v_src)) { this.log("4QC exige CtL fechado e DC link carregado", "warn"); return; }
+        if (!s.qc_on && !(s.ctl && s.mcb && s.panto_pos >= 1 && s.vdc > 0.8 * s.v_src)) { this.log("4QC requires CtL closed and DC link charged", "warn"); return; }
         s.qc_on = !s.qc_on;
-        this.log("4QC " + (s.qc_on ? "LIGADO" : "DESLIGADO"));
+        this.log("4QC " + (s.qc_on ? "ON" : "OFF"));
       } else if (what === "inv") {
         if (!s.inv_on) {
-          if (s.vdc < 0.6 * vnom(c)) { this.log(`Inversor bloqueado: DC link em ${s.vdc.toFixed(0)} V (< 60 %)`, "warn"); return; }
+          if (s.vdc < 0.6 * vnom(c)) { this.log(`Inverter blocked: DC link at ${s.vdc.toFixed(0)} V (< 60 %)`, "warn"); return; }
           s.inv_on = true; s.f_cmd = s.f_s;
-          this.log("Inversor HABILITADO (pulsos liberados)");
-        } else { s.inv_on = false; this.log("Inversor DESABILITADO"); }
+          this.log("Inverter ENABLED (pulses released)");
+        } else { s.inv_on = false; this.log("Inverter DISABLED"); }
       }
     }
 
     closeCtl() {
       const s = this.s, c = this.cfg;
       s.ctl = true;
-      this.log("CtL FECHADO");
+      this.log("CtL CLOSED");
       if (s.panto_pos >= 1 && s.mcb) {
         const dv = s.v_src - s.vdc, ipk = dv / Math.sqrt(c.l_line / c.c_dc);
-        if (ipk > 100) this.log(`Corrente de inrush ao fechar CtL: ${ipk.toFixed(0)} A (ΔV = ${dv.toFixed(0)} V)`, ipk < c.inrush_trip_a ? "warn" : "fault");
+        if (ipk > 100) this.log(`Inrush current when closing CtL: ${ipk.toFixed(0)} A (ΔV = ${dv.toFixed(0)} V)`, ipk < c.inrush_trip_a ? "warn" : "fault");
         if (ipk > c.inrush_trip_a) {
           s.mcb = false; s.vdc += 0.5 * dv;
-          this.fault(`MCB desarmou por sobrecorrente de inrush (${ipk.toFixed(0)} A) — faça a pré-carga antes!`);
+          this.fault(`MCB tripped on inrush overcurrent (${ipk.toFixed(0)} A) — pre-charge first!`);
         }
       }
     }
@@ -248,53 +249,53 @@
       s.inv_on = s.qc_on = s.ctl = s.chct = s.mcb = false;
       s.panto_cmd = false; s.throttle = 0;
       if (s.mode === "auto") s.phase = "EMERGENCY";
-      this.fault("EMERGÊNCIA — tudo aberto, freio mecânico máximo");
+      this.fault("EMERGENCY — everything open, full mechanical brake");
     }
 
     reset(keepMode) {
       const mode = this.s.mode, pos = this.s.pos;
-      if (this.s.speed > 0.1) { this.log("RESET só é possível com o trem parado", "warn"); return; }
+      if (this.s.speed > 0.1) { this.log("RESET is only possible with the train at standstill", "warn"); return; }
       this.s = newState();
       this.s.pos = pos;
       if (keepMode) { this.s.mode = mode; this.s.phase = mode === "manual" ? "MANUAL" : "OFF"; }
       this.log("RESET");
     }
 
-    // ----------------------------------------------------------- sequência
+    // ----------------------------------------------------------- sequence
     sequence(dt) {
       const s = this.s, c = this.cfg;
       s.phase_t += dt;
       const p = s.phase, pt = s.phase_t, st = s.steps;
       if (p === "RAISE_PANTO") {
         s.panto_cmd = true; st[0] = s.panto_pos * 100;
-        if (s.panto_pos >= 1 && pt > 3.2) { this.log("Pantógrafo em contato com a catenária"); this.goto("CLOSE_MCB"); }
+        if (s.panto_pos >= 1 && pt > 3.2) { this.log("Pantograph in contact with the catenary"); this.goto("CLOSE_MCB"); }
       } else if (p === "CLOSE_MCB") {
-        if (pt >= 1 && !s.mcb) { s.mcb = true; st[1] = 100; this.log("MCB FECHADO"); }
+        if (pt >= 1 && !s.mcb) { s.mcb = true; st[1] = 100; this.log("MCB CLOSED"); }
         if (pt >= 2) this.goto("PRECHARGE");
       } else if (p === "PRECHARGE") {
-        if (!s.chct) { s.chct = true; this.log(`ChCt FECHADO — pré-carga via Rpre = ${c.r_pre.toFixed(0)} Ω (τ = ${(c.r_pre * c.c_dc).toFixed(2)} s)`); }
+        if (!s.chct) { s.chct = true; this.log(`ChCt CLOSED — pre-charge via Rpre = ${c.r_pre.toFixed(0)} Ω (τ = ${(c.r_pre * c.c_dc).toFixed(2)} s)`); }
         const target = c.precharge_pct / 100 * s.v_src;
         st[2] = Math.min(100, s.vdc / Math.max(target, 1) * 100);
         if (s.vdc >= target) {
           if (s.pc_done_t < 0) {
             s.pc_done_t = pt;
-            this.log(`DC link pré-carregado: ${s.vdc.toFixed(0)} V (${(s.vdc / s.v_src * 100).toFixed(1)} %) em ${pt.toFixed(2)} s`);
+            this.log(`DC link pre-charged: ${s.vdc.toFixed(0)} V (${(s.vdc / s.v_src * 100).toFixed(1)} %) in ${pt.toFixed(2)} s`);
           }
           if (pt - s.pc_done_t >= 0.5) { s.pc_done_t = -1; this.goto("CLOSE_CTL"); }
-        } else if (pt > 20) this.fault("Timeout de pré-carga (verifique Rpre / tensão da linha)");
+        } else if (pt > 20) this.fault("Pre-charge timeout (check Rpre / line voltage)");
       } else if (p === "CLOSE_CTL") {
         if (!s.ctl) { this.closeCtl(); st[3] = 50; }
-        if (pt >= 0.6 && s.chct) { s.chct = false; st[3] = 100; this.log("ChCt ABERTO — Rpre fora do circuito"); }
+        if (pt >= 0.6 && s.chct) { s.chct = false; st[3] = 100; this.log("ChCt OPEN — Rpre out of circuit"); }
         if (pt >= 1.2) this.goto("STABILIZE");
       } else if (p === "STABILIZE") {
-        if (c.supply === "AC" && !s.qc_on) { s.qc_on = true; this.log(`4QC ligado — regulando DC link em ${c.vdc_ref_ac.toFixed(0)} V`); }
+        if (c.supply === "AC" && !s.qc_on) { s.qc_on = true; this.log(`4QC on — regulating DC link at ${c.vdc_ref_ac.toFixed(0)} V`); }
         const err = c.supply === "AC" ? Math.abs(s.vdc - vnom(c)) / vnom(c) : 0;
         st[4] = Math.min(100, pt / 1.5 * 100);
-        if (pt >= 1.5 && err < 0.02) { st[4] = 100; this.log(`DC link estável em ${s.vdc.toFixed(0)} V`); this.goto("INVERTER"); }
+        if (pt >= 1.5 && err < 0.02) { st[4] = 100; this.log(`DC link stable at ${s.vdc.toFixed(0)} V`); this.goto("INVERTER"); }
       } else if (p === "INVERTER") {
-        if (!s.inv_on) { s.inv_on = true; this.log("Inversor habilitado — magnetizando motores"); }
+        if (!s.inv_on) { s.inv_on = true; this.log("Inverter enabled — magnetizing motors"); }
         st[5] = s.flux * 100;
-        if (s.flux >= 0.99) { this.goto("TRACTION"); this.log(`Tração liberada — alvo ${c.target_kmh.toFixed(0)} km/h`); }
+        if (s.flux >= 0.99) { this.goto("TRACTION"); this.log(`Traction released — target ${c.target_kmh.toFixed(0)} km/h`); }
       } else if (p === "TRACTION") {
         st[5] = 100; st[6] = 100;
         const want = clip((c.target_kmh - s.speed * 3.6) / 4, -0.7, 1);
@@ -302,19 +303,19 @@
       } else if (p === "BRAKING") {
         st[6] = 0;
         s.throttle += clip(-0.8 - s.throttle, -0.6 * dt, 0.6 * dt);
-        if (s.speed < 0.05) { s.throttle = 0; this.log("Trem parado"); this.goto("SHUTDOWN"); }
+        if (s.speed < 0.05) { s.throttle = 0; this.log("Train stopped"); this.goto("SHUTDOWN"); }
       } else if (p === "SHUTDOWN") {
         s.throttle = 0;
-        if (s.inv_on || s.qc_on) { s.inv_on = s.qc_on = false; this.log("Inversor e 4QC desligados"); }
-        if (pt >= 0.6 && s.ctl) { s.ctl = false; this.log("CtL ABERTO"); }
-        if (pt >= 1.4 && s.mcb) { s.mcb = false; this.log("MCB ABERTO"); }
+        if (s.inv_on || s.qc_on) { s.inv_on = s.qc_on = false; this.log("Inverter and 4QC off"); }
+        if (pt >= 0.6 && s.ctl) { s.ctl = false; this.log("CtL OPEN"); }
+        if (pt >= 1.4 && s.mcb) { s.mcb = false; this.log("MCB OPEN"); }
         if (pt >= 2.2) s.panto_cmd = false;
         s.steps = pt >= 2.2 ? STEPS.map(() => 0) : st.map((x, i) => (i < 5 ? x : 0));
-        if (pt >= 2.2 && s.panto_pos <= 0) { this.log("Pantógrafo abaixado — sistema desligado"); this.goto("OFF"); }
+        if (pt >= 2.2 && s.panto_pos <= 0) { this.log("Pantograph lowered — system off"); this.goto("OFF"); }
       }
     }
 
-    // --------------------------------------------------------------- física
+    // --------------------------------------------------------------- physics
     step(dt) {
       const s = this.s, c = this.cfg;
       s.t += dt;
@@ -324,12 +325,12 @@
       const live = s.panto_pos >= 1 && s.mcb;
       if (s.mcb && s.panto_pos < 1 && s.panto_cmd === false && Math.abs(s.i_src) > 20) s.spark = 1;
       s.v_src = live ? (c.supply === "DC" ? c.v_cat_dc : c.v_sec_peak_ac) : 0;
-      if (c.supply === "AC" && s.qc_on && !(live && s.ctl)) { s.qc_on = false; this.log("4QC desligado (perda de alimentação)", "warn"); }
+      if (c.supply === "AC" && s.qc_on && !(live && s.ctl)) { s.qc_on = false; this.log("4QC off (loss of supply)", "warn"); }
       s.flux = s.inv_on ? Math.min(1, s.flux + dt) : Math.max(0, s.flux - dt / 0.3);
       this.traction(dt);
       s.i_dc = s.vdc > 100 ? s.p_elec / s.vdc : 0;
       this.dcLink(dt);
-      if (s.inv_on && s.vdc < 0.5 * vnom(c)) { s.inv_on = false; this.fault(`Subtensão no DC link (${s.vdc.toFixed(0)} V) — inversor bloqueado`); }
+      if (s.inv_on && s.vdc < 0.5 * vnom(c)) { s.inv_on = false; this.fault(`DC link undervoltage (${s.vdc.toFixed(0)} V) — inverter blocked`); }
       if (s.emergency && s.panto_pos <= 0 && s.speed <= 0) s.emergency = false;
     }
 
@@ -451,7 +452,7 @@
           const rip = new Array(n);
           let acc = 0;
           for (let i = 0; i < n; i++) { acc += (pwms[k][i] - refs[k][i]) * dtt; rip[i] = acc / L; }
-          // rip -= média móvel de 51 amostras (np.convolve mode="same", bordas com zero)
+          // rip -= 51-sample moving average (np.convolve mode="same", zero-padded edges)
           const pre = new Float64Array(n + 1);
           for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + rip[i];
           for (let i = 0; i < n; i++) {
@@ -523,7 +524,7 @@
     }
   }
 
-  // =============== API local: mesmas rotas do app.py, sem servidor
+  // =============== Local API: same routes as app.py, no server
   function makeLocalApi(sim) {
     const num = (q, k, d, lo, hi) => { const v = parseFloat(q.get(k)); return clip(Number.isFinite(v) ? v : d, lo, hi); };
     const r = (a, nd) => { const p = 10 ** nd; return Array.from(a, (x) => (Number.isFinite(x) ? Math.round(x * p) / p : 0)); };
@@ -547,7 +548,7 @@
           const half = (a, nd) => r(a.filter((_, i) => i % 2 === 0), nd);
           return { t: half(o.t, 6), rect: half(o.rect, 2), charge: half(o.charge, 2), cap: half(o.cap, 2), final: half(o.final, 2), C: o.C, tau: o.tau };
         }
-        throw new Error("rota desconhecida: " + url);
+        throw new Error("unknown route: " + url);
       },
       command(cmd, value) { sim.command(cmd, value); },
     };

@@ -1,4 +1,4 @@
-// Executa um cenário no motor JS e imprime JSON (usado por test_js_port.py)
+// Runs a scenario on the JS engine and prints JSON (used by test_js_port.py)
 const fs = require("fs"), path = require("path");
 require("vm").runInThisContext(fs.readFileSync(path.join(__dirname, "../static/js/engine.js"), "utf8"));
 const { Simulator, makeLocalApi } = globalThis.TractionSim;

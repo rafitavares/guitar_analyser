@@ -1,9 +1,11 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Simulador de Tração</title>
+  <title>Traction Converter Simulator — Rafael Tavares</title>
+  <meta name="author" content="Rafael Tavares">
+  <meta name="description" content="Railway traction converter simulator by Rafael Tavares">
   <style>
 .uplot, .uplot *, .uplot *::before, .uplot *::after {box-sizing: border-box;}.uplot {font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";line-height: 1.5;width: min-content;}.u-title {text-align: center;font-size: 18px;font-weight: bold;}.u-wrap {position: relative;user-select: none;}.u-over, .u-under {position: absolute;}.u-under {overflow: hidden;}.uplot canvas {display: block;position: relative;width: 100%;height: 100%;}.u-axis {position: absolute;}.u-legend {font-size: 14px;margin: auto;text-align: center;}.u-inline {display: block;}.u-inline * {display: inline-block;}.u-inline tr {margin-right: 16px;}.u-legend th {font-weight: 600;}.u-legend th > * {vertical-align: middle;display: inline-block;}.u-legend .u-marker {width: 1em;height: 1em;margin-right: 4px;background-clip: padding-box !important;}.u-inline.u-live th::after {content: ":";vertical-align: middle;}.u-inline:not(.u-live) .u-value {display: none;}.u-series > * {padding: 4px;}.u-series th {cursor: pointer;}.u-legend .u-off > * {opacity: 0.3;}.u-select {background: rgba(0,0,0,0.07);position: absolute;pointer-events: none;}.u-cursor-x, .u-cursor-y {position: absolute;left: 0;top: 0;pointer-events: none;will-change: transform;}.u-hz .u-cursor-x, .u-vt .u-cursor-y {height: 100%;border-right: 1px dashed #607D8B;}.u-hz .u-cursor-y, .u-vt .u-cursor-x {width: 100%;border-bottom: 1px dashed #607D8B;}.u-cursor-pt {position: absolute;top: 0;left: 0;border-radius: 50%;border: 0 solid;pointer-events: none;will-change: transform;/*this has to be !important since we set inline "background" shorthand */background-clip: padding-box !important;}.u-axis.u-off, .u-select.u-off, .u-cursor-x.u-off, .u-cursor-y.u-off, .u-cursor-pt.u-off {display: none;}
 </style>
@@ -17,9 +19,9 @@
   --text: #e6ecf5;
   --muted: #8b97ad;
   --dim: #56627a;
-  --c-line: #f5a524;   /* catenária / alimentação */
+  --c-line: #f5a524;   /* catenary / supply */
   --c-dc: #22d3ee;     /* DC link */
-  --c-ac: #a78bfa;     /* saída AC */
+  --c-ac: #a78bfa;     /* AC output */
   --c-ok: #34d399;
   --c-warn: #fbbf24;
   --c-bad: #f43f5e;
@@ -38,7 +40,7 @@ h2 { font-size: 13px; letter-spacing: .02em; color: #cfd8e6; }
 h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 10px; }
 button, select, input { font: inherit; color: inherit; }
 
-/* ---------- topo ---------- */
+/* ---------- header ---------- */
 .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px;
   padding: 10px 20px; background: rgba(10, 15, 26, .85); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border); }
@@ -64,7 +66,7 @@ button, select, input { font: inherit; color: inherit; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
 .note { font-size: 11px; color: var(--muted); }
 
-/* ---------- cena do trem ---------- */
+/* ---------- train scene ---------- */
 .scene-card { position: relative; padding: 0; overflow: hidden; aspect-ratio: 1200 / 190; max-height: 230px; }
 #scene { width: 100%; height: 100%; display: block; }
 .scene-hud { position: absolute; left: 18px; top: 12px; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 6px;
@@ -75,7 +77,7 @@ button, select, input { font: inherit; color: inherit; }
 .fault-banner { position: absolute; right: 14px; top: 12px; max-width: 46%; padding: 8px 12px; border-radius: 10px;
   background: rgba(244, 63, 94, .18); border: 1px solid rgba(244, 63, 94, .6); color: #ffd2da; font-size: 12px; }
 
-/* ---------- linha principal ---------- */
+/* ---------- main row ---------- */
 .row-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
 .schem-card #schem { width: 100%; height: auto; display: block; }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); align-items: center; flex-wrap: wrap; }
@@ -127,7 +129,7 @@ select { background: var(--bg2); border: 1px solid var(--border); border-radius:
 .tile span { font-size: 11px; color: var(--muted); }
 .tile b { font-size: 17px; }
 
-/* ---------- comando ---------- */
+/* ---------- driving controls ---------- */
 .drive { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
 .drive-auto, .drive-manual, .ctrl-group { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
 .drive-manual { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -145,7 +147,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px;
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c-dc); border: 3px solid #0b1324; cursor: pointer; }
 #in-thr { background: linear-gradient(90deg, rgba(244, 63, 94, .5), var(--bg2) 50%, rgba(52, 211, 153, .5)); }
 
-/* ---------- gráficos ---------- */
+/* ---------- charts ---------- */
 .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 16px; }
 .chart { width: 100%; min-height: 230px; }
 .uplot { font-family: var(--mono); font-size: 11px; color: var(--muted); }
@@ -161,7 +163,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .log li.warn { background: rgba(251, 191, 36, .08); color: #fde68a; }
 .log li.fault { background: rgba(244, 63, 94, .12); color: #fecdd3; }
 
-/* ---------- esquema (SVG) ---------- */
+/* ---------- diagram (SVG) ---------- */
 #schem text { font-family: system-ui, sans-serif; fill: var(--muted); font-size: 12px; }
 #schem text.val { font-family: var(--mono); fill: var(--text); font-size: 12px; }
 #schem text.ttl { fill: #cfd8e6; font-weight: 600; font-size: 12px; }
@@ -188,7 +190,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 #schem .rotor { stroke: var(--c-ac); stroke-width: 3; stroke-linecap: round; }
 #schem .capfill { transition: height .2s, y .2s; }
 
-/* ---------- laboratório ---------- */
+/* ---------- lab ---------- */
 .lab-intro { margin: 0; color: var(--muted); }
 .lab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(520px, 1fr)); gap: 16px; }
 .lab-ctrls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 8px; }
@@ -211,6 +213,11 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .tiles { grid-template-columns: 1fr 1fr; }
 }
 
+/* ---------- credits ---------- */
+.brand .author { color: var(--c-dc); }
+.credits { text-align: center; color: var(--muted); font-size: 12px; padding: 4px 16px 24px; }
+.credits b { color: var(--text); font-weight: 600; }
+
 </style>
   <script>
 /*! https://github.com/leeoniya/uPlot (v1.6.31) */
@@ -223,16 +230,16 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     <div class="brand">
       <svg viewBox="0 0 32 32" class="logo"><path d="M4 26h24M8 26l4-14h8l4 14M12 12l4-8 4 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>
       <div>
-        <h1>Simulador de Conversor de Tração</h1>
-        <p class="sub" id="topo-label">3 kV DC · inversor 2 níveis</p>
+        <h1>Traction Converter Simulator</h1>
+        <p class="sub"><span id="topo-label">3 kV DC · 2-level inverter</span> · <span class="author">by Rafael Tavares</span></p>
       </div>
     </div>
     <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="sim">Simulador</button>
-      <button class="tab" data-tab="lab">Laboratório Excel</button>
+      <button class="tab active" data-tab="sim">Simulator</button>
+      <button class="tab" data-tab="lab">Excel Lab</button>
     </nav>
     <div class="status">
-      <span class="pill" id="phase-pill">DESLIGADO</span>
+      <span class="pill" id="phase-pill">OFF</span>
       <span class="clock mono" id="clock">t = 0.0 s</span>
     </div>
   </header>
@@ -250,12 +257,12 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     <section class="row-main">
       <div class="card schem-card">
         <div class="card-head">
-          <h2>Esquema elétrico</h2>
+          <h2>Electrical diagram</h2>
           <div class="legend">
-            <span><i style="background:var(--c-line)"></i>Catenária</span>
+            <span><i style="background:var(--c-line)"></i>Catenary</span>
             <span><i style="background:var(--c-dc)"></i>DC link</span>
-            <span><i style="background:var(--c-ac)"></i>Saída AC</span>
-            <span class="hint" id="schem-hint">Modo automático</span>
+            <span><i style="background:var(--c-ac)"></i>AC output</span>
+            <span class="hint" id="schem-hint">Automatic mode</span>
           </div>
         </div>
         <svg id="schem" viewBox="0 0 1100 400"></svg>
@@ -263,38 +270,38 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
 
       <aside class="card side">
         <div class="seg" id="mode-seg">
-          <button data-mode="auto" class="on">Automático</button>
+          <button data-mode="auto" class="on">Automatic</button>
           <button data-mode="manual">Manual</button>
         </div>
         <div class="btns">
           <button class="btn start" id="btn-start">▶ START</button>
           <button class="btn stop" id="btn-stop">■ STOP</button>
-          <button class="btn emerg" id="btn-emerg">⚠ EMERGÊNCIA</button>
+          <button class="btn emerg" id="btn-emerg">⚠ EMERGENCY</button>
           <button class="btn ghost" id="btn-reset">↺ RESET</button>
         </div>
 
         <div class="topo">
-          <label>Alimentação
+          <label>Power supply
             <select id="sel-supply">
-              <option value="DC">Catenária 3 kV DC</option>
-              <option value="AC">25 kV 50 Hz AC (trafo + 4QC)</option>
+              <option value="DC">3 kV DC catenary</option>
+              <option value="AC">25 kV 50 Hz AC (transformer + 4QC)</option>
             </select>
           </label>
-          <label>Inversor
+          <label>Inverter
             <select id="sel-levels">
-              <option value="2">2 níveis</option>
-              <option value="3">3 níveis (NPC)</option>
+              <option value="2">2-level</option>
+              <option value="3">3-level (NPC)</option>
             </select>
           </label>
-          <label>Modulação
+          <label>Modulation
             <select id="sel-pwm">
-              <option value="excel">Excel (fórmulas da planilha)</option>
-              <option value="classic">Clássica (2L bipolar / 3L NPC-PD)</option>
+              <option value="excel">Excel (spreadsheet formulas)</option>
+              <option value="classic">Classic (2L bipolar / 3L NPC-PD)</option>
             </select>
           </label>
         </div>
 
-        <h3>Sequência de partida</h3>
+        <h3>Start-up sequence</h3>
         <ol class="steps" id="steps"></ol>
       </aside>
     </section>
@@ -305,64 +312,64 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
       <div class="card gauge-card"><svg id="g-vdc"></svg></div>
       <div class="card gauge-card"><svg id="g-power"></svg></div>
       <div class="card tiles">
-        <div class="tile"><span>Esforço trator</span><b class="mono" id="k-force">0 kN</b></div>
-        <div class="tile"><span>Corrente de fase</span><b class="mono" id="k-iph">0 A</b></div>
-        <div class="tile"><span>Corrente DC link</span><b class="mono" id="k-idc">0 A</b></div>
-        <div class="tile"><span>Índice de modulação</span><b class="mono" id="k-m">0.00</b></div>
+        <div class="tile"><span>Tractive effort</span><b class="mono" id="k-force">0 kN</b></div>
+        <div class="tile"><span>Phase current</span><b class="mono" id="k-iph">0 A</b></div>
+        <div class="tile"><span>DC link current</span><b class="mono" id="k-idc">0 A</b></div>
+        <div class="tile"><span>Modulation index</span><b class="mono" id="k-m">0.00</b></div>
         <div class="tile"><span>THD U–V</span><b class="mono" id="k-thd">—</b></div>
-        <div class="tile"><span>Freio mecânico</span><b class="mono" id="k-mech">0 kN</b></div>
+        <div class="tile"><span>Mechanical brake</span><b class="mono" id="k-mech">0 kN</b></div>
       </div>
     </section>
 
     <section class="card drive">
       <div class="drive-auto" id="drive-auto">
-        <label class="slider">Velocidade alvo <b class="mono" id="v-target">100 km/h</b>
+        <label class="slider">Target speed <b class="mono" id="v-target">100 km/h</b>
           <input type="range" id="in-target" min="0" max="140" step="5" value="100"></label>
-        <label class="slider">Escala de tempo <b class="mono" id="v-ts">1×</b>
+        <label class="slider">Time scale <b class="mono" id="v-ts">1×</b>
           <input type="range" id="in-ts" min="0" max="5" step="1" value="0"></label>
       </div>
       <div class="drive-manual" id="drive-manual" hidden>
         <div class="seg small" id="ctrl-seg">
-          <button data-ctrl="throttle" class="on">Acelerador / freio</button>
-          <button data-ctrl="freq">Frequência + amplitude (V/f)</button>
+          <button data-ctrl="throttle" class="on">Throttle / brake</button>
+          <button data-ctrl="freq">Frequency + amplitude (V/f)</button>
         </div>
         <div id="ctrl-throttle" class="ctrl-group">
-          <label class="slider throttle">Manipulador <b class="mono" id="v-thr">0 %</b>
+          <label class="slider throttle">Master controller <b class="mono" id="v-thr">0 %</b>
             <input type="range" id="in-thr" min="-100" max="100" step="5" value="0">
-            <span class="scale"><em>FREIO</em><em>0</em><em>TRAÇÃO</em></span></label>
-          <button class="btn ghost small" id="btn-thr0">Neutro</button>
+            <span class="scale"><em>BRAKE</em><em>0</em><em>TRACTION</em></span></label>
+          <button class="btn ghost small" id="btn-thr0">Neutral</button>
         </div>
         <div id="ctrl-freq" class="ctrl-group" hidden>
-          <label class="slider">Frequência do motor <b class="mono" id="v-fcmd">0.0 Hz</b>
+          <label class="slider">Motor frequency <b class="mono" id="v-fcmd">0.0 Hz</b>
             <input type="range" id="in-fcmd" min="0" max="160" step="0.5" value="0"></label>
-          <label class="slider">Amplitude (índice m) <b class="mono" id="v-mcmd">0.50</b>
+          <label class="slider">Amplitude (index m) <b class="mono" id="v-mcmd">0.50</b>
             <input type="range" id="in-mcmd" min="0" max="1.15" step="0.01" value="0.5"></label>
-          <label class="check"><input type="checkbox" id="in-vf" checked> V/f automático</label>
+          <label class="check"><input type="checkbox" id="in-vf" checked> Automatic V/f</label>
         </div>
-        <label class="slider">Escala de tempo <b class="mono" id="v-ts2">1×</b>
+        <label class="slider">Time scale <b class="mono" id="v-ts2">1×</b>
           <input type="range" id="in-ts2" min="0" max="5" step="1" value="0"></label>
       </div>
-      <label class="slider">Portadora (freq port) <b class="mono" id="v-fc">400 Hz</b>
+      <label class="slider">Carrier (freq port) <b class="mono" id="v-fc">400 Hz</b>
         <input type="range" id="in-fc" min="200" max="2000" step="50" value="400"></label>
     </section>
 
     <section class="charts">
-      <div class="card chart-card"><div class="card-head"><h2>DC link — tensão e corrente</h2><span class="note">histórico 60 s</span></div><div class="chart" id="c-dc"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>PWM — fase U</h2><span class="note" id="pwm-note">ref × portadora</span></div><div class="chart" id="c-pwm"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Tensão de linha U–V e correntes do motor</h2></div><div class="chart" id="c-uab"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Espectro harmônico U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Dinâmica do trem</h2><span class="note">histórico 120 s</span></div><div class="chart" id="c-train"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>DC link — voltage and current</h2><span class="note">last 60 s</span></div><div class="chart" id="c-dc"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>PWM — phase U</h2><span class="note" id="pwm-note">reference × carrier</span></div><div class="chart" id="c-pwm"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Line voltage U–V and motor currents</h2></div><div class="chart" id="c-uab"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Harmonic spectrum U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Train dynamics</h2><span class="note">last 120 s</span></div><div class="chart" id="c-train"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>DC link — zoom 40 ms (ripple)</h2><span class="note" id="rip-note">—</span></div><div class="chart" id="c-zoom"></div></div>
     </section>
 
     <section class="card log-card">
-      <div class="card-head"><h2>Registro de eventos</h2></div>
+      <div class="card-head"><h2>Event log</h2></div>
       <ul class="log mono" id="log"></ul>
     </section>
   </main>
 
   <main id="tab-lab" class="tabpane" hidden>
-    <p class="lab-intro">Reprodução direta das abas ocultas do <b>simulator.xlsm</b>, calculadas em Python com as mesmas fórmulas. Os controles têm os mesmos limites das barras de rolagem da planilha.</p>
+    <p class="lab-intro">Direct reproduction of the hidden sheets of <b>simulator.xlsm</b>, computed with the same formulas. The controls use the same limits as the spreadsheet scroll bars.</p>
     <section class="lab-grid">
       <div class="card lab-card">
         <div class="card-head"><h2>PWM Level 2 / Level 3</h2>
@@ -382,7 +389,7 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
           <label class="slider">Maximum Voltage — H1 <b class="mono" id="lv-pvmax">3000 V</b><input type="range" id="li-pvmax" min="500" max="4000" step="100" value="3000"></label>
           <label class="slider">Resistance R — H2 <b class="mono" id="lv-pr">1000 Ω</b><input type="range" id="li-pr" min="50" max="3000" step="50" value="1000"></label>
           <label class="slider">Capacitance C — H3 <b class="mono" id="lv-pc">1.0 mF</b><input type="range" id="li-pc" min="0.1" max="5" step="0.1" value="1"></label>
-          <label class="slider">Prozentual — H4 <b class="mono" id="lv-pp">95 %</b><input type="range" id="li-pp" min="0" max="100" step="1" value="95"></label>
+          <label class="slider">Percentage — H4 <b class="mono" id="lv-pp">95 %</b><input type="range" id="li-pp" min="0" max="100" step="1" value="95"></label>
         </div>
         <div class="chart" id="lc-pre"></div>
         <div class="formula mono" id="lf-pre"></div>
@@ -401,8 +408,10 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     </section>
   </main>
 
+  <footer class="credits">Traction Converter Simulator · developed by <b>Rafael Tavares</b></footer>
+
   <script>
-// Utilitários compartilhados
+// Shared utilities
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -433,7 +442,7 @@ function fmt(x, d = 0) {
   return Number.isFinite(x) ? x.toFixed(d) : "—";
 }
 
-// Formata com unidade automática (k/M)
+// Formats with automatic unit prefix (k/M)
 function fmtSI(x, unit, d = 1) {
   const a = Math.abs(x);
   if (a >= 1e6) return (x / 1e6).toFixed(d) + " M" + unit;
@@ -446,14 +455,15 @@ function debounce(fn, ms) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
-// Lê as cores definidas no :root
+// Reads the colors defined in :root
 const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 </script>
 <script>
-// Versão JavaScript de sim/excel_models.py + sim/engine.py, usada na versão
-// "arquivo único" (roda inteira no navegador, sem servidor Python).
-// Mantenha em sincronia com os arquivos Python: tests/test_js_port.py compara os dois.
+// JavaScript version of sim/excel_models.py + sim/engine.py, used by the
+// single-file build (runs entirely in the browser, no Python server).
+// Keep in sync with the Python files: tests/test_js_port.py compares both.
+// Author: Rafael Tavares
 (function (global) {
   "use strict";
   const PI = Math.PI;
@@ -510,7 +520,7 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
     excelGauges: (freq, amp) => ({ speed: freq * 4 / 100, power: amp / 1500 }),
   };
 
-  // FFT radix-2 (n potência de 2) -> módulo do rfft
+  // Radix-2 FFT (n power of 2) -> rfft magnitude
   function rfftMag(x) {
     const n = x.length, re = Float64Array.from(x), im = new Float64Array(n);
     for (let i = 1, j = 0; i < n; i++) {
@@ -538,9 +548,9 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
 
   // ================================================================ engine
   const STEPS = [
-    "Levantar pantógrafo", "Fechar disjuntor principal (MCB)", "Pré-carga do DC link (ChCt + Rpre)",
-    "Fechar contator de linha (CtL) / abrir ChCt", "Estabilização do DC link", "Conversão DC → AC (inversor)",
-    "Potência aos motores de tração",
+    "Raise pantograph", "Close main circuit breaker (MCB)", "Pre-charge DC link (ChCt + Rpre)",
+    "Close line contactor (CtL) / open ChCt", "DC link stabilization", "DC → AC conversion (inverter)",
+    "Power to traction motors",
   ];
 
   function newConfig() {
@@ -590,31 +600,31 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
     fault(msg) { if (!this.s.faults.includes(msg)) this.s.faults.push(msg); this.log(msg, "fault"); }
     goto(p) { this.s.phase = p; this.s.phase_t = 0; }
 
-    // ------------------------------------------------------------ comandos
+    // ------------------------------------------------------------ commands
     command(cmd, value) {
       const s = this.s;
       if (cmd === "start") {
-        if (s.faults.length) { this.log("Reconheça as falhas (RESET) antes de partir", "warn"); return; }
+        if (s.faults.length) { this.log("Acknowledge the faults (RESET) before starting", "warn"); return; }
         s.mode = "auto"; s.stop_req = false;
-        if (["OFF", "MANUAL", "SHUTDOWN"].includes(s.phase)) { this.goto("RAISE_PANTO"); this.log("START — sequência automática iniciada"); }
+        if (["OFF", "MANUAL", "SHUTDOWN"].includes(s.phase)) { this.goto("RAISE_PANTO"); this.log("START — automatic sequence started"); }
         else if (s.phase === "BRAKING") this.goto("TRACTION");
       } else if (cmd === "stop") {
         if (s.mode === "auto" && !["OFF", "SHUTDOWN", "BRAKING"].includes(s.phase)) {
           this.goto(s.inv_on ? "BRAKING" : "SHUTDOWN");
-          this.log("STOP — frenagem e desligamento");
+          this.log("STOP — braking and shutdown");
         } else if (s.mode === "manual") s.throttle = s.speed > 0.1 ? -1 : 0;
       } else if (cmd === "emergency") this.emergency();
       else if (cmd === "reset") this.reset(true);
       else if (cmd === "mode") {
         if (value === "manual" && s.mode !== "manual") {
           s.mode = "manual"; s.phase = "MANUAL"; s.throttle = 0; s.f_cmd = s.f_s;
-          this.log("Modo MANUAL — controle os contatores clicando no esquema");
+          this.log("MANUAL mode — operate the contactors by clicking the diagram");
         } else if (value === "auto" && s.mode !== "auto") {
           s.mode = "auto";
           if (s.inv_on && s.ctl && s.mcb && s.panto_pos >= 1) this.goto("TRACTION");
           else if (s.vdc < 50 && !(s.mcb || s.ctl || s.chct || s.panto_cmd)) this.goto("OFF");
           else this.goto("SHUTDOWN");
-          this.log("Modo AUTOMÁTICO");
+          this.log("AUTOMATIC mode");
         }
       } else if (cmd === "toggle") this.toggle(String(value));
       else if (cmd === "set") this.set(value || {});
@@ -645,52 +655,52 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
       }
       if (topo) {
         this.reset(true);
-        this.log("Topologia de alimentação: " + (c.supply === "AC" ? "25 kV 50 Hz AC (trafo + 4QC)" : "3 kV DC"));
+        this.log("Power supply topology: " + (c.supply === "AC" ? "25 kV 50 Hz AC (transformer + 4QC)" : "3 kV DC"));
       }
     }
 
     toggle(what) {
       const s = this.s, c = this.cfg;
-      if (s.mode !== "manual") { this.log("Mude para o modo MANUAL para operar os contatores", "warn"); return; }
+      if (s.mode !== "manual") { this.log("Switch to MANUAL mode to operate the contactors", "warn"); return; }
       if (what === "panto") {
         s.panto_cmd = !s.panto_cmd;
-        if (!s.panto_cmd && s.mcb && Math.abs(s.i_src) > 20) { this.log("Pantógrafo baixado sob carga — arco elétrico!", "warn"); s.spark = 1; }
-        this.log("Pantógrafo " + (s.panto_cmd ? "subindo" : "descendo"));
+        if (!s.panto_cmd && s.mcb && Math.abs(s.i_src) > 20) { this.log("Pantograph lowered under load — electric arc!", "warn"); s.spark = 1; }
+        this.log("Pantograph " + (s.panto_cmd ? "raising" : "lowering"));
       } else if (what === "mcb") {
-        if (!s.mcb && s.faults.length) { this.log("MCB bloqueado: existem falhas ativas (RESET)", "warn"); return; }
+        if (!s.mcb && s.faults.length) { this.log("MCB blocked: active faults present (RESET)", "warn"); return; }
         s.mcb = !s.mcb;
-        this.log("MCB " + (s.mcb ? "FECHADO" : "ABERTO"));
+        this.log("MCB " + (s.mcb ? "CLOSED" : "OPEN"));
         if (!s.mcb) s.qc_on = false;
       } else if (what === "chct") {
         s.chct = !s.chct;
-        this.log("ChCt (pré-carga) " + (s.chct ? "FECHADO" : "ABERTO"));
+        this.log("ChCt (pre-charge) " + (s.chct ? "CLOSED" : "OPEN"));
       } else if (what === "ctl") {
         if (!s.ctl) this.closeCtl();
-        else { s.ctl = false; s.qc_on = false; this.log("CtL ABERTO"); }
+        else { s.ctl = false; s.qc_on = false; this.log("CtL OPEN"); }
       } else if (what === "qc") {
         if (c.supply !== "AC") return;
-        if (!s.qc_on && !(s.ctl && s.mcb && s.panto_pos >= 1 && s.vdc > 0.8 * s.v_src)) { this.log("4QC exige CtL fechado e DC link carregado", "warn"); return; }
+        if (!s.qc_on && !(s.ctl && s.mcb && s.panto_pos >= 1 && s.vdc > 0.8 * s.v_src)) { this.log("4QC requires CtL closed and DC link charged", "warn"); return; }
         s.qc_on = !s.qc_on;
-        this.log("4QC " + (s.qc_on ? "LIGADO" : "DESLIGADO"));
+        this.log("4QC " + (s.qc_on ? "ON" : "OFF"));
       } else if (what === "inv") {
         if (!s.inv_on) {
-          if (s.vdc < 0.6 * vnom(c)) { this.log(`Inversor bloqueado: DC link em ${s.vdc.toFixed(0)} V (< 60 %)`, "warn"); return; }
+          if (s.vdc < 0.6 * vnom(c)) { this.log(`Inverter blocked: DC link at ${s.vdc.toFixed(0)} V (< 60 %)`, "warn"); return; }
           s.inv_on = true; s.f_cmd = s.f_s;
-          this.log("Inversor HABILITADO (pulsos liberados)");
-        } else { s.inv_on = false; this.log("Inversor DESABILITADO"); }
+          this.log("Inverter ENABLED (pulses released)");
+        } else { s.inv_on = false; this.log("Inverter DISABLED"); }
       }
     }
 
     closeCtl() {
       const s = this.s, c = this.cfg;
       s.ctl = true;
-      this.log("CtL FECHADO");
+      this.log("CtL CLOSED");
       if (s.panto_pos >= 1 && s.mcb) {
         const dv = s.v_src - s.vdc, ipk = dv / Math.sqrt(c.l_line / c.c_dc);
-        if (ipk > 100) this.log(`Corrente de inrush ao fechar CtL: ${ipk.toFixed(0)} A (ΔV = ${dv.toFixed(0)} V)`, ipk < c.inrush_trip_a ? "warn" : "fault");
+        if (ipk > 100) this.log(`Inrush current when closing CtL: ${ipk.toFixed(0)} A (ΔV = ${dv.toFixed(0)} V)`, ipk < c.inrush_trip_a ? "warn" : "fault");
         if (ipk > c.inrush_trip_a) {
           s.mcb = false; s.vdc += 0.5 * dv;
-          this.fault(`MCB desarmou por sobrecorrente de inrush (${ipk.toFixed(0)} A) — faça a pré-carga antes!`);
+          this.fault(`MCB tripped on inrush overcurrent (${ipk.toFixed(0)} A) — pre-charge first!`);
         }
       }
     }
@@ -701,53 +711,53 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
       s.inv_on = s.qc_on = s.ctl = s.chct = s.mcb = false;
       s.panto_cmd = false; s.throttle = 0;
       if (s.mode === "auto") s.phase = "EMERGENCY";
-      this.fault("EMERGÊNCIA — tudo aberto, freio mecânico máximo");
+      this.fault("EMERGENCY — everything open, full mechanical brake");
     }
 
     reset(keepMode) {
       const mode = this.s.mode, pos = this.s.pos;
-      if (this.s.speed > 0.1) { this.log("RESET só é possível com o trem parado", "warn"); return; }
+      if (this.s.speed > 0.1) { this.log("RESET is only possible with the train at standstill", "warn"); return; }
       this.s = newState();
       this.s.pos = pos;
       if (keepMode) { this.s.mode = mode; this.s.phase = mode === "manual" ? "MANUAL" : "OFF"; }
       this.log("RESET");
     }
 
-    // ----------------------------------------------------------- sequência
+    // ----------------------------------------------------------- sequence
     sequence(dt) {
       const s = this.s, c = this.cfg;
       s.phase_t += dt;
       const p = s.phase, pt = s.phase_t, st = s.steps;
       if (p === "RAISE_PANTO") {
         s.panto_cmd = true; st[0] = s.panto_pos * 100;
-        if (s.panto_pos >= 1 && pt > 3.2) { this.log("Pantógrafo em contato com a catenária"); this.goto("CLOSE_MCB"); }
+        if (s.panto_pos >= 1 && pt > 3.2) { this.log("Pantograph in contact with the catenary"); this.goto("CLOSE_MCB"); }
       } else if (p === "CLOSE_MCB") {
-        if (pt >= 1 && !s.mcb) { s.mcb = true; st[1] = 100; this.log("MCB FECHADO"); }
+        if (pt >= 1 && !s.mcb) { s.mcb = true; st[1] = 100; this.log("MCB CLOSED"); }
         if (pt >= 2) this.goto("PRECHARGE");
       } else if (p === "PRECHARGE") {
-        if (!s.chct) { s.chct = true; this.log(`ChCt FECHADO — pré-carga via Rpre = ${c.r_pre.toFixed(0)} Ω (τ = ${(c.r_pre * c.c_dc).toFixed(2)} s)`); }
+        if (!s.chct) { s.chct = true; this.log(`ChCt CLOSED — pre-charge via Rpre = ${c.r_pre.toFixed(0)} Ω (τ = ${(c.r_pre * c.c_dc).toFixed(2)} s)`); }
         const target = c.precharge_pct / 100 * s.v_src;
         st[2] = Math.min(100, s.vdc / Math.max(target, 1) * 100);
         if (s.vdc >= target) {
           if (s.pc_done_t < 0) {
             s.pc_done_t = pt;
-            this.log(`DC link pré-carregado: ${s.vdc.toFixed(0)} V (${(s.vdc / s.v_src * 100).toFixed(1)} %) em ${pt.toFixed(2)} s`);
+            this.log(`DC link pre-charged: ${s.vdc.toFixed(0)} V (${(s.vdc / s.v_src * 100).toFixed(1)} %) in ${pt.toFixed(2)} s`);
           }
           if (pt - s.pc_done_t >= 0.5) { s.pc_done_t = -1; this.goto("CLOSE_CTL"); }
-        } else if (pt > 20) this.fault("Timeout de pré-carga (verifique Rpre / tensão da linha)");
+        } else if (pt > 20) this.fault("Pre-charge timeout (check Rpre / line voltage)");
       } else if (p === "CLOSE_CTL") {
         if (!s.ctl) { this.closeCtl(); st[3] = 50; }
-        if (pt >= 0.6 && s.chct) { s.chct = false; st[3] = 100; this.log("ChCt ABERTO — Rpre fora do circuito"); }
+        if (pt >= 0.6 && s.chct) { s.chct = false; st[3] = 100; this.log("ChCt OPEN — Rpre out of circuit"); }
         if (pt >= 1.2) this.goto("STABILIZE");
       } else if (p === "STABILIZE") {
-        if (c.supply === "AC" && !s.qc_on) { s.qc_on = true; this.log(`4QC ligado — regulando DC link em ${c.vdc_ref_ac.toFixed(0)} V`); }
+        if (c.supply === "AC" && !s.qc_on) { s.qc_on = true; this.log(`4QC on — regulating DC link at ${c.vdc_ref_ac.toFixed(0)} V`); }
         const err = c.supply === "AC" ? Math.abs(s.vdc - vnom(c)) / vnom(c) : 0;
         st[4] = Math.min(100, pt / 1.5 * 100);
-        if (pt >= 1.5 && err < 0.02) { st[4] = 100; this.log(`DC link estável em ${s.vdc.toFixed(0)} V`); this.goto("INVERTER"); }
+        if (pt >= 1.5 && err < 0.02) { st[4] = 100; this.log(`DC link stable at ${s.vdc.toFixed(0)} V`); this.goto("INVERTER"); }
       } else if (p === "INVERTER") {
-        if (!s.inv_on) { s.inv_on = true; this.log("Inversor habilitado — magnetizando motores"); }
+        if (!s.inv_on) { s.inv_on = true; this.log("Inverter enabled — magnetizing motors"); }
         st[5] = s.flux * 100;
-        if (s.flux >= 0.99) { this.goto("TRACTION"); this.log(`Tração liberada — alvo ${c.target_kmh.toFixed(0)} km/h`); }
+        if (s.flux >= 0.99) { this.goto("TRACTION"); this.log(`Traction released — target ${c.target_kmh.toFixed(0)} km/h`); }
       } else if (p === "TRACTION") {
         st[5] = 100; st[6] = 100;
         const want = clip((c.target_kmh - s.speed * 3.6) / 4, -0.7, 1);
@@ -755,19 +765,19 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
       } else if (p === "BRAKING") {
         st[6] = 0;
         s.throttle += clip(-0.8 - s.throttle, -0.6 * dt, 0.6 * dt);
-        if (s.speed < 0.05) { s.throttle = 0; this.log("Trem parado"); this.goto("SHUTDOWN"); }
+        if (s.speed < 0.05) { s.throttle = 0; this.log("Train stopped"); this.goto("SHUTDOWN"); }
       } else if (p === "SHUTDOWN") {
         s.throttle = 0;
-        if (s.inv_on || s.qc_on) { s.inv_on = s.qc_on = false; this.log("Inversor e 4QC desligados"); }
-        if (pt >= 0.6 && s.ctl) { s.ctl = false; this.log("CtL ABERTO"); }
-        if (pt >= 1.4 && s.mcb) { s.mcb = false; this.log("MCB ABERTO"); }
+        if (s.inv_on || s.qc_on) { s.inv_on = s.qc_on = false; this.log("Inverter and 4QC off"); }
+        if (pt >= 0.6 && s.ctl) { s.ctl = false; this.log("CtL OPEN"); }
+        if (pt >= 1.4 && s.mcb) { s.mcb = false; this.log("MCB OPEN"); }
         if (pt >= 2.2) s.panto_cmd = false;
         s.steps = pt >= 2.2 ? STEPS.map(() => 0) : st.map((x, i) => (i < 5 ? x : 0));
-        if (pt >= 2.2 && s.panto_pos <= 0) { this.log("Pantógrafo abaixado — sistema desligado"); this.goto("OFF"); }
+        if (pt >= 2.2 && s.panto_pos <= 0) { this.log("Pantograph lowered — system off"); this.goto("OFF"); }
       }
     }
 
-    // --------------------------------------------------------------- física
+    // --------------------------------------------------------------- physics
     step(dt) {
       const s = this.s, c = this.cfg;
       s.t += dt;
@@ -777,12 +787,12 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
       const live = s.panto_pos >= 1 && s.mcb;
       if (s.mcb && s.panto_pos < 1 && s.panto_cmd === false && Math.abs(s.i_src) > 20) s.spark = 1;
       s.v_src = live ? (c.supply === "DC" ? c.v_cat_dc : c.v_sec_peak_ac) : 0;
-      if (c.supply === "AC" && s.qc_on && !(live && s.ctl)) { s.qc_on = false; this.log("4QC desligado (perda de alimentação)", "warn"); }
+      if (c.supply === "AC" && s.qc_on && !(live && s.ctl)) { s.qc_on = false; this.log("4QC off (loss of supply)", "warn"); }
       s.flux = s.inv_on ? Math.min(1, s.flux + dt) : Math.max(0, s.flux - dt / 0.3);
       this.traction(dt);
       s.i_dc = s.vdc > 100 ? s.p_elec / s.vdc : 0;
       this.dcLink(dt);
-      if (s.inv_on && s.vdc < 0.5 * vnom(c)) { s.inv_on = false; this.fault(`Subtensão no DC link (${s.vdc.toFixed(0)} V) — inversor bloqueado`); }
+      if (s.inv_on && s.vdc < 0.5 * vnom(c)) { s.inv_on = false; this.fault(`DC link undervoltage (${s.vdc.toFixed(0)} V) — inverter blocked`); }
       if (s.emergency && s.panto_pos <= 0 && s.speed <= 0) s.emergency = false;
     }
 
@@ -904,7 +914,7 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
           const rip = new Array(n);
           let acc = 0;
           for (let i = 0; i < n; i++) { acc += (pwms[k][i] - refs[k][i]) * dtt; rip[i] = acc / L; }
-          // rip -= média móvel de 51 amostras (np.convolve mode="same", bordas com zero)
+          // rip -= 51-sample moving average (np.convolve mode="same", zero-padded edges)
           const pre = new Float64Array(n + 1);
           for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + rip[i];
           for (let i = 0; i < n; i++) {
@@ -976,7 +986,7 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
     }
   }
 
-  // =============== API local: mesmas rotas do app.py, sem servidor
+  // =============== Local API: same routes as app.py, no server
   function makeLocalApi(sim) {
     const num = (q, k, d, lo, hi) => { const v = parseFloat(q.get(k)); return clip(Number.isFinite(v) ? v : d, lo, hi); };
     const r = (a, nd) => { const p = 10 ** nd; return Array.from(a, (x) => (Number.isFinite(x) ? Math.round(x * p) / p : 0)); };
@@ -1000,7 +1010,7 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
           const half = (a, nd) => r(a.filter((_, i) => i % 2 === 0), nd);
           return { t: half(o.t, 6), rect: half(o.rect, 2), charge: half(o.charge, 2), cap: half(o.cap, 2), final: half(o.final, 2), C: o.C, tau: o.tau };
         }
-        throw new Error("rota desconhecida: " + url);
+        throw new Error("unknown route: " + url);
       },
       command(cmd, value) { sim.command(cmd, value); },
     };
@@ -1022,7 +1032,7 @@ const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyVal
 
 </script>
   <script>
-// Mostradores circulares em SVG (arco de 240°)
+// Circular SVG gauges (240° arc)
 class Gauge {
   constructor(svg, { min, max, label, unit, digits = 0, color = "#22d3ee", zones = [], bipolar = false, mark }) {
     Object.assign(this, { svg, min, max, label, unit, digits, color, bipolar });
@@ -1031,7 +1041,7 @@ class Gauge {
     this.a0 = -210; this.a1 = 30;
     const track = svgEl("path", { d: this.arc(min, max), stroke: "#1d2940", "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
     for (const z of zones) svgEl("path", { d: this.arc(z[0], z[1], this.r + 10), stroke: z[2], "stroke-width": 3, fill: "none", opacity: 0.9 }, svg);
-    // marcações
+    // tick marks
     for (let i = 0; i <= 10; i++) {
       const v = min + (max - min) * i / 10, a = this.ang(v) * Math.PI / 180;
       const r1 = this.r - 12, r2 = this.r - (i % 5 === 0 ? 20 : 16);
@@ -1062,7 +1072,7 @@ class Gauge {
     return `M${x0},${y0} A${r},${r} 0 ${large} ${sweep} ${x1},${y1}`;
   }
   set(v, color) {
-    this.shown += (v - this.shown) * 0.35; // suavização visual
+    this.shown += (v - this.shown) * 0.35; // visual smoothing
     const from = this.bipolar ? 0 : this.min;
     const s = this.shown;
     this.val.setAttribute("d", Math.abs(s - from) < 1e-9 ? "" : (s >= from ? this.arc(from, s) : this.arc(s, from)));
@@ -1076,11 +1086,11 @@ class Gauge {
 
 </script>
   <script>
-// Cena lateral animada: trem, catenária, pantógrafo e paisagem em paralaxe
+// Animated side view: train, catenary, pantograph and parallax landscape
 class TrainScene {
   constructor(svg) {
     this.svg = svg;
-    this.PX = 10; // pixels por metro (camada dos trilhos)
+    this.PX = 10; // pixels per meter (track layer)
     const d = svgEl("defs", {}, svg);
     d.innerHTML = `
       <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -1094,19 +1104,19 @@ class TrainScene {
       </radialGradient>
       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
     svgEl("rect", { width: 1200, height: 190, fill: "url(#sky)" }, svg);
-    // estrelas
+    // stars
     const stars = svgEl("g", { opacity: 0.7 }, svg);
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 70; i++) svgEl("circle", { cx: rnd() * 1200, cy: rnd() * 90, r: rnd() * 1.1 + 0.2, fill: "#cfe1ff" }, stars);
     svgEl("circle", { cx: 1060, cy: 40, r: 14, fill: "#f4f1de", opacity: 0.85, filter: "url(#glow)" }, svg);
-    // montanhas (paralaxe lenta)
+    // mountains (slow parallax)
     this.far = this.layer(svg, (x) => `M${x},150 L${x + 80},110 L${x + 170},135 L${x + 260},95 L${x + 380},140 L${x + 470},105 L${x + 600},150 L${x + 700},118 L${x + 830},140 L${x + 950},100 L${x + 1080},138 L${x + 1200},150 Z`, "#1a2744");
     this.near = this.layer(svg, (x) => {
       let p = `M${x},165 `;
       for (let i = 0; i <= 24; i++) p += `Q${x + i * 50 + 25},${150 - (i * 37 % 13)} ${x + (i + 1) * 50},${160 - (i * 53 % 9)} `;
       return p + `L${x + 1200},170 L${x},170 Z`;
     }, "#121c33");
-    // postes da catenária + fio
+    // catenary masts + wire
     this.masts = svgEl("g", {}, svg);
     for (let i = 0; i < 10; i++) {
       const x = i * 150;
@@ -1116,18 +1126,18 @@ class TrainScene {
     }
     svgEl("line", { x1: 0, y1: 12, x2: 1200, y2: 12, stroke: "#4a5878", "stroke-width": 1.2 }, svg);
     this.wire = svgEl("line", { x1: 0, y1: 26, x2: 1200, y2: 26, stroke: "#b08a3e", "stroke-width": 2 }, svg);
-    // via
+    // track
     svgEl("rect", { x: 0, y: 168, width: 1200, height: 22, fill: "#1b2233" }, svg);
     this.sleepers = svgEl("g", {}, svg);
     for (let i = 0; i < 52; i++) svgEl("rect", { x: i * 24, y: 166, width: 12, height: 6, fill: "#3a3226" }, this.sleepers);
     svgEl("rect", { x: 0, y: 163, width: 1200, height: 3, fill: "#9aa6ba" }, svg);
 
-    // farol (atrás do trem)
+    // headlight beam (behind the train)
     this.beam = svgEl("path", { d: "M902,128 L1200,96 L1200,165 Z", fill: "url(#beam)", opacity: 0 }, svg);
-    // trem
+    // train
     const tr = svgEl("g", {}, svg);
     svgEl("path", { d: "M300,82 Q300,76 306,76 L840,76 Q872,76 892,100 L906,124 Q910,146 896,148 L306,148 Q300,148 300,142 Z", fill: "url(#body)", stroke: "#5b6780", "stroke-width": 1.5 }, tr);
-    svgEl("path", { d: "M852,84 Q874,86 888,104 L896,118 L856,118 Z", fill: "#0d1526", stroke: "#5b6780" }, tr); // para-brisa
+    svgEl("path", { d: "M852,84 Q874,86 888,104 L896,118 L856,118 Z", fill: "#0d1526", stroke: "#5b6780" }, tr); // windshield
     svgEl("rect", { x: 300, y: 126, width: 600, height: 6, fill: "#0891b2" }, tr);
     svgEl("rect", { x: 300, y: 134, width: 604, height: 2, fill: "#f43f5e" }, tr);
     this.windows = [];
@@ -1135,7 +1145,7 @@ class TrainScene {
       if (x > 520 && x < 560) { svgEl("rect", { x: x + 4, y: 88, width: 22, height: 54, rx: 2, fill: "#9aa6ba", stroke: "#5b6780" }, tr); continue; }
       this.windows.push(svgEl("rect", { x, y: 90, width: 34, height: 22, rx: 3, fill: "#1b2438" }, tr));
     }
-    svgEl("rect", { x: 520, y: 70, width: 130, height: 7, rx: 2, fill: "#6b778f" }, tr); // equipamento de teto
+    svgEl("rect", { x: 520, y: 70, width: 130, height: 7, rx: 2, fill: "#6b778f" }, tr); // roof equipment
     this.headlight = svgEl("circle", { cx: 899, cy: 130, r: 3.5, fill: "#3a4256" }, tr);
     this.tail = svgEl("circle", { cx: 303, cy: 130, r: 3, fill: "#3a1a22" }, tr);
     this.wheels = [];
@@ -1148,7 +1158,7 @@ class TrainScene {
       this.wheels.push(sp);
     }
     for (const bx of [400, 800]) svgEl("rect", { x: bx - 46, y: 146, width: 92, height: 8, rx: 3, fill: "#2b3448" }, tr);
-    // pantógrafo
+    // pantograph
     this.panto = svgEl("g", {}, svg);
     this.pArm = svgEl("path", { fill: "none", stroke: "#cfd8e6", "stroke-width": 3, "stroke-linejoin": "round", "stroke-linecap": "round" }, this.panto);
     this.pHead = svgEl("path", { fill: "none", stroke: "#e6ecf5", "stroke-width": 3.5, "stroke-linecap": "round" }, this.panto);
@@ -1166,7 +1176,7 @@ class TrainScene {
   }
 
   setPanto(p) {
-    // p = 0 (abaixado) .. 1 (em contato com o fio de contato, y = 26)
+    // p = 0 (lowered) .. 1 (touching the contact wire, y = 26)
     const base = 72, yh = 64 - 36 * p;
     const knee = [622 - 10 * p, (base + yh) / 2 + 4];
     this.pArm.setAttribute("d", `M572,${base} L${knee[0]},${knee[1]} L585,${yh + 2}`);
@@ -1194,7 +1204,7 @@ class TrainScene {
     const live = s.panto_pos >= 1;
     this.wire.setAttribute("stroke", live && s.mcb ? "#f5a524" : "#b08a3e");
 
-    // faíscas no contato: arco ao baixar sob carga, ou cintilação proporcional à corrente
+    // sparks at the contact: arc when lowered under load, or flicker proportional to current
     const iRatio = Math.abs(s.i_src) / 600;
     const flick = s.spark > 0 ? s.spark : (live && Math.random() < iRatio * 0.25 ? 0.7 : 0);
     this.spark.setAttribute("opacity", flick);
@@ -1211,7 +1221,7 @@ class TrainScene {
 
 </script>
   <script>
-// Esquema unifilar animado. Reconstruído quando a topologia muda (DC/AC, 2L/3L).
+// Animated single-line diagram. Rebuilt when the topology changes (DC/AC, 2L/3L).
 class Schematic {
   constructor(svg, onToggle) {
     this.svg = svg;
@@ -1255,40 +1265,40 @@ class Schematic {
       this.sw[id] = { grp, lev };
     };
 
-    // catenária / fonte
+    // catenary / source
     wire("cat", "M20,36 L250,36");
-    text(250, 26, AC ? "Catenária 25 kV 50 Hz" : "Catenária 3 kV DC", "ttl", "end");
+    text(250, 26, AC ? "25 kV 50 Hz catenary" : "3 kV DC catenary", "ttl", "end");
     this.t.vline = text(20, 26, "", "val", "start");
 
-    // pantógrafo (símbolo)
+    // pantograph (symbol)
     const pg = svgEl("g", { class: "clickable", "data-id": "panto" }, g);
     svgEl("rect", { x: 40, y: 34, width: 80, height: 84, rx: 8, class: "hit" }, pg);
         this.pantoArm = svgEl("path", { class: "sym", "stroke-width": 3 }, pg);
     this.pantoHead = svgEl("path", { class: "sym", "stroke-width": 3.5 }, pg);
     svgEl("line", { x1: 60, y1: 112, x2: 100, y2: 112, class: "sym", "stroke-width": 4 }, pg);
     pg.addEventListener("click", () => this.onToggle("panto"));
-    text(130, 100, "Pantógrafo", "ttl", "start");
+    text(130, 100, "Pantograph", "ttl", "start");
     this.t.panto = text(130, 116, "", "", "start");
     wire("panto", `M80,114 L80,${YP} L140,${YP}`);
 
-    sw("mcb", 140, YP, "MCB", "disjuntor principal");
+    sw("mcb", 140, YP, "MCB", "main circuit breaker");
     this.t.isrc = text(168, YP + 44, "", "val");
 
     if (!AC) {
       wire("mcb", `M196,${YP} L222,${YP} a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 L330,${YP}`);
-      text(262, YP - 22, "Filtro L", "ttl");
+      text(262, YP - 22, "Line filter L", "ttl");
     } else {
       wire("mcb", `M196,${YP} L232,${YP}`);
       svgEl("circle", { cx: 252, cy: YP, r: 20, class: "sym" }, g);
       svgEl("circle", { cx: 278, cy: YP, r: 20, class: "sym" }, g);
-      text(265, YP - 30, "Trafo T1", "ttl");
+      text(265, YP - 30, "Transformer T1", "ttl");
       wire("pri", `M252,${YP + 20} L252,${YN}`);
       wire("sec", `M298,${YP} L330,${YP}`);
       wire("sec2", `M278,${YP + 20} L278,295 L560,295`);
     }
-    // contator de linha e ramo de pré-carga
+    // line contactor and pre-charge branch
     wire("node", `M330,${YP} L380,${YP}`);
-    sw("ctl", 380, YP, "CtL", "contator de linha (K110)");
+    sw("ctl", 380, YP, "CtL", "line contactor (K110)");
     wire("ctl", `M436,${YP} L520,${YP}`);
     wire("pre1", `M330,${YP} L330,262 L360,262`);
     sw("chct", 360, 262, "ChCt", "");
@@ -1310,13 +1320,13 @@ class Schematic {
       wire("dcn", `M640,${YN} L860,${YN}`);
     } else {
       wire("dcn", `M80,${YN} L860,${YN}`);
-      // retorno pelo trilho
+      // return through the rail
       svgEl("path", { d: `M66,${YN} L94,${YN} M71,${YN + 6} L89,${YN + 6} M76,${YN + 12} L84,${YN + 12}`, class: "sym" }, g);
-      text(80, YN + 30, "trilho (retorno)");
+      text(80, YN + 30, "rail (return)");
     }
     wire("dcp", `M${xDC0},${YP} L860,${YP}`);
 
-    // DC link (1 ou 2 capacitores)
+    // DC link (1 or 2 capacitors)
     const cx = 700;
     if (levels === 3) {
       wire("cap", `M${cx},${YP} L${cx},226 M${cx},238 L${cx},292 M${cx},304 L${cx},${YN}`);
@@ -1334,20 +1344,20 @@ class Schematic {
     defs.innerHTML = `<linearGradient id="capgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0e7490"/><stop offset="1" stop-color="#67e8f9"/></linearGradient>`;
     this.t.vdc = text(cx, YN + 30, "", "val");
 
-    // VLU (chopper de frenagem)
+    // VLU (brake chopper)
     const vx = 795;
     wire("vlu", `M${vx},${YP} L${vx},214 M${vx},258 L${vx},${YN}`);
     this.vluR = svgEl("rect", { x: vx - 8, y: 214, width: 16, height: 44, rx: 2, class: "sym" }, g);
     text(vx, YN + 30, "VLU");
 
-    // inversor
+    // inverter
     const ig = svgEl("g", { class: "clickable", "data-id": "inv" }, g);
     this.invBox = svgEl("rect", { x: 860, y: 170, width: 90, height: 180, rx: 6, class: "box" }, ig);
     svgEl("line", { x1: 860, y1: 350, x2: 950, y2: 170, class: "sym", "stroke-width": 1.5 }, ig);
     const e1 = svgEl("text", { x: 874, y: 206, "font-size": 22, fill: "#cfd8e6" }, ig); e1.textContent = "=";
     const e2 = svgEl("text", { x: 918, y: 334, "font-size": 22, fill: "#cfd8e6" }, ig); e2.textContent = "~";
     const il = svgEl("text", { x: 905, y: 160, class: "ttl", "text-anchor": "middle" }, ig);
-    il.textContent = levels === 3 ? "Inversor 3L NPC" : "Inversor 2L";
+    il.textContent = levels === 3 ? "3L NPC inverter" : "2L inverter";
     ig.addEventListener("click", () => this.onToggle("inv"));
     this.t.idc = text(775, YP - 12, "", "val");
 
@@ -1357,7 +1367,7 @@ class Schematic {
     this.rotorG = svgEl("g", { transform: "translate(1040,260)" }, g);
     for (let k = 0; k < 3; k++) svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -26, class: "rotor", transform: `rotate(${k * 120})`, opacity: 0.35 }, this.rotorG);
     const mt = svgEl("text", { x: 1040, y: 265, "text-anchor": "middle", class: "ttl", "font-size": 15 }, g); mt.textContent = "M 3~";
-    text(1040, 212, "Motor de tração", "ttl");
+    text(1040, 212, "Traction motor", "ttl");
     this.t.mot = text(1040, 316, "", "val");
     this.t.mot2 = text(1040, 332, "", "val");
   }
@@ -1383,11 +1393,11 @@ class Schematic {
     this.build(c.supply, c.levels);
     this.svg.classList.toggle("manual", s.mode === "manual");
 
-    // pantógrafo
+    // pantograph
     const yh = 78 - 40 * s.panto_pos;
     this.pantoArm.setAttribute("d", `M66,112 L100,${(112 + yh) / 2} L76,${yh + 2}`);
     this.pantoHead.setAttribute("d", `M58,${yh} L102,${yh}`);
-    this.t.panto.textContent = s.panto_pos >= 1 ? "em contato" : s.panto_cmd ? "subindo…" : s.panto_pos > 0 ? "descendo…" : "abaixado";
+    this.t.panto.textContent = s.panto_pos >= 1 ? "in contact" : s.panto_cmd ? "raising…" : s.panto_pos > 0 ? "lowering…" : "lowered";
 
     const pUp = s.panto_pos >= 1, up = pUp && s.mcb;
     const iS = Math.abs(s.i_src), iD = Math.abs(s.i_dc);
@@ -1428,16 +1438,16 @@ class Schematic {
     this.t.vdc.textContent = `${fmt(s.vdc)} V`;
     this.t.idc.textContent = s.inv_on ? `${fmt(s.i_dc)} A` : "";
     const rpm = s.f_rotor / c.pole_pairs * 60;
-    this.t.mot.textContent = s.inv_on ? `${fmt(s.f_s, 1)} Hz` : "parado";
+    this.t.mot.textContent = s.inv_on ? `${fmt(s.f_s, 1)} Hz` : "stopped";
     this.t.mot2.textContent = `${fmt(rpm)} rpm`;
-    this.rotor = (this.rotor + 360 * (s.f_rotor / c.pole_pairs) * dt * 0.25) % 360; // 1/4 da rotação real p/ ser visível
+    this.rotor = (this.rotor + 360 * (s.f_rotor / c.pole_pairs) * dt * 0.25) % 360; // 1/4 of the real speed so it stays visible
     this.rotorG.setAttribute("transform", `translate(1040,260) rotate(${this.rotor})`);
   }
 }
 
 </script>
   <script>
-// Gráficos com uPlot (rápido o bastante para atualizar a ~10 Hz)
+// uPlot charts (fast enough to update at ~10 Hz)
 const COL = {
   dc: "#22d3ee", line: "#f5a524", ac: "#a78bfa", ok: "#34d399", bad: "#f43f5e",
   grid: "#1a2540", axis: "#8b97ad", dim: "#56627a", ia: "#fb7185", ib: "#4ade80", ic: "#60a5fa", force: "#fb923c",
@@ -1474,8 +1484,8 @@ function makeCharts() {
     axes: [axisX("t [s]"), axisY("V", "V"), axisY("A", "A", 1)],
     series: [{ label: "t", value: (u, v) => v == null ? "—" : v.toFixed(1) + " s" },
       { label: "Vdc", stroke: COL.dc, width: 2, scale: "V", fill: "rgba(34,211,238,.08)", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
-      { label: "V fonte", stroke: COL.line, width: 1.5, dash: [6, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
-      { label: "Limiar pré-carga", stroke: COL.dim, width: 1, dash: [3, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
+      { label: "V source", stroke: COL.line, width: 1.5, dash: [6, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
+      { label: "Pre-charge threshold", stroke: COL.dim, width: 1, dash: [3, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
       { label: "I DC", stroke: COL.ia, width: 1.5, scale: "A", value: (u, v) => v == null ? "—" : v.toFixed(0) + " A" }],
   }, 5);
 
@@ -1484,9 +1494,9 @@ function makeCharts() {
     axes: [axisX("t [ms]"), axisY("V", "y")],
     series: [{ label: "t" },
       { label: "PWM", stroke: COL.ac, width: 1.5, fill: "rgba(167,139,250,.18)", paths: uPlot.paths.stepped({ align: 1 }) },
-      { label: "Referência", stroke: COL.line, width: 2 },
-      { label: "Portadora", stroke: "#64748b", width: 1 },
-      { label: "−Portadora", stroke: "#475569", width: 1 }],
+      { label: "Reference", stroke: COL.line, width: 2 },
+      { label: "Carrier", stroke: "#64748b", width: 1 },
+      { label: "−Carrier", stroke: "#475569", width: 1 }],
   }, 5);
 
   C.uab = new Chart($("#c-uab"), {
@@ -1501,7 +1511,7 @@ function makeCharts() {
 
   C.spec = new Chart($("#c-spec"), {
     scales: { x: { time: false }, y: { auto: true } },
-    axes: [axisX("f [Hz]"), axisY("V (pico)", "y")],
+    axes: [axisX("f [Hz]"), axisY("V (peak)", "y")],
     series: [{ label: "f", value: (u, v) => v == null ? "—" : v.toFixed(1) + " Hz" },
       { label: "|U–V|", stroke: COL.dc, fill: "rgba(34,211,238,.6)", width: 0, paths: uPlot.paths.bars({ size: [1, 3] }), points: { show: false },
         value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" }],
@@ -1511,9 +1521,9 @@ function makeCharts() {
     scales: { x: { time: false }, v: { range: (u, a, b) => [0, Math.max(40, b * 1.1)] }, F: { auto: true }, P: { auto: true } },
     axes: [axisX("t [s]"), axisY("km/h", "v"), axisY("kN", "F", 1), axisY("MW", "P", 1, { size: 44 })],
     series: [{ label: "t", value: (u, v) => v == null ? "—" : v.toFixed(1) + " s" },
-      { label: "Velocidade", stroke: COL.ok, width: 2.5, scale: "v", value: (u, v) => v == null ? "—" : v.toFixed(1) + " km/h" },
-      { label: "Esforço elétrico", stroke: COL.force, width: 1.5, scale: "F", value: (u, v) => v == null ? "—" : v.toFixed(1) + " kN" },
-      { label: "Potência DC", stroke: COL.ac, width: 1.5, scale: "P", dash: [5, 3], value: (u, v) => v == null ? "—" : v.toFixed(2) + " MW" }],
+      { label: "Speed", stroke: COL.ok, width: 2.5, scale: "v", value: (u, v) => v == null ? "—" : v.toFixed(1) + " km/h" },
+      { label: "Electric effort", stroke: COL.force, width: 1.5, scale: "F", value: (u, v) => v == null ? "—" : v.toFixed(1) + " kN" },
+      { label: "DC power", stroke: COL.ac, width: 1.5, scale: "P", dash: [5, 3], value: (u, v) => v == null ? "—" : v.toFixed(2) + " MW" }],
   }, 4);
 
   C.zoom = new Chart($("#c-zoom"), {
@@ -1524,12 +1534,12 @@ function makeCharts() {
   return C;
 }
 
-// Buffer circular simples para os históricos
+// Simple rolling buffer for the histories
 class History {
   constructor(n, window) { this.n = n; this.window = window; this.cols = Array.from({ length: n }, () => []); }
   push(row) {
     const t = row[0], x = this.cols[0];
-    if (x.length && t < x[x.length - 1]) this.clear(); // reset da simulação
+    if (x.length && t < x[x.length - 1]) this.clear(); // simulation reset
     row.forEach((v, i) => this.cols[i].push(v));
     while (x.length && x[0] < t - this.window) this.cols.forEach((c) => c.shift());
   }
@@ -1538,7 +1548,7 @@ class History {
 
 </script>
   <script>
-// Aba "Laboratório Excel": cada cartão chama a API que reproduz uma aba da planilha
+// "Excel Lab" tab: each card calls the API that reproduces one spreadsheet sheet
 function initLab() {
   const L = {};
   L.pwm = new Chart($("#lc-pwm"), {
@@ -1547,26 +1557,26 @@ function initLab() {
     axes: [axisX("t [s]"), axisY("V", "y")],
     series: [{ label: "A (t)" },
       { label: "D — PWM", stroke: COL.ac, width: 1.5, fill: "rgba(167,139,250,.2)", paths: uPlot.paths.stepped({ align: 1 }) },
-      { label: "B — senoide", stroke: COL.line, width: 2 },
-      { label: "C — portadora", stroke: "#64748b", width: 1 }],
+      { label: "B — sine", stroke: COL.line, width: 2 },
+      { label: "C — carrier", stroke: "#64748b", width: 1 }],
   }, 4);
   L.pre = new Chart($("#lc-pre"), {
     height: 260,
     scales: { x: { time: false }, y: { auto: true } },
     axes: [axisX("Time [s]"), axisY("Voltage (V)", "y")],
     series: [{ label: "A (t)", value: (u, v) => v == null ? "—" : v.toFixed(2) + " s" },
-      { label: "B — tensão", stroke: COL.dc, width: 2.5, fill: "rgba(34,211,238,.08)" },
-      { label: "E2 — alvo", stroke: COL.line, width: 1.5, dash: [6, 4] },
-      { label: "D2 — instante", stroke: COL.bad, width: 0, points: { show: true, size: 10, fill: COL.bad } }],
+      { label: "B — voltage", stroke: COL.dc, width: 2.5, fill: "rgba(34,211,238,.08)" },
+      { label: "E2 — target", stroke: COL.line, width: 1.5, dash: [6, 4] },
+      { label: "D2 — instant", stroke: COL.bad, width: 0, points: { show: true, size: 10, fill: COL.bad } }],
   }, 4);
   L.rip = new Chart($("#lc-rip"), {
     height: 260,
     scales: { x: { time: false }, y: { auto: true } },
-    axes: [axisX("Tempo [s]"), axisY("V", "y")],
+    axes: [axisX("Time [s]"), axisY("V", "y")],
     series: [{ label: "A (t)", value: (u, v) => v == null ? "—" : (v * 1000).toFixed(2) + " ms" },
-      { label: "E — curva final", stroke: COL.dc, width: 2.5 },
-      { label: "B — retificada", stroke: "rgba(245,165,36,.45)", width: 1 },
-      { label: "C — carga RC", stroke: COL.ok, width: 1, dash: [5, 4] }],
+      { label: "E — final curve", stroke: COL.dc, width: 2.5 },
+      { label: "B — rectified", stroke: "rgba(245,165,36,.45)", width: 1 },
+      { label: "C — RC charge", stroke: COL.ok, width: 1, dash: [5, 4] }],
   }, 4);
 
   let level = 2;
@@ -1585,8 +1595,8 @@ function initLab() {
     $("#lf-pwm").innerHTML = (level === 2
       ? `D = IF(B>0, IF(|B|>|C|, <b>1500</b>, 0), IF(|B|>|C|, <b>−1500</b>, 0))`
       : `D = IF(B>0, IF(B≥750, IF(|B|>|C|,<b>1500</b>,<b>750</b>), IF(|B|>|C|,<b>750</b>,0)),\n        IF(|B|≥750, IF(|B|>|C|,<b>−1500</b>,<b>−750</b>), IF(|B|>|C|,<b>−750</b>,0)))`)
-      + `\nB = Amp·sin(2π·f·t)   C = E2·(1 − 2·|frac(t·fc) − 0.5|)   passo 0.0001 s, 1001 linhas`
-      + `\nIndicadores da aba principal:  Speed = B2·4/100 = <b>${g.speed.toFixed(2)}</b>   Power = C2/1500 = <b>${g.power.toFixed(2)}</b>`;
+      + `\nB = Amp·sin(2π·f·t)   C = E2·(1 − 2·|frac(t·fc) − 0.5|)   step 0.0001 s, 1001 rows`
+      + `\nMain sheet indicators:  Speed = B2·4/100 = <b>${g.speed.toFixed(2)}</b>   Power = C2/1500 = <b>${g.power.toFixed(2)}</b>`;
   }, 60);
 
   const runPre = debounce(async () => {
@@ -1598,8 +1608,8 @@ function initLab() {
     if (k >= 0) mark[k] = d.target_v;
     L.pre.set([d.t, d.v, tgt, mark]);
     $("#lf-pre").innerHTML = `B = ROUND(H1·(1 − e^(−t/(H2·H3))), 0)     τ = R·C = <b>${d.tau.toFixed(3)} s</b>`
-      + `\nD2 = IF(E2=H1, 8.5, −R·C·ln(1 − E2/H1))  →  tempo para ${pct}% (${d.target_v.toFixed(0)} V) = <b>${d.target_t.toFixed(3)} s</b>`
-      + `\nNo simulador o CtL fecha quando o DC link atinge o limiar de pré-carga (95 % por padrão).`;
+      + `\nD2 = IF(E2=H1, 8.5, −R·C·ln(1 − E2/H1))  →  time to ${pct}% (${d.target_v.toFixed(0)} V) = <b>${d.target_t.toFixed(3)} s</b>`
+      + `\nIn the simulator the CtL closes when the DC link reaches the pre-charge threshold (95 % by default).`;
   }, 60);
 
   const runRip = debounce(async () => {
@@ -1607,7 +1617,7 @@ function initLab() {
     const d = await apiGet("/api/lab/ripple?" + new URLSearchParams(q));
     L.rip.set([d.t, d.final, d.rect, d.charge]);
     $("#lf-rip").innerHTML = `B = G4·|sin(2π·100·t)|   C = G4·(1 − e^(−t/(G2·G3)))   D = IF(B>C, C, D₋₁·e^(−Δt/(G2·G3)))`
-      + `\nE = IF(B>C, C, IF(B&lt;D, D, B))      C = <b>${(d.C * 1e6).toFixed(0)} µF</b>   τ = <b>${(d.tau * 1000).toFixed(2)} ms</b>   passo 10 µs, 5000 linhas`;
+      + `\nE = IF(B>C, C, IF(B&lt;D, D, B))      C = <b>${(d.C * 1e6).toFixed(0)} µF</b>   τ = <b>${(d.tau * 1000).toFixed(2)} ms</b>   step 10 µs, 5000 rows`;
   }, 60);
 
   bind("#li-freq", "#lv-freq", (v) => v + " Hz", runPwm);
@@ -1637,12 +1647,13 @@ function initLab() {
 
 </script>
   <script>
-// Aplicação principal: polling do estado da simulação (Python) e renderização
+// Main application: polls the simulation state and renders it
+// Author: Rafael Tavares
 const PHASES = {
-  OFF: ["DESLIGADO", ""], RAISE_PANTO: ["SUBINDO PANTÓGRAFO", "seq"], CLOSE_MCB: ["FECHANDO MCB", "seq"],
-  PRECHARGE: ["PRÉ-CARGA DC LINK", "seq"], CLOSE_CTL: ["FECHANDO CtL", "seq"], STABILIZE: ["ESTABILIZANDO", "seq"],
-  INVERTER: ["MAGNETIZANDO", "seq"], TRACTION: ["EM TRAÇÃO", "run"], BRAKING: ["FRENANDO", "seq"],
-  SHUTDOWN: ["DESLIGANDO", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGÊNCIA", "bad"],
+  OFF: ["OFF", ""], RAISE_PANTO: ["RAISING PANTOGRAPH", "seq"], CLOSE_MCB: ["CLOSING MCB", "seq"],
+  PRECHARGE: ["DC LINK PRE-CHARGE", "seq"], CLOSE_CTL: ["CLOSING CtL", "seq"], STABILIZE: ["STABILIZING", "seq"],
+  INVERTER: ["MAGNETIZING", "seq"], TRACTION: ["TRACTION", "run"], BRAKING: ["BRAKING", "seq"],
+  SHUTDOWN: ["SHUTTING DOWN", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGENCY", "bad"],
 };
 const TS = [1, 2, 3, 5, 8, 10];
 
@@ -1651,17 +1662,17 @@ const schem = new Schematic($("#schem"), (id) => apiCmd("toggle", id));
 const charts = makeCharts();
 const lab = initLab();
 const G = {
-  speed: new Gauge($("#g-speed"), { min: 0, max: 160, label: "Velocidade", unit: "km/h", color: COL.ok, zones: [[140, 160, COL.bad]] }),
-  freq: new Gauge($("#g-freq"), { min: 0, max: 160, label: "Frequência do motor", unit: "Hz", digits: 1, color: COL.ac }),
-  vdc: new Gauge($("#g-vdc"), { min: 0, max: 4000, label: "Tensão DC link", unit: "V", color: COL.dc, zones: [[3510, 4000, COL.bad]], mark: 3000 }),
-  power: new Gauge($("#g-power"), { min: -1.5, max: 1.5, label: "Potência (tração / regeneração)", unit: "MW", digits: 2, color: COL.line, bipolar: true }),
+  speed: new Gauge($("#g-speed"), { min: 0, max: 160, label: "Speed", unit: "km/h", color: COL.ok, zones: [[140, 160, COL.bad]] }),
+  freq: new Gauge($("#g-freq"), { min: 0, max: 160, label: "Motor frequency", unit: "Hz", digits: 1, color: COL.ac }),
+  vdc: new Gauge($("#g-vdc"), { min: 0, max: 4000, label: "DC link voltage", unit: "V", color: COL.dc, zones: [[3510, 4000, COL.bad]], mark: 3000 }),
+  power: new Gauge($("#g-power"), { min: -1.5, max: 1.5, label: "Power (traction / regen)", unit: "MW", digits: 2, color: COL.line, bipolar: true }),
 };
 const hDC = new History(5, 60);
 const hTrain = new History(4, 120);
 
 let S = null, tState = 0, lastEvent = 0, lastFrame = performance.now(), online = true;
 
-// ------------------------------------------------------------------ controles
+// ------------------------------------------------------------------ controls
 function bindControls() {
   $$(".tab").forEach((b) => b.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
@@ -1695,7 +1706,7 @@ function bindControls() {
   $("#btn-thr0").onclick = () => { $("#in-thr").value = 0; $("#v-thr").textContent = "0 %"; apiCmd("set", { throttle: 0 }); };
   $$("#ctrl-seg button").forEach((b) => b.addEventListener("click", () => apiCmd("set", { ctrl: b.dataset.ctrl })));
 
-  // atalhos de teclado (modo manual): ↑/↓ manipulador
+  // keyboard shortcuts (manual mode): ↑/↓ master controller
   window.addEventListener("keydown", (e) => {
     if (!S || S.mode !== "manual" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     const el = $("#in-thr");
@@ -1718,21 +1729,21 @@ function buildSteps(names) {
 
 function renderState(s) {
   const c = s.cfg;
-  // topo
+  // header
   const [ptxt, pcls] = PHASES[s.phase] || [s.phase, ""];
   const pill = $("#phase-pill");
-  pill.textContent = s.faults.length ? "FALHA" : ptxt;
+  pill.textContent = s.faults.length ? "FAULT" : ptxt;
   pill.className = "pill " + (s.faults.length ? "bad" : pcls);
   $("#clock").textContent = `t = ${s.t.toFixed(1)} s`;
-  $("#topo-label").textContent = (c.supply === "AC" ? "25 kV 50 Hz AC · trafo + 4QC" : "3 kV DC")
-    + ` · inversor ${c.levels === 3 ? "3 níveis NPC" : "2 níveis"} · PWM ${c.pwm_method === "excel" ? "Excel" : "clássico"}`;
+  $("#topo-label").textContent = (c.supply === "AC" ? "25 kV 50 Hz AC · transformer + 4QC" : "3 kV DC")
+    + ` · ${c.levels === 3 ? "3-level NPC" : "2-level"} inverter · ${c.pwm_method === "excel" ? "Excel" : "classic"} PWM`;
 
-  // modo e painéis
+  // mode and panels
   $$("#mode-seg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === s.mode));
   $("#drive-auto").hidden = s.mode !== "auto";
   $("#drive-manual").hidden = s.mode !== "manual";
   $("#btn-start").disabled = s.mode !== "auto";
-  $("#schem-hint").textContent = s.mode === "manual" ? "Clique nos contatores, pantógrafo, 4QC e inversor" : "Modo automático";
+  $("#schem-hint").textContent = s.mode === "manual" ? "Click the contactors, pantograph, 4QC and inverter" : "Automatic mode";
   $$("#ctrl-seg button").forEach((b) => b.classList.toggle("on", b.dataset.ctrl === s.ctrl));
   $("#ctrl-throttle").hidden = s.ctrl !== "throttle";
   $("#ctrl-freq").hidden = s.ctrl !== "freq";
@@ -1750,7 +1761,7 @@ function renderState(s) {
     $("#v-thr").textContent = (s.throttle > 0 ? "+" : "") + Math.round(s.throttle * 100) + " %";
   }
 
-  // sequência
+  // sequence
   if (!$("#steps").children.length) buildSteps(s.step_names);
   const lis = $("#steps").children;
   let activeSet = false;
@@ -1774,10 +1785,10 @@ function renderState(s) {
   $("#k-thd").textContent = sp && sp.thd_uab != null ? `${sp.thd_uab.toFixed(1)} %` : "—";
   $("#hud-dist").textContent = `${(s.pos / 1000).toFixed(2)} km · ${PHASES[s.phase]?.[0] || s.phase}`;
 
-  // falhas
+  // faults
   const fb = $("#fault-banner");
   fb.hidden = !s.faults.length;
-  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Pressione RESET com o trem parado.</small>";
+  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Press RESET with the train at standstill.</small>";
 
   // log
   const newEv = s.events.filter((e) => e.id > lastEvent);
@@ -1791,13 +1802,13 @@ function renderState(s) {
   }
   while ($("#log").children.length > 150) $("#log").lastChild.remove();
 
-  // históricos
+  // histories
   hDC.push([s.t, s.vdc, s.v_src, s.v_src > 0 ? s.v_src * c.precharge_pct / 100 : null, s.i_dc]);
   hTrain.push([s.t, s.speed_kmh, (s.force + s.force_mech) / 1e3, s.p_elec / 1e6]);
   charts.dc.set(hDC.cols);
   charts.train.set(hTrain.cols);
 
-  // formas de onda calculadas em Python
+  // waveforms computed by the engine
   const w = s.wave;
   if (w) {
     const V = s.vdc / 2;
@@ -1806,18 +1817,18 @@ function renderState(s) {
     else if (c.levels === 2) { up = w.carrier.map((x) => 2 * x - V); lo = w.t.map(() => null); }
     else lo = w.carrier.map((x) => x - V);
     charts.pwm.set([w.t, w.pwm, w.ref, up, lo]);
-    $("#pwm-note").textContent = `${c.pwm_method === "excel" ? "Excel" : "clássica"} · ${c.levels}L · portadora ${c.fc} Hz · f = ${s.f_s.toFixed(1)} Hz · m = ${s.m.toFixed(2)}`;
+    $("#pwm-note").textContent = `${c.pwm_method === "excel" ? "Excel" : "classic"} · ${c.levels}L · carrier ${c.fc} Hz · f = ${s.f_s.toFixed(1)} Hz · m = ${s.m.toFixed(2)}`;
     charts.uab.set([w.t, w.uab, w.ia, w.ib, w.ic]);
     if (w.spec) {
       charts.spec.set([w.spec.f, w.spec.a]);
-      $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD U–V ${w.spec.thd_uab.toFixed(1)} % · THD fase ${w.spec.thd_pwm.toFixed(1)} %`;
+      $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD U–V ${w.spec.thd_uab.toFixed(1)} % · THD phase ${w.spec.thd_pwm.toFixed(1)} %`;
     } else {
       charts.spec.set([[], []]);
-      $("#spec-note").textContent = "inversor parado";
+      $("#spec-note").textContent = "inverter stopped";
     }
     charts.zoom.set([w.dct, w.dcv]);
     const mn = Math.min(...w.dcv), mx = Math.max(...w.dcv);
-    $("#rip-note").textContent = `ripple pico-a-pico ${(mx - mn).toFixed(0)} V` + (c.supply === "AC" ? " · 100 Hz (2× rede)" : "");
+    $("#rip-note").textContent = `peak-to-peak ripple ${(mx - mn).toFixed(0)} V` + (c.supply === "AC" ? " · 100 Hz (2× grid)" : "");
   }
 }
 
@@ -1826,7 +1837,7 @@ function frame(now) {
   lastFrame = now;
   if (S) {
     const ts = S.cfg.time_scale;
-    const pos = S.pos + S.speed * Math.min(0.3, (now - tState) / 1000) * ts; // extrapola entre amostras
+    const pos = S.pos + S.speed * Math.min(0.3, (now - tState) / 1000) * ts; // extrapolate between samples
     scene.update(S, pos);
     schem.update(S, dt * ts);
     $("#hud-speed").textContent = S.speed_kmh.toFixed(0);
@@ -1848,7 +1859,7 @@ async function poll() {
     online = false;
     const fb = $("#fault-banner");
     fb.hidden = false;
-    fb.textContent = "Sem conexão com o servidor Python (app.py). Ele está rodando?";
+    fb.textContent = "No connection to the Python server (app.py). Is it running?";
   }
   setTimeout(poll, 90);
 }

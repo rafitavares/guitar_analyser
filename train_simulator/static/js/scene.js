@@ -1,8 +1,8 @@
-// Cena lateral animada: trem, catenária, pantógrafo e paisagem em paralaxe
+// Animated side view: train, catenary, pantograph and parallax landscape
 class TrainScene {
   constructor(svg) {
     this.svg = svg;
-    this.PX = 10; // pixels por metro (camada dos trilhos)
+    this.PX = 10; // pixels per meter (track layer)
     const d = svgEl("defs", {}, svg);
     d.innerHTML = `
       <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -16,19 +16,19 @@ class TrainScene {
       </radialGradient>
       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
     svgEl("rect", { width: 1200, height: 190, fill: "url(#sky)" }, svg);
-    // estrelas
+    // stars
     const stars = svgEl("g", { opacity: 0.7 }, svg);
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 70; i++) svgEl("circle", { cx: rnd() * 1200, cy: rnd() * 90, r: rnd() * 1.1 + 0.2, fill: "#cfe1ff" }, stars);
     svgEl("circle", { cx: 1060, cy: 40, r: 14, fill: "#f4f1de", opacity: 0.85, filter: "url(#glow)" }, svg);
-    // montanhas (paralaxe lenta)
+    // mountains (slow parallax)
     this.far = this.layer(svg, (x) => `M${x},150 L${x + 80},110 L${x + 170},135 L${x + 260},95 L${x + 380},140 L${x + 470},105 L${x + 600},150 L${x + 700},118 L${x + 830},140 L${x + 950},100 L${x + 1080},138 L${x + 1200},150 Z`, "#1a2744");
     this.near = this.layer(svg, (x) => {
       let p = `M${x},165 `;
       for (let i = 0; i <= 24; i++) p += `Q${x + i * 50 + 25},${150 - (i * 37 % 13)} ${x + (i + 1) * 50},${160 - (i * 53 % 9)} `;
       return p + `L${x + 1200},170 L${x},170 Z`;
     }, "#121c33");
-    // postes da catenária + fio
+    // catenary masts + wire
     this.masts = svgEl("g", {}, svg);
     for (let i = 0; i < 10; i++) {
       const x = i * 150;
@@ -38,18 +38,18 @@ class TrainScene {
     }
     svgEl("line", { x1: 0, y1: 12, x2: 1200, y2: 12, stroke: "#4a5878", "stroke-width": 1.2 }, svg);
     this.wire = svgEl("line", { x1: 0, y1: 26, x2: 1200, y2: 26, stroke: "#b08a3e", "stroke-width": 2 }, svg);
-    // via
+    // track
     svgEl("rect", { x: 0, y: 168, width: 1200, height: 22, fill: "#1b2233" }, svg);
     this.sleepers = svgEl("g", {}, svg);
     for (let i = 0; i < 52; i++) svgEl("rect", { x: i * 24, y: 166, width: 12, height: 6, fill: "#3a3226" }, this.sleepers);
     svgEl("rect", { x: 0, y: 163, width: 1200, height: 3, fill: "#9aa6ba" }, svg);
 
-    // farol (atrás do trem)
+    // headlight beam (behind the train)
     this.beam = svgEl("path", { d: "M902,128 L1200,96 L1200,165 Z", fill: "url(#beam)", opacity: 0 }, svg);
-    // trem
+    // train
     const tr = svgEl("g", {}, svg);
     svgEl("path", { d: "M300,82 Q300,76 306,76 L840,76 Q872,76 892,100 L906,124 Q910,146 896,148 L306,148 Q300,148 300,142 Z", fill: "url(#body)", stroke: "#5b6780", "stroke-width": 1.5 }, tr);
-    svgEl("path", { d: "M852,84 Q874,86 888,104 L896,118 L856,118 Z", fill: "#0d1526", stroke: "#5b6780" }, tr); // para-brisa
+    svgEl("path", { d: "M852,84 Q874,86 888,104 L896,118 L856,118 Z", fill: "#0d1526", stroke: "#5b6780" }, tr); // windshield
     svgEl("rect", { x: 300, y: 126, width: 600, height: 6, fill: "#0891b2" }, tr);
     svgEl("rect", { x: 300, y: 134, width: 604, height: 2, fill: "#f43f5e" }, tr);
     this.windows = [];
@@ -57,7 +57,7 @@ class TrainScene {
       if (x > 520 && x < 560) { svgEl("rect", { x: x + 4, y: 88, width: 22, height: 54, rx: 2, fill: "#9aa6ba", stroke: "#5b6780" }, tr); continue; }
       this.windows.push(svgEl("rect", { x, y: 90, width: 34, height: 22, rx: 3, fill: "#1b2438" }, tr));
     }
-    svgEl("rect", { x: 520, y: 70, width: 130, height: 7, rx: 2, fill: "#6b778f" }, tr); // equipamento de teto
+    svgEl("rect", { x: 520, y: 70, width: 130, height: 7, rx: 2, fill: "#6b778f" }, tr); // roof equipment
     this.headlight = svgEl("circle", { cx: 899, cy: 130, r: 3.5, fill: "#3a4256" }, tr);
     this.tail = svgEl("circle", { cx: 303, cy: 130, r: 3, fill: "#3a1a22" }, tr);
     this.wheels = [];
@@ -70,7 +70,7 @@ class TrainScene {
       this.wheels.push(sp);
     }
     for (const bx of [400, 800]) svgEl("rect", { x: bx - 46, y: 146, width: 92, height: 8, rx: 3, fill: "#2b3448" }, tr);
-    // pantógrafo
+    // pantograph
     this.panto = svgEl("g", {}, svg);
     this.pArm = svgEl("path", { fill: "none", stroke: "#cfd8e6", "stroke-width": 3, "stroke-linejoin": "round", "stroke-linecap": "round" }, this.panto);
     this.pHead = svgEl("path", { fill: "none", stroke: "#e6ecf5", "stroke-width": 3.5, "stroke-linecap": "round" }, this.panto);
@@ -88,7 +88,7 @@ class TrainScene {
   }
 
   setPanto(p) {
-    // p = 0 (abaixado) .. 1 (em contato com o fio de contato, y = 26)
+    // p = 0 (lowered) .. 1 (touching the contact wire, y = 26)
     const base = 72, yh = 64 - 36 * p;
     const knee = [622 - 10 * p, (base + yh) / 2 + 4];
     this.pArm.setAttribute("d", `M572,${base} L${knee[0]},${knee[1]} L585,${yh + 2}`);
@@ -116,7 +116,7 @@ class TrainScene {
     const live = s.panto_pos >= 1;
     this.wire.setAttribute("stroke", live && s.mcb ? "#f5a524" : "#b08a3e");
 
-    // faíscas no contato: arco ao baixar sob carga, ou cintilação proporcional à corrente
+    // sparks at the contact: arc when lowered under load, or flicker proportional to current
     const iRatio = Math.abs(s.i_src) / 600;
     const flick = s.spark > 0 ? s.spark : (live && Math.random() < iRatio * 0.25 ? 0.7 : 0);
     this.spark.setAttribute("opacity", flick);

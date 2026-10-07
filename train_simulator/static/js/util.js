@@ -1,4 +1,4 @@
-// Utilitários compartilhados
+// Shared utilities
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -29,7 +29,7 @@ function fmt(x, d = 0) {
   return Number.isFinite(x) ? x.toFixed(d) : "—";
 }
 
-// Formata com unidade automática (k/M)
+// Formats with automatic unit prefix (k/M)
 function fmtSI(x, unit, d = 1) {
   const a = Math.abs(x);
   if (a >= 1e6) return (x / 1e6).toFixed(d) + " M" + unit;
@@ -42,5 +42,5 @@ function debounce(fn, ms) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
-// Lê as cores definidas no :root
+// Reads the colors defined in :root
 const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();

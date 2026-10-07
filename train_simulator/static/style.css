@@ -7,9 +7,9 @@
   --text: #e6ecf5;
   --muted: #8b97ad;
   --dim: #56627a;
-  --c-line: #f5a524;   /* catenária / alimentação */
+  --c-line: #f5a524;   /* catenary / supply */
   --c-dc: #22d3ee;     /* DC link */
-  --c-ac: #a78bfa;     /* saída AC */
+  --c-ac: #a78bfa;     /* AC output */
   --c-ok: #34d399;
   --c-warn: #fbbf24;
   --c-bad: #f43f5e;
@@ -28,7 +28,7 @@ h2 { font-size: 13px; letter-spacing: .02em; color: #cfd8e6; }
 h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 10px; }
 button, select, input { font: inherit; color: inherit; }
 
-/* ---------- topo ---------- */
+/* ---------- header ---------- */
 .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px;
   padding: 10px 20px; background: rgba(10, 15, 26, .85); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border); }
@@ -54,7 +54,7 @@ button, select, input { font: inherit; color: inherit; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
 .note { font-size: 11px; color: var(--muted); }
 
-/* ---------- cena do trem ---------- */
+/* ---------- train scene ---------- */
 .scene-card { position: relative; padding: 0; overflow: hidden; aspect-ratio: 1200 / 190; max-height: 230px; }
 #scene { width: 100%; height: 100%; display: block; }
 .scene-hud { position: absolute; left: 18px; top: 12px; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 6px;
@@ -65,7 +65,7 @@ button, select, input { font: inherit; color: inherit; }
 .fault-banner { position: absolute; right: 14px; top: 12px; max-width: 46%; padding: 8px 12px; border-radius: 10px;
   background: rgba(244, 63, 94, .18); border: 1px solid rgba(244, 63, 94, .6); color: #ffd2da; font-size: 12px; }
 
-/* ---------- linha principal ---------- */
+/* ---------- main row ---------- */
 .row-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
 .schem-card #schem { width: 100%; height: auto; display: block; }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); align-items: center; flex-wrap: wrap; }
@@ -117,7 +117,7 @@ select { background: var(--bg2); border: 1px solid var(--border); border-radius:
 .tile span { font-size: 11px; color: var(--muted); }
 .tile b { font-size: 17px; }
 
-/* ---------- comando ---------- */
+/* ---------- driving controls ---------- */
 .drive { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
 .drive-auto, .drive-manual, .ctrl-group { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
 .drive-manual { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -135,7 +135,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px;
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c-dc); border: 3px solid #0b1324; cursor: pointer; }
 #in-thr { background: linear-gradient(90deg, rgba(244, 63, 94, .5), var(--bg2) 50%, rgba(52, 211, 153, .5)); }
 
-/* ---------- gráficos ---------- */
+/* ---------- charts ---------- */
 .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 16px; }
 .chart { width: 100%; min-height: 230px; }
 .uplot { font-family: var(--mono); font-size: 11px; color: var(--muted); }
@@ -151,7 +151,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .log li.warn { background: rgba(251, 191, 36, .08); color: #fde68a; }
 .log li.fault { background: rgba(244, 63, 94, .12); color: #fecdd3; }
 
-/* ---------- esquema (SVG) ---------- */
+/* ---------- diagram (SVG) ---------- */
 #schem text { font-family: system-ui, sans-serif; fill: var(--muted); font-size: 12px; }
 #schem text.val { font-family: var(--mono); fill: var(--text); font-size: 12px; }
 #schem text.ttl { fill: #cfd8e6; font-weight: 600; font-size: 12px; }
@@ -178,7 +178,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 #schem .rotor { stroke: var(--c-ac); stroke-width: 3; stroke-linecap: round; }
 #schem .capfill { transition: height .2s, y .2s; }
 
-/* ---------- laboratório ---------- */
+/* ---------- lab ---------- */
 .lab-intro { margin: 0; color: var(--muted); }
 .lab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(520px, 1fr)); gap: 16px; }
 .lab-ctrls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 8px; }
@@ -200,3 +200,8 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .slider, .slider.throttle { min-width: 0; width: 100%; }
   .tiles { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- credits ---------- */
+.brand .author { color: var(--c-dc); }
+.credits { text-align: center; color: var(--muted); font-size: 12px; padding: 4px 16px 24px; }
+.credits b { color: var(--text); font-weight: 600; }

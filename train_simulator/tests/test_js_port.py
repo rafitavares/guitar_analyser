@@ -1,4 +1,4 @@
-"""Garante que o motor JavaScript (versão arquivo único) reproduz o motor Python."""
+"""Ensures the JavaScript engine (single-file version) reproduces the Python engine."""
 import json
 import shutil
 import subprocess
@@ -12,7 +12,7 @@ from sim.engine import Simulator
 
 ROOT = Path(__file__).resolve().parent.parent
 NODE = shutil.which("node")
-pytestmark = pytest.mark.skipif(not NODE, reason="node não instalado")
+pytestmark = pytest.mark.skipif(not NODE, reason="node not installed")
 
 SCALARS = ["vdc", "speed", "pos", "f_s", "m", "force", "p_elec", "i_phase", "i_dc", "panto_pos", "flux"]
 
@@ -51,7 +51,7 @@ def test_engine_matches(supply, levels, method):
         wa, wb = a["wave"], b["wave"]
         for k in ("t", "ref", "carrier", "uab", "dcv"):
             np.testing.assert_allclose(wa[k], wb[k], atol=0.11, err_msg=k)
-        # bordas da comparação PWM podem divergir em empates de ponto flutuante
+        # PWM comparison edges may differ on floating-point ties
         assert np.mean(np.array(wa["pwm"]) != np.array(wb["pwm"])) < 0.002
         np.testing.assert_allclose(wa["ia"], wb["ia"], atol=2.0)
         if wb["spec"]:

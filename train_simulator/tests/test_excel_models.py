@@ -1,7 +1,7 @@
-"""Compara o port Python com os valores em cache do simulator.xlsm.
+"""Compares the Python port with the cached values of simulator.xlsm.
 
-Rode com:  SIMULATOR_XLSM=/caminho/simulator.xlsm pytest tests
-(se a variável não estiver definida, os testes de comparação são pulados).
+Run with:  SIMULATOR_XLSM=/path/simulator.xlsm pytest tests
+(if the variable is not set, the comparison tests are skipped).
 """
 import os
 
@@ -11,7 +11,7 @@ import pytest
 from sim import excel_models as em
 
 XLSM = os.environ.get("SIMULATOR_XLSM")
-needs_xlsm = pytest.mark.skipif(not XLSM or not os.path.exists(XLSM), reason="SIMULATOR_XLSM não definido")
+needs_xlsm = pytest.mark.skipif(not XLSM or not os.path.exists(XLSM), reason="SIMULATOR_XLSM not set")
 
 
 def _cols(sheet, first_row, cols, last_row):
@@ -29,7 +29,7 @@ def test_pwm_matches_excel(level, sheet):
     out = em.pwm_sheet(level)
     np.testing.assert_allclose(out["ref"], b, atol=1e-6)
     np.testing.assert_allclose(out["carrier"], c, atol=1e-6)
-    # Igualdade |B|==|C| pode virar por arredondamento de ponto flutuante: tolera 0.5 %
+    # |B|==|C| ties can flip due to floating-point rounding: allow 0.5 %
     assert np.mean(out["pwm"] != d) < 0.005
 
 

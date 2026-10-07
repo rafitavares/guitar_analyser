@@ -1,8 +1,10 @@
-"""Simulador de conversor de tração — servidor web.
+"""Traction converter simulator — web server.
 
-Uso:
+Author: Rafael Tavares
+
+Usage:
     pip install -r requirements.txt
-    python app.py            # abre http://127.0.0.1:8050 no navegador
+    python app.py            # opens http://127.0.0.1:8050 in the browser
 """
 from __future__ import annotations
 
@@ -48,7 +50,7 @@ def command():
     return jsonify(ok=True)
 
 
-# ----------------------------------------------------------- Laboratório Excel
+# ----------------------------------------------------------- Excel Lab
 @app.get("/api/lab/pwm")
 def lab_pwm():
     level = 3 if request.args.get("level") == "3" else 2
@@ -75,7 +77,7 @@ def lab_precharge():
 def lab_ripple():
     out = em.ripple_sheet(r=_f("r", 325, 1, 10000), c_step=_f("c_step", 4, 0.1, 100),
                           vmax=_f("vmax", 3000, 0, 50000), dt_step=_f("dt_step", 7, 0.1, 100))
-    # 5000 pontos -> devolve 1 a cada 2 para o gráfico (a curva continua idêntica à do Excel)
+    # 5000 points -> return every 2nd one for the chart (the curve stays identical to Excel)
     return jsonify({k: (_list(v[::2], 6 if k == "t" else 2) if isinstance(v, np.ndarray) else v)
                     for k, v in out.items()})
 
@@ -88,7 +90,7 @@ def main() -> None:
     args = ap.parse_args()
     SIM.start()
     url = f"http://{args.host}:{args.port}"
-    print(f"Simulador rodando em {url}  (Ctrl+C para sair)")
+    print(f"Simulator running at {url}  (Ctrl+C to quit)")
     if not args.no_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     app.run(host=args.host, port=args.port, threaded=True, debug=False, use_reloader=False)

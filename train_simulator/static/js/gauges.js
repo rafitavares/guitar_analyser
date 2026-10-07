@@ -1,4 +1,4 @@
-// Mostradores circulares em SVG (arco de 240°)
+// Circular SVG gauges (240° arc)
 class Gauge {
   constructor(svg, { min, max, label, unit, digits = 0, color = "#22d3ee", zones = [], bipolar = false, mark }) {
     Object.assign(this, { svg, min, max, label, unit, digits, color, bipolar });
@@ -7,7 +7,7 @@ class Gauge {
     this.a0 = -210; this.a1 = 30;
     const track = svgEl("path", { d: this.arc(min, max), stroke: "#1d2940", "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
     for (const z of zones) svgEl("path", { d: this.arc(z[0], z[1], this.r + 10), stroke: z[2], "stroke-width": 3, fill: "none", opacity: 0.9 }, svg);
-    // marcações
+    // tick marks
     for (let i = 0; i <= 10; i++) {
       const v = min + (max - min) * i / 10, a = this.ang(v) * Math.PI / 180;
       const r1 = this.r - 12, r2 = this.r - (i % 5 === 0 ? 20 : 16);
@@ -38,7 +38,7 @@ class Gauge {
     return `M${x0},${y0} A${r},${r} 0 ${large} ${sweep} ${x1},${y1}`;
   }
   set(v, color) {
-    this.shown += (v - this.shown) * 0.35; // suavização visual
+    this.shown += (v - this.shown) * 0.35; // visual smoothing
     const from = this.bipolar ? 0 : this.min;
     const s = this.shown;
     this.val.setAttribute("d", Math.abs(s - from) < 1e-9 ? "" : (s >= from ? this.arc(from, s) : this.arc(s, from)));

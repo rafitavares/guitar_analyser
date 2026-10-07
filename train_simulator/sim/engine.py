@@ -1,11 +1,13 @@
-"""Motor de simulação do conversor de tração + dinâmica do trem.
+"""Traction converter simulation engine + train dynamics.
 
-Roda num thread em segundo plano (passo de 20 ms em tempo real, multiplicado
-pela escala de tempo). Toda a física do DC link segue as abas do Excel:
-  - pré-carga RC  -> aba "Pre-charge"  (R = 1000 Ω, C = 1 mF, Vmax = 3000 V)
-  - ripple 100 Hz -> aba "Ripple SImulator" (retificação + capacitor)
-  - PWM 2/3 níveis -> abas "PWM Level2"/"PWM Level3"
-O resto (trem, motor, proteções) é um modelo simplificado, mas fisicamente coerente.
+Author: Rafael Tavares
+
+Runs in a background thread (20 ms real-time step, multiplied by the time
+scale). All DC link physics follows the Excel sheets:
+  - RC pre-charge  -> "Pre-charge" sheet (R = 1000 Ω, C = 1 mF, Vmax = 3000 V)
+  - 100 Hz ripple  -> "Ripple SImulator" sheet (rectifier + capacitor)
+  - 2/3-level PWM  -> "PWM Level2"/"PWM Level3" sheets
+The rest (train, motor, protections) is a simplified but physically consistent model.
 """
 from __future__ import annotations
 
@@ -20,36 +22,36 @@ import numpy as np
 from . import excel_models as em
 
 STEPS = [
-    "Levantar pantógrafo",
-    "Fechar disjuntor principal (MCB)",
-    "Pré-carga do DC link (ChCt + Rpre)",
-    "Fechar contator de linha (CtL) / abrir ChCt",
-    "Estabilização do DC link",
-    "Conversão DC → AC (inversor)",
-    "Potência aos motores de tração",
+    "Raise pantograph",
+    "Close main circuit breaker (MCB)",
+    "Pre-charge DC link (ChCt + Rpre)",
+    "Close line contactor (CtL) / open ChCt",
+    "DC link stabilization",
+    "DC → AC conversion (inverter)",
+    "Power to traction motors",
 ]
 
 
 @dataclass
 class Config:
-    supply: str = "DC"            # "DC" = catenária 3 kV DC | "AC" = 25 kV 50 Hz + trafo + 4QC
-    levels: int = 2               # 2 ou 3 níveis no inversor
-    pwm_method: str = "excel"     # "excel" (fórmulas da planilha) | "classic" (2L bipolar / 3L NPC-PD)
-    v_cat_dc: float = 3000.0      # tensão da catenária DC  (= Max Voltage do Excel)
-    v_sec_peak_ac: float = 2700.0  # pico do secundário retificado (pré-carga AC passiva)
-    vdc_ref_ac: float = 3000.0    # referência do 4QC
+    supply: str = "DC"            # "DC" = 3 kV DC catenary | "AC" = 25 kV 50 Hz + transformer + 4QC
+    levels: int = 2               # 2- or 3-level inverter
+    pwm_method: str = "excel"     # "excel" (spreadsheet formulas) | "classic" (2L bipolar / 3L NPC-PD)
+    v_cat_dc: float = 3000.0      # DC catenary voltage  (= Excel Max Voltage)
+    v_sec_peak_ac: float = 2700.0  # rectified secondary peak (passive AC pre-charge)
+    vdc_ref_ac: float = 3000.0    # 4QC reference
     f_grid: float = 50.0
-    c_dc: float = 1e-3            # Capacitance (C, Farads) da aba Pre-charge
-    r_pre: float = 1000.0         # Resistance (R, Ohms) da aba Pre-charge
+    c_dc: float = 1e-3            # Capacitance (C, Farads) from the Pre-charge sheet
+    r_pre: float = 1000.0         # Resistance (R, Ohms) from the Pre-charge sheet
     r_line: float = 0.08
-    l_line: float = 0.01          # p/ cálculo da corrente de inrush (Z0 = sqrt(L/C))
-    r_ac_eq: float = 0.5          # resistência equivalente trafo+ponte (AC passivo)
-    r_dis: float = 10_000.0       # resistor de descarga do DC link
+    l_line: float = 0.01          # for the inrush current calculation (Z0 = sqrt(L/C))
+    r_ac_eq: float = 0.5          # equivalent transformer + bridge resistance (passive AC)
+    r_dis: float = 10_000.0       # DC link discharge resistor
     precharge_pct: float = 95.0
     inrush_trip_a: float = 600.0
-    fc_2l: float = 400.0          # 'freq port' da aba PWM Level2
-    fc_3l: float = 600.0          # 'freq port' da aba PWM Level3
-    # trem
+    fc_2l: float = 400.0          # 'freq port' from the PWM Level2 sheet
+    fc_3l: float = 600.0          # 'freq port' from the PWM Level3 sheet
+    # train
     mass_t: float = 200.0
     rot_factor: float = 1.08
     f_max_kn: float = 120.0
@@ -83,7 +85,7 @@ class Config:
 
     @property
     def f_base(self) -> float:
-        # fim da região V/f constante = velocidade base (onde P_max = F_max * v)
+        # end of the constant V/f region = base speed (where P_max = F_max * v)
         return self.f_rotor(self.p_max_mw * 1e6 / (self.f_max_kn * 1e3))
 
 
@@ -98,23 +100,23 @@ class State:
     mcb: bool = False
     chct: bool = False
     ctl: bool = False
-    qc_on: bool = False           # 4QC ativo (só AC)
+    qc_on: bool = False           # 4QC active (AC only)
     inv_on: bool = False
-    flux: float = 0.0             # 0..1 magnetização do motor
+    flux: float = 0.0             # 0..1 motor magnetization
     vdc: float = 0.0
-    v_src: float = 0.0            # tensão disponível na fonte (catenária/retificado)
+    v_src: float = 0.0            # voltage available at the source (catenary/rectified)
     i_src: float = 0.0
-    i_dc: float = 0.0             # corrente do inversor
+    i_dc: float = 0.0             # inverter current
     i_vlu: float = 0.0
     p_vlu: float = 0.0
     speed: float = 0.0            # m/s
     pos: float = 0.0              # m
-    f_s: float = 0.0              # frequência de saída do inversor
-    m: float = 0.0                # índice de modulação
-    force: float = 0.0            # esforço elétrico (N)
-    force_mech: float = 0.0       # freio mecânico (N, negativo)
-    p_elec: float = 0.0           # potência no DC link (W)
-    i_phase: float = 0.0          # corrente de fase rms
+    f_s: float = 0.0              # inverter output frequency
+    m: float = 0.0                # modulation index
+    force: float = 0.0            # electric tractive effort (N)
+    force_mech: float = 0.0       # mechanical brake (N, negative)
+    p_elec: float = 0.0           # DC link power (W)
+    i_phase: float = 0.0          # rms phase current
     phi: float = 0.0
     ctrl: str = "throttle"        # manual: "throttle" | "freq"
     throttle: float = 0.0         # -1..1
@@ -157,7 +159,7 @@ class Simulator:
                 self.step(self.TICK * self.cfg.time_scale)
             nxt += self.TICK
             time.sleep(max(0.0, nxt - time.perf_counter()))
-            if time.perf_counter() - nxt > 0.5:  # ficou muito atrasado (debugger, sleep do SO)
+            if time.perf_counter() - nxt > 0.5:  # fell far behind (debugger, OS sleep)
                 nxt = time.perf_counter()
 
     def log(self, msg: str, level: str = "info") -> None:
@@ -169,19 +171,19 @@ class Simulator:
             self.s.faults.append(msg)
         self.log(msg, "fault")
 
-    # --------------------------------------------------------------- comandos
+    # --------------------------------------------------------------- commands
     def command(self, cmd: str, value=None) -> None:
         with self.lock:
             s, c = self.s, self.cfg
             if cmd == "start":
                 if s.faults:
-                    self.log("Reconheça as falhas (RESET) antes de partir", "warn")
+                    self.log("Acknowledge the faults (RESET) before starting", "warn")
                     return
                 s.mode = "auto"
                 s.stop_req = False
                 if s.phase in ("OFF", "MANUAL", "SHUTDOWN"):
                     self._goto("RAISE_PANTO")
-                    self.log("START — sequência automática iniciada")
+                    self.log("START — automatic sequence started")
                 elif s.phase == "BRAKING":
                     self._goto("TRACTION")
             elif cmd == "stop":
@@ -190,7 +192,7 @@ class Simulator:
                         self._goto("BRAKING")
                     else:
                         self._goto("SHUTDOWN")
-                    self.log("STOP — frenagem e desligamento")
+                    self.log("STOP — braking and shutdown")
                 elif s.mode == "manual":
                     s.throttle = -1.0 if s.speed > 0.1 else 0.0
             elif cmd == "emergency":
@@ -203,7 +205,7 @@ class Simulator:
                     s.phase = "MANUAL"
                     s.throttle = 0.0
                     s.f_cmd = s.f_s
-                    self.log("Modo MANUAL — controle os contatores clicando no esquema")
+                    self.log("MANUAL mode — operate the contactors by clicking the diagram")
                 elif value == "auto" and s.mode != "auto":
                     s.mode = "auto"
                     if s.inv_on and s.ctl and s.mcb and s.panto_pos >= 1:
@@ -212,7 +214,7 @@ class Simulator:
                         self._goto("OFF")
                     else:
                         self._goto("SHUTDOWN")
-                    self.log("Modo AUTOMÁTICO")
+                    self.log("AUTOMATIC mode")
             elif cmd == "toggle":
                 self._manual_toggle(str(value))
             elif cmd == "set":
@@ -255,71 +257,71 @@ class Simulator:
                 setattr(c, k, float(v))
         if changed_topology:
             self._reset(keep_mode=True)
-            self.log(f"Topologia de alimentação: {'25 kV 50 Hz AC (trafo + 4QC)' if c.supply == 'AC' else '3 kV DC'}")
+            self.log(f"Power supply topology: {'25 kV 50 Hz AC (transformer + 4QC)' if c.supply == 'AC' else '3 kV DC'}")
 
     def _manual_toggle(self, what: str) -> None:
         s, c = self.s, self.cfg
         if s.mode != "manual":
-            self.log("Mude para o modo MANUAL para operar os contatores", "warn")
+            self.log("Switch to MANUAL mode to operate the contactors", "warn")
             return
         if what == "panto":
             s.panto_cmd = not s.panto_cmd
             if not s.panto_cmd and s.mcb and abs(s.i_src) > 20:
-                self.log("Pantógrafo baixado sob carga — arco elétrico!", "warn")
+                self.log("Pantograph lowered under load — electric arc!", "warn")
                 s.spark = 1.0
-            self.log("Pantógrafo " + ("subindo" if s.panto_cmd else "descendo"))
+            self.log("Pantograph " + ("raising" if s.panto_cmd else "lowering"))
         elif what == "mcb":
             if not s.mcb and s.faults:
-                self.log("MCB bloqueado: existem falhas ativas (RESET)", "warn")
+                self.log("MCB blocked: active faults present (RESET)", "warn")
                 return
             s.mcb = not s.mcb
-            self.log("MCB " + ("FECHADO" if s.mcb else "ABERTO"))
+            self.log("MCB " + ("CLOSED" if s.mcb else "OPEN"))
             if not s.mcb:
                 s.qc_on = False
         elif what == "chct":
             s.chct = not s.chct
-            self.log("ChCt (pré-carga) " + ("FECHADO" if s.chct else "ABERTO"))
+            self.log("ChCt (pre-charge) " + ("CLOSED" if s.chct else "OPEN"))
         elif what == "ctl":
             if not s.ctl:
                 self._close_ctl()
             else:
                 s.ctl = False
                 s.qc_on = False
-                self.log("CtL ABERTO")
+                self.log("CtL OPEN")
         elif what == "qc":
             if c.supply != "AC":
                 return
             if not s.qc_on and not (s.ctl and s.mcb and s.panto_pos >= 1 and s.vdc > 0.8 * s.v_src):
-                self.log("4QC exige CtL fechado e DC link carregado", "warn")
+                self.log("4QC requires CtL closed and DC link charged", "warn")
                 return
             s.qc_on = not s.qc_on
-            self.log("4QC " + ("LIGADO" if s.qc_on else "DESLIGADO"))
+            self.log("4QC " + ("ON" if s.qc_on else "OFF"))
         elif what == "inv":
             if not s.inv_on:
                 if s.vdc < 0.6 * c.vnom:
-                    self.log(f"Inversor bloqueado: DC link em {s.vdc:.0f} V (< 60 %)", "warn")
+                    self.log(f"Inverter blocked: DC link at {s.vdc:.0f} V (< 60 %)", "warn")
                     return
                 s.inv_on = True
                 s.f_cmd = s.f_s
-                self.log("Inversor HABILITADO (pulsos liberados)")
+                self.log("Inverter ENABLED (pulses released)")
             else:
                 s.inv_on = False
-                self.log("Inversor DESABILITADO")
+                self.log("Inverter DISABLED")
 
     def _close_ctl(self) -> None:
         s, c = self.s, self.cfg
         s.ctl = True
-        self.log("CtL FECHADO")
+        self.log("CtL CLOSED")
         if s.panto_pos >= 1 and s.mcb:
             dv = s.v_src - s.vdc
             i_pk = dv / math.sqrt(c.l_line / c.c_dc)
             if i_pk > 100:
-                self.log(f"Corrente de inrush ao fechar CtL: {i_pk:.0f} A (ΔV = {dv:.0f} V)",
+                self.log(f"Inrush current when closing CtL: {i_pk:.0f} A (ΔV = {dv:.0f} V)",
                          "warn" if i_pk < c.inrush_trip_a else "fault")
             if i_pk > c.inrush_trip_a:
                 s.mcb = False
                 s.vdc += 0.5 * dv
-                self.fault(f"MCB desarmou por sobrecorrente de inrush ({i_pk:.0f} A) — faça a pré-carga antes!")
+                self.fault(f"MCB tripped on inrush overcurrent ({i_pk:.0f} A) — pre-charge first!")
 
     def _emergency(self) -> None:
         s = self.s
@@ -329,14 +331,14 @@ class Simulator:
         s.throttle = 0.0
         if s.mode == "auto":
             s.phase = "EMERGENCY"
-        self.fault("EMERGÊNCIA — tudo aberto, freio mecânico máximo")
+        self.fault("EMERGENCY — everything open, full mechanical brake")
 
     def _reset(self, keep_mode: bool = False) -> None:
         mode = self.s.mode
         pos = self.s.pos
         moving = self.s.speed > 0.1
         if moving:
-            self.log("RESET só é possível com o trem parado", "warn")
+            self.log("RESET is only possible with the train at standstill", "warn")
             return
         cfg = self.cfg
         self.s = State()
@@ -351,7 +353,7 @@ class Simulator:
         self.s.phase = phase
         self.s.phase_t = 0.0
 
-    # --------------------------------------------------------------- sequência
+    # --------------------------------------------------------------- sequence
     def _sequence(self, dt: float) -> None:
         s, c = self.s, self.cfg
         s.phase_t += dt
@@ -361,30 +363,30 @@ class Simulator:
             s.panto_cmd = True
             st[0] = s.panto_pos * 100
             if s.panto_pos >= 1 and pt > 3.2:
-                self.log("Pantógrafo em contato com a catenária")
+                self.log("Pantograph in contact with the catenary")
                 self._goto("CLOSE_MCB")
         elif p == "CLOSE_MCB":
             if pt >= 1.0 and not s.mcb:
                 s.mcb = True
                 st[1] = 100
-                self.log("MCB FECHADO")
+                self.log("MCB CLOSED")
             if pt >= 2.0:
                 self._goto("PRECHARGE")
         elif p == "PRECHARGE":
             if not s.chct:
                 s.chct = True
-                self.log(f"ChCt FECHADO — pré-carga via Rpre = {c.r_pre:.0f} Ω (τ = {c.r_pre * c.c_dc:.2f} s)")
+                self.log(f"ChCt CLOSED — pre-charge via Rpre = {c.r_pre:.0f} Ω (τ = {c.r_pre * c.c_dc:.2f} s)")
             target = c.precharge_pct / 100 * s.v_src
             st[2] = min(100.0, s.vdc / max(target, 1) * 100)
             if s.vdc >= target:
                 if s.pc_done_t < 0:
                     s.pc_done_t = pt
-                    self.log(f"DC link pré-carregado: {s.vdc:.0f} V ({s.vdc / s.v_src * 100:.1f} %) em {pt:.2f} s")
+                    self.log(f"DC link pre-charged: {s.vdc:.0f} V ({s.vdc / s.v_src * 100:.1f} %) in {pt:.2f} s")
                 if pt - s.pc_done_t >= 0.5:
                     s.pc_done_t = -1.0
                     self._goto("CLOSE_CTL")
             elif pt > 20:
-                self.fault("Timeout de pré-carga (verifique Rpre / tensão da linha)")
+                self.fault("Pre-charge timeout (check Rpre / line voltage)")
         elif p == "CLOSE_CTL":
             if not s.ctl:
                 self._close_ctl()
@@ -392,31 +394,31 @@ class Simulator:
             if pt >= 0.6 and s.chct:
                 s.chct = False
                 st[3] = 100
-                self.log("ChCt ABERTO — Rpre fora do circuito")
+                self.log("ChCt OPEN — Rpre out of circuit")
             if pt >= 1.2:
                 self._goto("STABILIZE")
         elif p == "STABILIZE":
             if c.supply == "AC" and not s.qc_on:
                 s.qc_on = True
-                self.log(f"4QC ligado — regulando DC link em {c.vdc_ref_ac:.0f} V")
+                self.log(f"4QC on — regulating DC link at {c.vdc_ref_ac:.0f} V")
             err = abs(s.vdc - c.vnom) / c.vnom if c.supply == "AC" else 0.0
             st[4] = min(100.0, pt / 1.5 * 100)
             if pt >= 1.5 and err < 0.02:
                 st[4] = 100
-                self.log(f"DC link estável em {s.vdc:.0f} V")
+                self.log(f"DC link stable at {s.vdc:.0f} V")
                 self._goto("INVERTER")
         elif p == "INVERTER":
             if not s.inv_on:
                 s.inv_on = True
-                self.log("Inversor habilitado — magnetizando motores")
+                self.log("Inverter enabled — magnetizing motors")
             st[5] = s.flux * 100
             if s.flux >= 0.99:
                 self._goto("TRACTION")
-                self.log(f"Tração liberada — alvo {c.target_kmh:.0f} km/h")
+                self.log(f"Traction released — target {c.target_kmh:.0f} km/h")
         elif p == "TRACTION":
             st[5] = 100
             st[6] = 100
-            # controlador P de velocidade com limite de jerk
+            # P speed controller with jerk limit
             err = c.target_kmh - s.speed * 3.6
             want = float(np.clip(err / 4.0, -0.7, 1.0))
             s.throttle += float(np.clip(want - s.throttle, -0.6 * dt, 0.6 * dt))
@@ -425,27 +427,27 @@ class Simulator:
             s.throttle += float(np.clip(-0.8 - s.throttle, -0.6 * dt, 0.6 * dt))
             if s.speed < 0.05:
                 s.throttle = 0
-                self.log("Trem parado")
+                self.log("Train stopped")
                 self._goto("SHUTDOWN")
         elif p == "SHUTDOWN":
             s.throttle = 0
             if s.inv_on or s.qc_on:
                 s.inv_on = s.qc_on = False
-                self.log("Inversor e 4QC desligados")
+                self.log("Inverter and 4QC off")
             if pt >= 0.6 and s.ctl:
                 s.ctl = False
-                self.log("CtL ABERTO")
+                self.log("CtL OPEN")
             if pt >= 1.4 and s.mcb:
                 s.mcb = False
-                self.log("MCB ABERTO")
+                self.log("MCB OPEN")
             if pt >= 2.2:
                 s.panto_cmd = False
             s.steps = [0.0] * len(STEPS) if pt >= 2.2 else [x if i < 5 else 0 for i, x in enumerate(st)]
             if pt >= 2.2 and s.panto_pos <= 0:
-                self.log("Pantógrafo abaixado — sistema desligado")
+                self.log("Pantograph lowered — system off")
                 self._goto("OFF")
 
-    # ----------------------------------------------------------------- física
+    # ----------------------------------------------------------------- physics
     def step(self, dt: float) -> None:
         s, c = self.s, self.cfg
         s.t += dt
@@ -453,7 +455,7 @@ class Simulator:
             self._sequence(dt)
         s.spark = max(0.0, s.spark - dt * 2)
 
-        # pantógrafo: 3 s para subir, 2 s para descer
+        # pantograph: 3 s to raise, 2 s to lower
         if s.panto_cmd:
             s.panto_pos = min(1.0, s.panto_pos + dt / 3.0)
         else:
@@ -464,21 +466,21 @@ class Simulator:
         s.v_src = (c.v_cat_dc if c.supply == "DC" else c.v_sec_peak_ac) if live else 0.0
         if c.supply == "AC" and s.qc_on and not (live and s.ctl):
             s.qc_on = False
-            self.log("4QC desligado (perda de alimentação)", "warn")
+            self.log("4QC off (loss of supply)", "warn")
 
-        # magnetização
+        # magnetization
         s.flux = min(1.0, s.flux + dt / 1.0) if s.inv_on else max(0.0, s.flux - dt / 0.3)
 
         self._traction(dt)
 
-        # corrente que o inversor puxa do DC link
+        # current drawn by the inverter from the DC link
         s.i_dc = s.p_elec / s.vdc if s.vdc > 100 else 0.0
         self._dc_link(dt)
 
-        # proteções
+        # protections
         if s.inv_on and s.vdc < 0.5 * c.vnom:
             s.inv_on = False
-            self.fault(f"Subtensão no DC link ({s.vdc:.0f} V) — inversor bloqueado")
+            self.fault(f"DC link undervoltage ({s.vdc:.0f} V) — inverter blocked")
         if s.emergency and s.panto_pos <= 0 and s.speed <= 0:
             s.emergency = False
 
@@ -495,7 +497,7 @@ class Simulator:
         ok = s.inv_on and s.flux > 0.05
 
         if s.mode == "manual" and s.ctrl == "freq":
-            # rampa de frequência comandada (10 Hz/s), torque pelo escorregamento
+            # commanded frequency ramp (10 Hz/s), torque from slip
             if ok:
                 s.f_s += float(np.clip(s.f_cmd - s.f_s, -10 * dt, 10 * dt))
             else:
@@ -511,7 +513,7 @@ class Simulator:
         else:
             thr = s.throttle
             if s.mode == "manual" and v * 3.6 >= c.v_max_kmh and thr > 0:
-                thr = 0.0  # proteção de sobrevelocidade
+                thr = 0.0  # overspeed protection
             if s.emergency:
                 f_mech = -1.2 * c.mass_t * 1e3
             elif ok and thr >= 0:
@@ -533,11 +535,11 @@ class Simulator:
         if not s.inv_on:
             s.f_s = s.m = f_elec = 0.0
 
-        # dinâmica longitudinal
+        # longitudinal dynamics
         resist = (c.davis_a + c.davis_b * v + c.davis_c * v * v) if v > 0.01 else 0.0
         m_eff = c.mass_t * 1e3 * c.rot_factor
         f_total = f_elec + f_mech - resist
-        if v <= 0.0 and f_total < 0:  # parado: atrito estático/freio segura
+        if v <= 0.0 and f_total < 0:  # at standstill: static friction/brake holds
             f_total = 0.0
         v_new = max(0.0, v + f_total / m_eff * dt)
         s.pos += 0.5 * (v + v_new) * dt
@@ -545,7 +547,7 @@ class Simulator:
         s.force = f_elec
         s.force_mech = f_mech
 
-        # potência e correntes
+        # power and currents
         p_mech = f_elec * v
         p_loss_mag = 12e3 * s.flux if s.inv_on else 0.0
         s.p_elec = (p_mech / c.eta if p_mech >= 0 else p_mech * c.eta) + p_loss_mag
@@ -575,24 +577,24 @@ class Simulator:
                 r = c.r_pre
         v0 = s.vdc
         if c.supply == "AC" and s.qc_on:
-            # 4QC regula a tensão (τ = 150 ms) e fornece/recebe a potência da carga
+            # 4QC regulates the voltage (τ = 150 ms) and supplies/absorbs the load power
             s.vdc = c.vdc_ref_ac + (s.vdc - c.vdc_ref_ac) * math.exp(-dt / 0.15)
             s.i_src = i_load + C * (s.vdc - v0) / dt
         elif r is not None:
             tau = r * C
             v_inf = s.v_src - i_load * r
             if c.supply == "AC" and v_inf < s.vdc:
-                # ponte de diodos: não devolve energia, DC link só descarrega pela carga
+                # diode bridge: cannot return energy, DC link only discharges through the load
                 s.vdc = max(0.0, s.vdc - i_load * dt / C)
                 s.i_src = 0.0
             else:
                 s.vdc = v_inf + (s.vdc - v_inf) * math.exp(-dt / tau)
                 s.i_src = (s.v_src - s.vdc) / r
         else:
-            # isolado: carga + resistor de descarga
+            # isolated: load + discharge resistor
             s.vdc = max(0.0, s.vdc * math.exp(-dt / (c.r_dis * C)) - i_load * dt / C)
             s.i_src = 0.0
-        # VLU / chopper de frenagem grampeia a sobretensão
+        # VLU / brake chopper clamps the overvoltage
         v_lim = 1.17 * c.vnom
         if s.vdc > v_lim:
             e = 0.5 * C * (s.vdc ** 2 - v_lim ** 2)
@@ -635,7 +637,7 @@ class Simulator:
         pwms = [self._modulate(r, t, carrier, vlevel) for r in refs] if s.inv_on else [np.zeros(n)] * 3
         uab = pwms[0] - pwms[1]
 
-        # correntes: senoide atrasada de phi + ripple de chaveamento (L_sigma = 10 mH)
+        # currents: sine lagging by phi + switching ripple (L_sigma = 10 mH)
         ipk = s.i_phase * math.sqrt(2)
         L = 0.01
         dtt = t[1] - t[0]
@@ -643,7 +645,7 @@ class Simulator:
         for k in range(3):
             base = ipk * np.sin(2 * np.pi * f * t - k * 2 * np.pi / 3 - s.phi)
             if s.inv_on and amp > 0:
-                # ripple: integra a diferença entre tensão chaveada e a fundamental
+                # ripple: integrates the difference between switched voltage and fundamental
                 rip = np.cumsum((pwms[k] - refs[k]) * dtt) / L
                 rip -= np.convolve(rip, np.ones(51) / 51, mode="same")
                 base = base + rip * 0.5
@@ -665,7 +667,7 @@ class Simulator:
             return em.pwm_level2_excel(ref, carrier, vlevel) if c.levels == 2 else em.pwm_level3_excel(ref, carrier, vlevel)
         if c.levels == 2:
             return em.pwm_bipolar(ref, t, c.fc, vlevel)
-        # 3 níveis NPC, phase-disposition: portadora superior 0..V e inferior -V..0
+        # 3-level NPC, phase disposition: upper carrier 0..V and lower carrier -V..0
         up = carrier
         lo = carrier - vlevel
         return np.where(ref > up, vlevel, np.where(ref < lo, -vlevel, 0.0))
@@ -705,7 +707,7 @@ class Simulator:
                 "thd_uab": thd(A), "thd_pwm": thd(P), "fund_uab": float(A[k]), "fund_pwm": float(P[k])}
 
     def _dc_zoom(self):
-        """40 ms do DC link em alta resolução (equivalente dinâmico da aba Ripple SImulator)."""
+        """40 ms of the DC link at high resolution (dynamic equivalent of the Ripple SImulator sheet)."""
         s, c = self.s, self.cfg
         n = 2000
         W = 0.04
@@ -713,18 +715,18 @@ class Simulator:
         dt = W / n
         v0 = s.vdc
         if c.supply == "AC" and s.v_src > 0 and (s.ctl or s.chct) and not s.qc_on:
-            # retificador a diodos + capacitor: v' = max(0, |vs|-v)/(R C) - i/C
+            # diode rectifier + capacitor: v' = max(0, |vs|-v)/(R C) - i/C
             r = c.r_ac_eq if s.ctl else c.r_pre
             vs = s.v_src * np.abs(np.sin(2 * np.pi * c.f_grid * t))
             v = np.empty(n)
             x = v0
-            # pré-condiciona um ciclo para entrar em regime
+            # pre-run one cycle to reach steady state
             for _ in range(2):
                 for i in range(n):
                     x += (max(0.0, vs[i] - x) / (r * c.c_dc) - s.i_dc / c.c_dc) * dt
                     x = max(x, 0.0)
                     v[i] = x
-                if r > 10:  # pré-carga lenta: mostra só a evolução real
+                if r > 10:  # slow pre-charge: show only the real evolution
                     break
                 x = v[-1] if abs(v[-1] - v0) < 0.2 * max(v0, 1) else v0
             return t, v

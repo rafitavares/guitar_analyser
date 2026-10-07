@@ -1,9 +1,10 @@
-// Aplicação principal: polling do estado da simulação (Python) e renderização
+// Main application: polls the simulation state and renders it
+// Author: Rafael Tavares
 const PHASES = {
-  OFF: ["DESLIGADO", ""], RAISE_PANTO: ["SUBINDO PANTÓGRAFO", "seq"], CLOSE_MCB: ["FECHANDO MCB", "seq"],
-  PRECHARGE: ["PRÉ-CARGA DC LINK", "seq"], CLOSE_CTL: ["FECHANDO CtL", "seq"], STABILIZE: ["ESTABILIZANDO", "seq"],
-  INVERTER: ["MAGNETIZANDO", "seq"], TRACTION: ["EM TRAÇÃO", "run"], BRAKING: ["FRENANDO", "seq"],
-  SHUTDOWN: ["DESLIGANDO", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGÊNCIA", "bad"],
+  OFF: ["OFF", ""], RAISE_PANTO: ["RAISING PANTOGRAPH", "seq"], CLOSE_MCB: ["CLOSING MCB", "seq"],
+  PRECHARGE: ["DC LINK PRE-CHARGE", "seq"], CLOSE_CTL: ["CLOSING CtL", "seq"], STABILIZE: ["STABILIZING", "seq"],
+  INVERTER: ["MAGNETIZING", "seq"], TRACTION: ["TRACTION", "run"], BRAKING: ["BRAKING", "seq"],
+  SHUTDOWN: ["SHUTTING DOWN", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGENCY", "bad"],
 };
 const TS = [1, 2, 3, 5, 8, 10];
 
@@ -12,17 +13,17 @@ const schem = new Schematic($("#schem"), (id) => apiCmd("toggle", id));
 const charts = makeCharts();
 const lab = initLab();
 const G = {
-  speed: new Gauge($("#g-speed"), { min: 0, max: 160, label: "Velocidade", unit: "km/h", color: COL.ok, zones: [[140, 160, COL.bad]] }),
-  freq: new Gauge($("#g-freq"), { min: 0, max: 160, label: "Frequência do motor", unit: "Hz", digits: 1, color: COL.ac }),
-  vdc: new Gauge($("#g-vdc"), { min: 0, max: 4000, label: "Tensão DC link", unit: "V", color: COL.dc, zones: [[3510, 4000, COL.bad]], mark: 3000 }),
-  power: new Gauge($("#g-power"), { min: -1.5, max: 1.5, label: "Potência (tração / regeneração)", unit: "MW", digits: 2, color: COL.line, bipolar: true }),
+  speed: new Gauge($("#g-speed"), { min: 0, max: 160, label: "Speed", unit: "km/h", color: COL.ok, zones: [[140, 160, COL.bad]] }),
+  freq: new Gauge($("#g-freq"), { min: 0, max: 160, label: "Motor frequency", unit: "Hz", digits: 1, color: COL.ac }),
+  vdc: new Gauge($("#g-vdc"), { min: 0, max: 4000, label: "DC link voltage", unit: "V", color: COL.dc, zones: [[3510, 4000, COL.bad]], mark: 3000 }),
+  power: new Gauge($("#g-power"), { min: -1.5, max: 1.5, label: "Power (traction / regen)", unit: "MW", digits: 2, color: COL.line, bipolar: true }),
 };
 const hDC = new History(5, 60);
 const hTrain = new History(4, 120);
 
 let S = null, tState = 0, lastEvent = 0, lastFrame = performance.now(), online = true;
 
-// ------------------------------------------------------------------ controles
+// ------------------------------------------------------------------ controls
 function bindControls() {
   $$(".tab").forEach((b) => b.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
@@ -56,7 +57,7 @@ function bindControls() {
   $("#btn-thr0").onclick = () => { $("#in-thr").value = 0; $("#v-thr").textContent = "0 %"; apiCmd("set", { throttle: 0 }); };
   $$("#ctrl-seg button").forEach((b) => b.addEventListener("click", () => apiCmd("set", { ctrl: b.dataset.ctrl })));
 
-  // atalhos de teclado (modo manual): ↑/↓ manipulador
+  // keyboard shortcuts (manual mode): ↑/↓ master controller
   window.addEventListener("keydown", (e) => {
     if (!S || S.mode !== "manual" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     const el = $("#in-thr");
@@ -79,21 +80,21 @@ function buildSteps(names) {
 
 function renderState(s) {
   const c = s.cfg;
-  // topo
+  // header
   const [ptxt, pcls] = PHASES[s.phase] || [s.phase, ""];
   const pill = $("#phase-pill");
-  pill.textContent = s.faults.length ? "FALHA" : ptxt;
+  pill.textContent = s.faults.length ? "FAULT" : ptxt;
   pill.className = "pill " + (s.faults.length ? "bad" : pcls);
   $("#clock").textContent = `t = ${s.t.toFixed(1)} s`;
-  $("#topo-label").textContent = (c.supply === "AC" ? "25 kV 50 Hz AC · trafo + 4QC" : "3 kV DC")
-    + ` · inversor ${c.levels === 3 ? "3 níveis NPC" : "2 níveis"} · PWM ${c.pwm_method === "excel" ? "Excel" : "clássico"}`;
+  $("#topo-label").textContent = (c.supply === "AC" ? "25 kV 50 Hz AC · transformer + 4QC" : "3 kV DC")
+    + ` · ${c.levels === 3 ? "3-level NPC" : "2-level"} inverter · ${c.pwm_method === "excel" ? "Excel" : "classic"} PWM`;
 
-  // modo e painéis
+  // mode and panels
   $$("#mode-seg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === s.mode));
   $("#drive-auto").hidden = s.mode !== "auto";
   $("#drive-manual").hidden = s.mode !== "manual";
   $("#btn-start").disabled = s.mode !== "auto";
-  $("#schem-hint").textContent = s.mode === "manual" ? "Clique nos contatores, pantógrafo, 4QC e inversor" : "Modo automático";
+  $("#schem-hint").textContent = s.mode === "manual" ? "Click the contactors, pantograph, 4QC and inverter" : "Automatic mode";
   $$("#ctrl-seg button").forEach((b) => b.classList.toggle("on", b.dataset.ctrl === s.ctrl));
   $("#ctrl-throttle").hidden = s.ctrl !== "throttle";
   $("#ctrl-freq").hidden = s.ctrl !== "freq";
@@ -111,7 +112,7 @@ function renderState(s) {
     $("#v-thr").textContent = (s.throttle > 0 ? "+" : "") + Math.round(s.throttle * 100) + " %";
   }
 
-  // sequência
+  // sequence
   if (!$("#steps").children.length) buildSteps(s.step_names);
   const lis = $("#steps").children;
   let activeSet = false;
@@ -135,10 +136,10 @@ function renderState(s) {
   $("#k-thd").textContent = sp && sp.thd_uab != null ? `${sp.thd_uab.toFixed(1)} %` : "—";
   $("#hud-dist").textContent = `${(s.pos / 1000).toFixed(2)} km · ${PHASES[s.phase]?.[0] || s.phase}`;
 
-  // falhas
+  // faults
   const fb = $("#fault-banner");
   fb.hidden = !s.faults.length;
-  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Pressione RESET com o trem parado.</small>";
+  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Press RESET with the train at standstill.</small>";
 
   // log
   const newEv = s.events.filter((e) => e.id > lastEvent);
@@ -152,13 +153,13 @@ function renderState(s) {
   }
   while ($("#log").children.length > 150) $("#log").lastChild.remove();
 
-  // históricos
+  // histories
   hDC.push([s.t, s.vdc, s.v_src, s.v_src > 0 ? s.v_src * c.precharge_pct / 100 : null, s.i_dc]);
   hTrain.push([s.t, s.speed_kmh, (s.force + s.force_mech) / 1e3, s.p_elec / 1e6]);
   charts.dc.set(hDC.cols);
   charts.train.set(hTrain.cols);
 
-  // formas de onda calculadas em Python
+  // waveforms computed by the engine
   const w = s.wave;
   if (w) {
     const V = s.vdc / 2;
@@ -167,18 +168,18 @@ function renderState(s) {
     else if (c.levels === 2) { up = w.carrier.map((x) => 2 * x - V); lo = w.t.map(() => null); }
     else lo = w.carrier.map((x) => x - V);
     charts.pwm.set([w.t, w.pwm, w.ref, up, lo]);
-    $("#pwm-note").textContent = `${c.pwm_method === "excel" ? "Excel" : "clássica"} · ${c.levels}L · portadora ${c.fc} Hz · f = ${s.f_s.toFixed(1)} Hz · m = ${s.m.toFixed(2)}`;
+    $("#pwm-note").textContent = `${c.pwm_method === "excel" ? "Excel" : "classic"} · ${c.levels}L · carrier ${c.fc} Hz · f = ${s.f_s.toFixed(1)} Hz · m = ${s.m.toFixed(2)}`;
     charts.uab.set([w.t, w.uab, w.ia, w.ib, w.ic]);
     if (w.spec) {
       charts.spec.set([w.spec.f, w.spec.a]);
-      $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD U–V ${w.spec.thd_uab.toFixed(1)} % · THD fase ${w.spec.thd_pwm.toFixed(1)} %`;
+      $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD U–V ${w.spec.thd_uab.toFixed(1)} % · THD phase ${w.spec.thd_pwm.toFixed(1)} %`;
     } else {
       charts.spec.set([[], []]);
-      $("#spec-note").textContent = "inversor parado";
+      $("#spec-note").textContent = "inverter stopped";
     }
     charts.zoom.set([w.dct, w.dcv]);
     const mn = Math.min(...w.dcv), mx = Math.max(...w.dcv);
-    $("#rip-note").textContent = `ripple pico-a-pico ${(mx - mn).toFixed(0)} V` + (c.supply === "AC" ? " · 100 Hz (2× rede)" : "");
+    $("#rip-note").textContent = `peak-to-peak ripple ${(mx - mn).toFixed(0)} V` + (c.supply === "AC" ? " · 100 Hz (2× grid)" : "");
   }
 }
 
@@ -187,7 +188,7 @@ function frame(now) {
   lastFrame = now;
   if (S) {
     const ts = S.cfg.time_scale;
-    const pos = S.pos + S.speed * Math.min(0.3, (now - tState) / 1000) * ts; // extrapola entre amostras
+    const pos = S.pos + S.speed * Math.min(0.3, (now - tState) / 1000) * ts; // extrapolate between samples
     scene.update(S, pos);
     schem.update(S, dt * ts);
     $("#hud-speed").textContent = S.speed_kmh.toFixed(0);
@@ -209,7 +210,7 @@ async function poll() {
     online = false;
     const fb = $("#fault-banner");
     fb.hidden = false;
-    fb.textContent = "Sem conexão com o servidor Python (app.py). Ele está rodando?";
+    fb.textContent = "No connection to the Python server (app.py). Is it running?";
   }
   setTimeout(poll, 90);
 }

@@ -1,4 +1,4 @@
-// Esquema unifilar animado. Reconstruído quando a topologia muda (DC/AC, 2L/3L).
+// Animated single-line diagram. Rebuilt when the topology changes (DC/AC, 2L/3L).
 class Schematic {
   constructor(svg, onToggle) {
     this.svg = svg;
@@ -42,40 +42,40 @@ class Schematic {
       this.sw[id] = { grp, lev };
     };
 
-    // catenária / fonte
+    // catenary / source
     wire("cat", "M20,36 L250,36");
-    text(250, 26, AC ? "Catenária 25 kV 50 Hz" : "Catenária 3 kV DC", "ttl", "end");
+    text(250, 26, AC ? "25 kV 50 Hz catenary" : "3 kV DC catenary", "ttl", "end");
     this.t.vline = text(20, 26, "", "val", "start");
 
-    // pantógrafo (símbolo)
+    // pantograph (symbol)
     const pg = svgEl("g", { class: "clickable", "data-id": "panto" }, g);
     svgEl("rect", { x: 40, y: 34, width: 80, height: 84, rx: 8, class: "hit" }, pg);
         this.pantoArm = svgEl("path", { class: "sym", "stroke-width": 3 }, pg);
     this.pantoHead = svgEl("path", { class: "sym", "stroke-width": 3.5 }, pg);
     svgEl("line", { x1: 60, y1: 112, x2: 100, y2: 112, class: "sym", "stroke-width": 4 }, pg);
     pg.addEventListener("click", () => this.onToggle("panto"));
-    text(130, 100, "Pantógrafo", "ttl", "start");
+    text(130, 100, "Pantograph", "ttl", "start");
     this.t.panto = text(130, 116, "", "", "start");
     wire("panto", `M80,114 L80,${YP} L140,${YP}`);
 
-    sw("mcb", 140, YP, "MCB", "disjuntor principal");
+    sw("mcb", 140, YP, "MCB", "main circuit breaker");
     this.t.isrc = text(168, YP + 44, "", "val");
 
     if (!AC) {
       wire("mcb", `M196,${YP} L222,${YP} a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 a10,10 0 0 1 20,0 L330,${YP}`);
-      text(262, YP - 22, "Filtro L", "ttl");
+      text(262, YP - 22, "Line filter L", "ttl");
     } else {
       wire("mcb", `M196,${YP} L232,${YP}`);
       svgEl("circle", { cx: 252, cy: YP, r: 20, class: "sym" }, g);
       svgEl("circle", { cx: 278, cy: YP, r: 20, class: "sym" }, g);
-      text(265, YP - 30, "Trafo T1", "ttl");
+      text(265, YP - 30, "Transformer T1", "ttl");
       wire("pri", `M252,${YP + 20} L252,${YN}`);
       wire("sec", `M298,${YP} L330,${YP}`);
       wire("sec2", `M278,${YP + 20} L278,295 L560,295`);
     }
-    // contator de linha e ramo de pré-carga
+    // line contactor and pre-charge branch
     wire("node", `M330,${YP} L380,${YP}`);
-    sw("ctl", 380, YP, "CtL", "contator de linha (K110)");
+    sw("ctl", 380, YP, "CtL", "line contactor (K110)");
     wire("ctl", `M436,${YP} L520,${YP}`);
     wire("pre1", `M330,${YP} L330,262 L360,262`);
     sw("chct", 360, 262, "ChCt", "");
@@ -97,13 +97,13 @@ class Schematic {
       wire("dcn", `M640,${YN} L860,${YN}`);
     } else {
       wire("dcn", `M80,${YN} L860,${YN}`);
-      // retorno pelo trilho
+      // return through the rail
       svgEl("path", { d: `M66,${YN} L94,${YN} M71,${YN + 6} L89,${YN + 6} M76,${YN + 12} L84,${YN + 12}`, class: "sym" }, g);
-      text(80, YN + 30, "trilho (retorno)");
+      text(80, YN + 30, "rail (return)");
     }
     wire("dcp", `M${xDC0},${YP} L860,${YP}`);
 
-    // DC link (1 ou 2 capacitores)
+    // DC link (1 or 2 capacitors)
     const cx = 700;
     if (levels === 3) {
       wire("cap", `M${cx},${YP} L${cx},226 M${cx},238 L${cx},292 M${cx},304 L${cx},${YN}`);
@@ -121,20 +121,20 @@ class Schematic {
     defs.innerHTML = `<linearGradient id="capgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0e7490"/><stop offset="1" stop-color="#67e8f9"/></linearGradient>`;
     this.t.vdc = text(cx, YN + 30, "", "val");
 
-    // VLU (chopper de frenagem)
+    // VLU (brake chopper)
     const vx = 795;
     wire("vlu", `M${vx},${YP} L${vx},214 M${vx},258 L${vx},${YN}`);
     this.vluR = svgEl("rect", { x: vx - 8, y: 214, width: 16, height: 44, rx: 2, class: "sym" }, g);
     text(vx, YN + 30, "VLU");
 
-    // inversor
+    // inverter
     const ig = svgEl("g", { class: "clickable", "data-id": "inv" }, g);
     this.invBox = svgEl("rect", { x: 860, y: 170, width: 90, height: 180, rx: 6, class: "box" }, ig);
     svgEl("line", { x1: 860, y1: 350, x2: 950, y2: 170, class: "sym", "stroke-width": 1.5 }, ig);
     const e1 = svgEl("text", { x: 874, y: 206, "font-size": 22, fill: "#cfd8e6" }, ig); e1.textContent = "=";
     const e2 = svgEl("text", { x: 918, y: 334, "font-size": 22, fill: "#cfd8e6" }, ig); e2.textContent = "~";
     const il = svgEl("text", { x: 905, y: 160, class: "ttl", "text-anchor": "middle" }, ig);
-    il.textContent = levels === 3 ? "Inversor 3L NPC" : "Inversor 2L";
+    il.textContent = levels === 3 ? "3L NPC inverter" : "2L inverter";
     ig.addEventListener("click", () => this.onToggle("inv"));
     this.t.idc = text(775, YP - 12, "", "val");
 
@@ -144,7 +144,7 @@ class Schematic {
     this.rotorG = svgEl("g", { transform: "translate(1040,260)" }, g);
     for (let k = 0; k < 3; k++) svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -26, class: "rotor", transform: `rotate(${k * 120})`, opacity: 0.35 }, this.rotorG);
     const mt = svgEl("text", { x: 1040, y: 265, "text-anchor": "middle", class: "ttl", "font-size": 15 }, g); mt.textContent = "M 3~";
-    text(1040, 212, "Motor de tração", "ttl");
+    text(1040, 212, "Traction motor", "ttl");
     this.t.mot = text(1040, 316, "", "val");
     this.t.mot2 = text(1040, 332, "", "val");
   }
@@ -170,11 +170,11 @@ class Schematic {
     this.build(c.supply, c.levels);
     this.svg.classList.toggle("manual", s.mode === "manual");
 
-    // pantógrafo
+    // pantograph
     const yh = 78 - 40 * s.panto_pos;
     this.pantoArm.setAttribute("d", `M66,112 L100,${(112 + yh) / 2} L76,${yh + 2}`);
     this.pantoHead.setAttribute("d", `M58,${yh} L102,${yh}`);
-    this.t.panto.textContent = s.panto_pos >= 1 ? "em contato" : s.panto_cmd ? "subindo…" : s.panto_pos > 0 ? "descendo…" : "abaixado";
+    this.t.panto.textContent = s.panto_pos >= 1 ? "in contact" : s.panto_cmd ? "raising…" : s.panto_pos > 0 ? "lowering…" : "lowered";
 
     const pUp = s.panto_pos >= 1, up = pUp && s.mcb;
     const iS = Math.abs(s.i_src), iD = Math.abs(s.i_dc);
@@ -215,9 +215,9 @@ class Schematic {
     this.t.vdc.textContent = `${fmt(s.vdc)} V`;
     this.t.idc.textContent = s.inv_on ? `${fmt(s.i_dc)} A` : "";
     const rpm = s.f_rotor / c.pole_pairs * 60;
-    this.t.mot.textContent = s.inv_on ? `${fmt(s.f_s, 1)} Hz` : "parado";
+    this.t.mot.textContent = s.inv_on ? `${fmt(s.f_s, 1)} Hz` : "stopped";
     this.t.mot2.textContent = `${fmt(rpm)} rpm`;
-    this.rotor = (this.rotor + 360 * (s.f_rotor / c.pole_pairs) * dt * 0.25) % 360; // 1/4 da rotação real p/ ser visível
+    this.rotor = (this.rotor + 360 * (s.f_rotor / c.pole_pairs) * dt * 0.25) % 360; // 1/4 of the real speed so it stays visible
     this.rotorG.setAttribute("transform", `translate(1040,260) rotate(${this.rotor})`);
   }
 }
