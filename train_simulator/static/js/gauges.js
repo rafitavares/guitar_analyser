@@ -1,31 +1,31 @@
 // Circular SVG gauges (240° arc)
 class Gauge {
-  constructor(svg, { min, max, label, unit, digits = 0, color = "#22d3ee", zones = [], bipolar = false, mark }) {
+  constructor(svg, { min, max, label, unit, digits = 0, color = "#3D85FF", zones = [], bipolar = false, mark }) {
     Object.assign(this, { svg, min, max, label, unit, digits, color, bipolar });
     svg.setAttribute("viewBox", "0 0 200 150");
     this.cx = 100; this.cy = 92; this.r = 70;
     this.a0 = -210; this.a1 = 30;
-    const track = svgEl("path", { d: this.arc(min, max), stroke: "#1d2940", "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
+    const track = svgEl("path", { d: this.arc(min, max), stroke: "#333333", "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
     for (const z of zones) svgEl("path", { d: this.arc(z[0], z[1], this.r + 10), stroke: z[2], "stroke-width": 3, fill: "none", opacity: 0.9 }, svg);
     // tick marks
     for (let i = 0; i <= 10; i++) {
       const v = min + (max - min) * i / 10, a = this.ang(v) * Math.PI / 180;
       const r1 = this.r - 12, r2 = this.r - (i % 5 === 0 ? 20 : 16);
-      svgEl("line", { x1: this.cx + r1 * Math.cos(a), y1: this.cy + r1 * Math.sin(a), x2: this.cx + r2 * Math.cos(a), y2: this.cy + r2 * Math.sin(a), stroke: "#3a4966", "stroke-width": 1.5 }, svg);
+      svgEl("line", { x1: this.cx + r1 * Math.cos(a), y1: this.cy + r1 * Math.sin(a), x2: this.cx + r2 * Math.cos(a), y2: this.cy + r2 * Math.sin(a), stroke: "#4a4a4a", "stroke-width": 1.5 }, svg);
       if (i % 5 === 0) {
-        const t = svgEl("text", { x: this.cx + (this.r - 30) * Math.cos(a), y: this.cy + (this.r - 30) * Math.sin(a) + 3, "text-anchor": "middle", fill: "#56627a", "font-size": 9, "font-family": "ui-monospace,monospace" }, svg);
+        const t = svgEl("text", { x: this.cx + (this.r - 30) * Math.cos(a), y: this.cy + (this.r - 30) * Math.sin(a) + 3, "text-anchor": "middle", fill: "#707070", "font-size": 9, "font-family": "ui-monospace,monospace" }, svg);
         t.textContent = Math.abs(v) >= 1000 ? (v / 1000) + "k" : v;
       }
     }
     if (mark !== undefined) {
       const a = this.ang(mark) * Math.PI / 180;
-      svgEl("line", { x1: this.cx + (this.r + 8) * Math.cos(a), y1: this.cy + (this.r + 8) * Math.sin(a), x2: this.cx + (this.r - 8) * Math.cos(a), y2: this.cy + (this.r - 8) * Math.sin(a), stroke: "#e6ecf5", "stroke-width": 2 }, svg);
+      svgEl("line", { x1: this.cx + (this.r + 8) * Math.cos(a), y1: this.cy + (this.r + 8) * Math.sin(a), x2: this.cx + (this.r - 8) * Math.cos(a), y2: this.cy + (this.r - 8) * Math.sin(a), stroke: "#f2f2f2", "stroke-width": 2 }, svg);
     }
     this.val = svgEl("path", { stroke: color, "stroke-width": 12, fill: "none", "stroke-linecap": "round" }, svg);
     this.glow = svgEl("circle", { r: 5, fill: "#fff" }, svg);
-    this.txt = svgEl("text", { x: 100, y: 98, "text-anchor": "middle", fill: "#e6ecf5", "font-size": 26, "font-weight": 700, "font-family": "ui-monospace,monospace" }, svg);
-    const u = svgEl("text", { x: 100, y: 116, "text-anchor": "middle", fill: "#8b97ad", "font-size": 11 }, svg); u.textContent = unit;
-    const l = svgEl("text", { x: 100, y: 143, "text-anchor": "middle", fill: "#cfd8e6", "font-size": 12, "font-weight": 600 }, svg); l.textContent = label;
+    this.txt = svgEl("text", { x: 100, y: 98, "text-anchor": "middle", fill: "#f2f2f2", "font-size": 26, "font-weight": 700, "font-family": "ui-monospace,monospace" }, svg);
+    const u = svgEl("text", { x: 100, y: 116, "text-anchor": "middle", fill: "#a6a6a6", "font-size": 11 }, svg); u.textContent = unit;
+    const l = svgEl("text", { x: 100, y: 143, "text-anchor": "middle", fill: "#dedede", "font-size": 12, "font-weight": 600 }, svg); l.textContent = label;
     this.shown = bipolar ? 0 : min;
     this.set(this.shown);
   }

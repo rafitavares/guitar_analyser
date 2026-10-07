@@ -89,8 +89,8 @@ class Schematic {
       const qg = svgEl("g", { class: "clickable", "data-id": "qc" }, g);
       this.qcBox = svgEl("rect", { x: 560, y: 170, width: 80, height: 140, rx: 6, class: "box" }, qg);
       svgEl("line", { x1: 560, y1: 310, x2: 640, y2: 170, class: "sym", "stroke-width": 1.5 }, qg);
-      const a = svgEl("text", { x: 578, y: 200, "font-size": 22, fill: "#cfd8e6" }, qg); a.textContent = "~";
-      const b = svgEl("text", { x: 606, y: 296, "font-size": 22, fill: "#cfd8e6" }, qg); b.textContent = "=";
+      const a = svgEl("text", { x: 578, y: 200, "font-size": 22, fill: "#dedede" }, qg); a.textContent = "~";
+      const b = svgEl("text", { x: 606, y: 296, "font-size": 22, fill: "#dedede" }, qg); b.textContent = "=";
       const l = svgEl("text", { x: 600, y: 160, class: "ttl", "text-anchor": "middle" }, qg); l.textContent = "4QC (AC/DC)";
       qg.addEventListener("click", () => this.onToggle("qc"));
       xDC0 = 640;
@@ -115,10 +115,10 @@ class Schematic {
       for (const y of [254, 266]) svgEl("line", { x1: cx - 20, y1: y, x2: cx + 20, y2: y, class: "sym", "stroke-width": 3 }, g);
     }
     text(cx - 30, 212, "DC link", "ttl", "end");
-    svgEl("rect", { x: cx + 28, y: 200, width: 10, height: 120, rx: 3, fill: "#0e1626", stroke: "#2b3956" }, g);
+    svgEl("rect", { x: cx + 28, y: 200, width: 10, height: 120, rx: 3, fill: "#1a1a1a", stroke: "#444444" }, g);
     this.capFill = svgEl("rect", { x: cx + 28, y: 320, width: 10, height: 0, rx: 3, fill: "url(#capgrad)", class: "capfill" }, g);
     const defs = svgEl("defs", {}, svg);
-    defs.innerHTML = `<linearGradient id="capgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0e7490"/><stop offset="1" stop-color="#67e8f9"/></linearGradient>`;
+    defs.innerHTML = `<linearGradient id="capgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#1F5FD6"/><stop offset="1" stop-color="#8AB4FF"/></linearGradient>`;
     this.t.vdc = text(cx, YN + 30, "", "val");
 
     // VLU (brake chopper)
@@ -131,8 +131,8 @@ class Schematic {
     const ig = svgEl("g", { class: "clickable", "data-id": "inv" }, g);
     this.invBox = svgEl("rect", { x: 860, y: 170, width: 90, height: 180, rx: 6, class: "box" }, ig);
     svgEl("line", { x1: 860, y1: 350, x2: 950, y2: 170, class: "sym", "stroke-width": 1.5 }, ig);
-    const e1 = svgEl("text", { x: 874, y: 206, "font-size": 22, fill: "#cfd8e6" }, ig); e1.textContent = "=";
-    const e2 = svgEl("text", { x: 918, y: 334, "font-size": 22, fill: "#cfd8e6" }, ig); e2.textContent = "~";
+    const e1 = svgEl("text", { x: 874, y: 206, "font-size": 22, fill: "#dedede" }, ig); e1.textContent = "=";
+    const e2 = svgEl("text", { x: 918, y: 334, "font-size": 22, fill: "#dedede" }, ig); e2.textContent = "~";
     const il = svgEl("text", { x: 905, y: 160, class: "ttl", "text-anchor": "middle" }, ig);
     il.textContent = levels === 3 ? "3L NPC inverter" : "2L inverter";
     ig.addEventListener("click", () => this.onToggle("inv"));

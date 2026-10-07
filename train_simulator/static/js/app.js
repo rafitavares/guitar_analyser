@@ -195,7 +195,7 @@ function frame(now) {
     G.speed.set(S.speed_kmh);
     G.freq.set(S.f_s);
     G.vdc.set(S.vdc);
-    G.power.set(S.p_elec / 1e6, S.p_elec < 0 ? "#4ade80" : COL.line);
+    G.power.set(S.p_elec / 1e6, S.p_elec < 0 ? "#1EC337" : COL.line);
   }
   requestAnimationFrame(frame);
 }

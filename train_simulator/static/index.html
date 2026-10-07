@@ -5,15 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Traction Converter Simulator — Rafael Tavares</title>
   <meta name="author" content="Rafael Tavares">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23FF000F'/%3E%3Ctext x='50' y='66' font-family='Arial,Helvetica,sans-serif' font-weight='700' font-size='44' text-anchor='middle' fill='white'%3EABB%3C/text%3E%3C/svg%3E">
   <meta name="description" content="Railway traction converter simulator by Rafael Tavares">
   <link rel="stylesheet" href="/static/vendor/uPlot.min.css">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/vendor/uPlot.iife.min.js"></script>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <mask id="abb-gaps" maskUnits="userSpaceOnUse" x="0" y="0" width="280" height="100">
+        <rect width="280" height="100" fill="#fff"/>
+        <g fill="#000"><rect y="48" width="280" height="4"/><rect x="48" width="4" height="100"/><rect x="134" width="4" height="100"/><rect x="222" width="4" height="100"/></g>
+      </mask>
+      <symbol id="abb-logo" viewBox="0 0 280 100">
+        <g fill="#FF000F" mask="url(#abb-gaps)">
+          <path d="M30,0 H70 L100,100 H62 L50,62 L38,100 H0 Z"/>
+          <path d="M110,0 H160 Q184,0 184,24 Q184,42 170,50 Q188,57 188,76 Q188,100 164,100 H110 Z"/>
+          <path d="M198,0 H248 Q272,0 272,24 Q272,42 258,50 Q276,57 276,76 Q276,100 252,100 H198 Z"/>
+        </g>
+      </symbol>
+    </defs>
+  </svg>
   <header class="topbar">
     <div class="brand">
-      <svg viewBox="0 0 32 32" class="logo"><path d="M4 26h24M8 26l4-14h8l4 14M12 12l4-8 4 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>
+      <span class="abb-badge" title="ABB"><svg class="abb-logo" viewBox="0 0 280 100" role="img" aria-label="ABB"><use href="#abb-logo"/></svg></span>
       <div>
         <h1>Traction Converter Simulator</h1>
         <p class="sub"><span id="topo-label">3 kV DC · 2-level inverter</span> · <span class="author">by Rafael Tavares</span></p>

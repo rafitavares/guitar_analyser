@@ -6,16 +6,16 @@ function initLab() {
     scales: { x: { time: false }, y: { auto: true } },
     axes: [axisX("t [s]"), axisY("V", "y")],
     series: [{ label: "A (t)" },
-      { label: "D — PWM", stroke: COL.ac, width: 1.5, fill: "rgba(167,139,250,.2)", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "D — PWM", stroke: COL.ac, width: 1.5, fill: "rgba(255, 216, 0,.2)", paths: uPlot.paths.stepped({ align: 1 }) },
       { label: "B — sine", stroke: COL.line, width: 2 },
-      { label: "C — carrier", stroke: "#64748b", width: 1 }],
+      { label: "C — carrier", stroke: "#7a7a7a", width: 1 }],
   }, 4);
   L.pre = new Chart($("#lc-pre"), {
     height: 260,
     scales: { x: { time: false }, y: { auto: true } },
     axes: [axisX("Time [s]"), axisY("Voltage (V)", "y")],
     series: [{ label: "A (t)", value: (u, v) => v == null ? "—" : v.toFixed(2) + " s" },
-      { label: "B — voltage", stroke: COL.dc, width: 2.5, fill: "rgba(34,211,238,.08)" },
+      { label: "B — voltage", stroke: COL.dc, width: 2.5, fill: "rgba(61, 133, 255,.08)" },
       { label: "E2 — target", stroke: COL.line, width: 1.5, dash: [6, 4] },
       { label: "D2 — instant", stroke: COL.bad, width: 0, points: { show: true, size: 10, fill: COL.bad } }],
   }, 4);
@@ -25,7 +25,7 @@ function initLab() {
     axes: [axisX("Time [s]"), axisY("V", "y")],
     series: [{ label: "A (t)", value: (u, v) => v == null ? "—" : (v * 1000).toFixed(2) + " ms" },
       { label: "E — final curve", stroke: COL.dc, width: 2.5 },
-      { label: "B — rectified", stroke: "rgba(245,165,36,.45)", width: 1 },
+      { label: "B — rectified", stroke: "rgba(255, 115, 0,.45)", width: 1 },
       { label: "C — RC charge", stroke: COL.ok, width: 1, dash: [5, 4] }],
   }, 4);
 

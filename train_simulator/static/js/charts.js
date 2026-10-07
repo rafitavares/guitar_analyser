@@ -1,7 +1,7 @@
 // uPlot charts (fast enough to update at ~10 Hz)
 const COL = {
-  dc: "#22d3ee", line: "#f5a524", ac: "#a78bfa", ok: "#34d399", bad: "#f43f5e",
-  grid: "#1a2540", axis: "#8b97ad", dim: "#56627a", ia: "#fb7185", ib: "#4ade80", ic: "#60a5fa", force: "#fb923c",
+  dc: "#3D85FF", line: "#FF7300", ac: "#FFD800", ok: "#1EC337", bad: "#F03040",
+  grid: "#2c2c2c", axis: "#a6a6a6", dim: "#707070", ia: "#FF6B6B", ib: "#1EC337", ic: "#8AB4FF", force: "#FF9A40",
 };
 
 const axisX = (label) => ({ stroke: COL.axis, grid: { stroke: COL.grid, width: 1 }, ticks: { stroke: COL.grid }, label, labelSize: 18, size: 36 });
@@ -34,7 +34,7 @@ function makeCharts() {
     scales: { x: { time: false }, V: { range: (u, a, b) => [0, Math.max(3600, b * 1.05)] }, A: { auto: true } },
     axes: [axisX("t [s]"), axisY("V", "V"), axisY("A", "A", 1)],
     series: [{ label: "t", value: (u, v) => v == null ? "—" : v.toFixed(1) + " s" },
-      { label: "Vdc", stroke: COL.dc, width: 2, scale: "V", fill: "rgba(34,211,238,.08)", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
+      { label: "Vdc", stroke: COL.dc, width: 2, scale: "V", fill: "rgba(61, 133, 255,.08)", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
       { label: "V source", stroke: COL.line, width: 1.5, dash: [6, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
       { label: "Pre-charge threshold", stroke: COL.dim, width: 1, dash: [3, 4], scale: "V", value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" },
       { label: "I DC", stroke: COL.ia, width: 1.5, scale: "A", value: (u, v) => v == null ? "—" : v.toFixed(0) + " A" }],
@@ -44,17 +44,17 @@ function makeCharts() {
     scales: { x: { time: false }, y: { auto: true } },
     axes: [axisX("t [ms]"), axisY("V", "y")],
     series: [{ label: "t" },
-      { label: "PWM", stroke: COL.ac, width: 1.5, fill: "rgba(167,139,250,.18)", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "PWM", stroke: COL.ac, width: 1.5, fill: "rgba(255, 216, 0,.18)", paths: uPlot.paths.stepped({ align: 1 }) },
       { label: "Reference", stroke: COL.line, width: 2 },
-      { label: "Carrier", stroke: "#64748b", width: 1 },
-      { label: "−Carrier", stroke: "#475569", width: 1 }],
+      { label: "Carrier", stroke: "#7a7a7a", width: 1 },
+      { label: "−Carrier", stroke: "#5c5c5c", width: 1 }],
   }, 5);
 
   C.uab = new Chart($("#c-uab"), {
     scales: { x: { time: false }, V: { auto: true }, A: { auto: true } },
     axes: [axisX("t [ms]"), axisY("V", "V"), axisY("A", "A", 1)],
     series: [{ label: "t" },
-      { label: "U–V", stroke: "rgba(34,211,238,.55)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "U–V", stroke: "rgba(61, 133, 255,.55)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
       { label: "iU", stroke: COL.ia, width: 2, scale: "A" },
       { label: "iV", stroke: COL.ib, width: 2, scale: "A" },
       { label: "iW", stroke: COL.ic, width: 2, scale: "A" }],
@@ -64,7 +64,7 @@ function makeCharts() {
     scales: { x: { time: false }, y: { auto: true } },
     axes: [axisX("f [Hz]"), axisY("V (peak)", "y")],
     series: [{ label: "f", value: (u, v) => v == null ? "—" : v.toFixed(1) + " Hz" },
-      { label: "|U–V|", stroke: COL.dc, fill: "rgba(34,211,238,.6)", width: 0, paths: uPlot.paths.bars({ size: [1, 3] }), points: { show: false },
+      { label: "|U–V|", stroke: COL.dc, fill: "rgba(61, 133, 255,.6)", width: 0, paths: uPlot.paths.bars({ size: [1, 3] }), points: { show: false },
         value: (u, v) => v == null ? "—" : v.toFixed(0) + " V" }],
   }, 2);
 
@@ -80,7 +80,7 @@ function makeCharts() {
   C.zoom = new Chart($("#c-zoom"), {
     scales: { x: { time: false }, y: { auto: true } },
     axes: [axisX("t [ms]"), axisY("V", "y")],
-    series: [{ label: "t" }, { label: "Vdc", stroke: COL.dc, width: 1.8, fill: "rgba(34,211,238,.06)" }],
+    series: [{ label: "t" }, { label: "Vdc", stroke: COL.dc, width: 1.8, fill: "rgba(61, 133, 255,.06)" }],
   }, 2);
   return C;
 }
