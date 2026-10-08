@@ -1,4 +1,4 @@
-// Engine regression tests — run with:  node --test tests/
+// Engine regression tests — run with:  node --test tests/*.test.cjs
 // Author: Rafael Tavares
 const test = require("node:test");
 const assert = require("node:assert");
@@ -18,7 +18,7 @@ const CASES = [
 for (const cfg of CASES) {
   test(`full cycle without faults: ${JSON.stringify(cfg)}`, () => {
     const r = run(cfg, { T: 90 });
-    assert.deepStrictEqual(r.faults, [], r.faults.join("; "));
+    assert.deepStrictEqual(r.faults, [], r.faults.map((f) => f.cls + " " + f.msg).join("; "));
     assert.ok(r.phases.some((p) => p.includes(" RUN ")), "reaches RUN");
     assert.ok(r.phases[r.phases.length - 1].includes(" OFF"), "shuts down to OFF");
     if (cfg.system !== "aux") assert.ok(r.run.kmh > 40, `accelerates (${r.run.kmh} km/h)`);
@@ -37,7 +37,7 @@ test("closing CtL without pre-charge trips the breaker", () => {
   for (let i = 0; i < 200; i++) m.step(0.02);
   m.command("toggle", "brk"); m.step(0.02); m.command("toggle", "ctl");
   for (let i = 0; i < 20; i++) m.step(0.02);
-  assert.ok(m.s.faults.some((f) => f.includes("HSCB tripped")));
+  assert.ok(m.s.faults.some((f) => f.msg.includes("HSCB tripped")));
 });
 
 test("non-receptive DC line sends braking energy to the VLU", () => {
@@ -69,7 +69,7 @@ test("EN 50163 table is consistent", () => {
 for (const cfg of [{ system: "dc_ohl", supply: "DC3000" }, { system: "ac_ohl", supply: "AC15" }, { system: "diesel" }, { system: "hydrogen" }]) {
   test(`runs with all optional modules removed: ${cfg.system}`, () => {
     const r = run({ ...cfg, mods: { hf: false, vlu: false, hbu: false, hwr: false } }, { T: 90 });
-    assert.deepStrictEqual(r.faults, [], r.faults.join("; "));
+    assert.deepStrictEqual(r.faults, [], r.faults.map((f) => f.cls + " " + f.msg).join("; "));
     assert.ok(r.run.kmh > 40);
     assert.strictEqual(parseFloat(r.energy_kWh.vlu), 0);
   });

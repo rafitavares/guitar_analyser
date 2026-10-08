@@ -15,7 +15,7 @@ and the train runs with realistic start-up sequences, protections and driving dy
 **Local server:** `python app.py` (Python 3.8+, no packages needed) opens `http://127.0.0.1:8050`.
 
 After changing the code, rebuild the single file with `python build_standalone.py`
-and run the tests with `node --test tests/engine.test.cjs`.
+and run the tests with `node --test tests/*.test.cjs` (`DT=0.1` repeats the Trip Lab tests at 5× time scale).
 
 ## Systems
 
@@ -49,6 +49,29 @@ it stores braking energy, shaves traction peaks and keeps the train running when
 - **HWR**: variable-frequency cooling fans driven by converter and motor temperatures.
 - **MC — motor converter**: 2-level or 3-level NPC, SVPWM asynchronous → synchronous (21, 15, 9, 3 pulses — multiples of 3 for three-phase symmetry, amplitude-compensated) → block (six-step),
   induction motors solved with the T-equivalent circuit (slip, current, power factor, efficiency, breakdown torque).
+
+## Protection and Trip Lab
+
+Every detected fault is assigned a **trip class**, and the class decides the reaction:
+
+| Class | Typical condition | Reaction |
+|---|---|---|
+| Trip_SYS_0 | DC-link short circuit | everything opened at once, collector lowered, DC link fast-discharged |
+| Trip_SYS_1 | welded contactor, risk of opening under load | pulses blocked, breaker and ESS contactors opened, collector lowered |
+| Trip_SYS_2 | overcurrent, IGBT, earth fault, line fault | pulses blocked, breaker / line contactor opened, ESS disconnected |
+| Trip_SYS_3 | DC-link undervoltage | pulses blocked, automatic restart (3 in 2 min → Trip_SYS_2) |
+| OFF_SYS_1 / OFF_SYS_2 / OFF_FU | controlled disconnection without urgency | normal shutdown sequence without load (system, power circuit or one unit) |
+| Trip_ESS / Trip_AUX / Trip_MC / Trip_LC (GC) | fault confined to one converter | only that converter is blocked; RESET restarts it |
+| Warning | limit exceeded | indication only |
+
+The **Trip Lab** tab injects 22 faults — ESS connection box (CtPos / CtNeg / CtCh do not close / open / move unexpectedly,
+welded contactor, precharge timeout, voltage does not rise, tripline, BMS), converters (overcurrent, IGBT desaturation,
+earth fault, DC-link over/undervoltage and short circuit, MC and LC/GC faults) and auxiliaries (overload, overtemperature, fan).
+Each fault can be triggered immediately, after a delay, during traction or braking or in an ESS state; analog faults can be a step,
+a slow ramp (warning first) or short bursts that are filtered and counted. The class of every fault can be changed.
+Faults are detected physically: contactors have command, auxiliary feedback and real main contacts, the ESS pre-charge and the
+DC link are simulated, and the trip recorder freezes 4 s before and 2 s after each trip.
+The ESS contactor scenarios follow common practice in ESS protection concepts; the class names and reactions are a generic model, not a specific product.
 
 ## Physics and data sources
 

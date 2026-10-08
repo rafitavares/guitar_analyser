@@ -146,15 +146,22 @@ class Schematic {
       // battery (main ESS) feeding the DC link through the ESC
       this.batFill = this.battery(g, 26, 200, "bat");
       text(70, 190, D.bat.chem + " battery", "ttl");
-      text(14, 318, `${(D.bat.E / 1e3).toFixed(0)} kWh · ${D.bat.Vn} V`, "small", "start");
+      text(14, 318, `${(D.bat.E / 1e3).toFixed(0)} kWh`, "small", "start");
       this.t.bat = text(14, 334, "", "val", "start");
+      // ESS connection box: CtPos (+), CtCh + Rch in parallel, CtNeg (−)
+      svgEl("rect", { x: 140, y: YP - 64, width: 190, height: YN - YP + 110, rx: 10, fill: "none", stroke: "#3a3a3a", "stroke-dasharray": "5 4" }, g);
+      text(140, YP - 50, "ESS connection box", "small", "start");
+      this.t.ebox = text(324, YP - 50, "", "val", "end");
       wire("bat", `M70,200 L70,${YP} L170,${YP}`);
-      sw("brk", 170, YP, "Battery contactor", "", false);
+      sw("ctpos", 170, YP, "CtPos", "", false);
       wire("bat2", `M226,${YP} L400,${YP}`);
       wire("pre1", `M150,${YP} L150,250 L170,250`);
-      sw("chct", 170, 250, "Pre-charge", "", true);
+      sw("chct", 170, 250, "CtCh", "", true);
       wire("pre2", `M226,250 L230,250 ${resistor(230, 250)} L270,250 L270,${YP}`);
-      wire("bat_ret", `M70,290 L70,${YN} L400,${YN}`);
+      text(288, 266, "Rch", "small");
+      wire("bat_ret", `M70,290 L70,${YN} L170,${YN}`);
+      sw("ctneg", 170, YN, "CtNeg", "", true);
+      wire("bat_ret2", `M226,${YN} L400,${YN}`);
       conv("esc", 400, YP - 10, 70, 190, "ESC", "=", "=", "esc");
     }
 
@@ -222,10 +229,20 @@ class Schematic {
     const yOut = 420;
     if (xs.esc) {
       const cx = xs.esc + 35;
-      wire("esc_out", `M${cx},${BY1} L${cx},${yOut - 58}`);
-      this.batFill = this.battery(g, cx - 22, yOut - 52, "bat");
-      text(cx, yOut + 52, `${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh`, "small");
-      this.t.bat = text(cx, yOut + 68, "", "val");
+      wire("esc_out", `M${cx},${BY1} L${cx},352 M${cx},404 L${cx},408`);
+      // ESS connection box with contactor LEDs (click = connect / disconnect in manual mode)
+      const eg = clickable("essbox", svgEl("g", {}, g));
+      this.box.ebox = svgEl("rect", { x: cx - 40, y: 352, width: 80, height: 52, rx: 6, class: "box" }, eg);
+      text(cx, 366, "ESS box", "small", "middle", eg);
+      this.leds = {};
+      [["neg", "Neg"], ["ch", "Ch"], ["pos", "Pos"]].forEach(([k, l], i) => {
+        this.leds[k] = svgEl("circle", { cx: cx - 22 + i * 22, cy: 380, r: 5, class: "led" }, eg);
+        text(cx - 22 + i * 22, 398, l, "small", "middle", eg);
+      });
+      this.t.ebox = text(cx + 46, 382, "", "val", "start");
+      this.batFill = this.battery(g, cx - 22, 414, "bat");
+      text(cx, 524, `${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh`, "small");
+      this.t.bat = text(cx, 540, "", "val");
     }
     if (xs.fcc) {
       const cx = xs.fcc + 35;
@@ -346,6 +363,7 @@ class Schematic {
     this.setWire("bat", batLive ? "ess" : "", s.brk ? P(s.p_esc) : 0, s.p_esc < 0);
     this.setWire("bat2", s.brk ? "ess" : "", s.brk ? P(s.p_esc) : 0, s.p_esc < 0);
     this.setWire("bat_ret", batLive ? "ess" : "");
+    this.setWire("bat_ret2", s.brk ? "ess" : "");
     // bus and modules
     const busFlow = Math.max(P(s.p_mc), P(s.p_src), P(s.p_esc));
     this.setWire("busp", dc, busFlow, s.p_mc < 0);
@@ -365,6 +383,14 @@ class Schematic {
     this.setWire("mot", s.mc ? "ac" : "", s.mc ? Math.max(P(s.p_mc), 5) : 0, s.p_mc < 0);
 
     this.setSwitch("brk", s.brk); this.setSwitch("ctl", s.ctl); this.setSwitch("chct", s.chct);
+    const eb = s.eb, ctBad = (c) => c.cmd !== c.fb || c.act !== c.fb;
+    if (D.bat) {
+      this.setSwitch("ctpos", eb.c.pos.act); this.setSwitch("ctneg", eb.c.neg.act);
+      for (const [id, k] of [["ctpos", "pos"], ["ctneg", "neg"], ["chct", "ch"]]) if (this.sw[id] && (D.src === "battery" || D.src === "fuelcell")) this.sw[id].grp.classList.toggle("bad", ctBad(eb.c[k]));
+      if (this.leds) for (const k of ["pos", "neg", "ch"]) this.leds[k].setAttribute("class", "led" + (eb.c[k].act ? " on" : "") + (ctBad(eb.c[k]) ? " bad" : ""));
+      if (this.t.ebox) this.t.ebox.textContent = eb.st;
+      this.setBox("ebox", eb.st === "Trip" ? "fault" : eb.st === "Connected" ? "liveg" : eb.st === "Idle" ? "" : "warm");
+    }
     this.setBox("lc", s.lc ? "live" : "");
     this.setBox("esc", s.esc ? "liveg" : "");
     this.setBox("fcc", s.fc === "run" ? "liveg" : s.fc === "start" ? "warm" : "");
@@ -374,6 +400,14 @@ class Schematic {
     this.setBox("mc", s.mc ? "livea" : "");
     this.setBox("vlu", s.p_vlu > 1000 ? "hot" : "");
     this.setBox("eng", s.eng === "run" ? "live" : s.eng === "crank" ? "warm" : "");
+    // modules with an active trip are outlined in red
+    const bad = new Set();
+    for (const f of s.faults) {
+      const u = f.cls === "Trip_AUX" ? "aux" : f.cls === "Trip_MC" ? "mc" : f.cls === "Trip_ESS" ? "ess" : f.cls === "Trip_LC" ? "lc" : f.unit;
+      if (u === "aux") { bad.add("hbu"); bad.add("hwr"); } else if (u === "ess") bad.add("esc"); else if (u) bad.add(u);
+      if (f.code === "dcl_short" || f.code === "dcl_ov" || f.code === "dcl_uv") bad.add("dcl");
+    }
+    for (const id of ["mc", "lc", "esc", "hbu", "hwr"]) if (bad.has(id)) this.setBox(id, "fault");
 
     // values
     const sup = D.supply;

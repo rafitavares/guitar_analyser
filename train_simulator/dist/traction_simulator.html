@@ -79,8 +79,6 @@ button, select, input { font: inherit; color: inherit; }
 .scene-hud .big { font-size: 40px; font-weight: 700; line-height: 1; }
 .scene-hud .unit { color: var(--muted); font-size: 14px; }
 .scene-hud .hud-sub { grid-column: 1 / 3; color: var(--muted); font-size: 12px; }
-.fault-banner { position: absolute; right: 14px; top: 12px; max-width: 46%; padding: 8px 12px; border-radius: 10px;
-  background: rgba(240, 48, 64, .18); border: 1px solid rgba(240, 48, 64, .6); color: #ffd2da; font-size: 12px; }
 
 /* ---------- main row ---------- */
 .row-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
@@ -296,6 +294,98 @@ select { width: 100%; min-width: 0; max-width: 100%; }
 .sw-l { color: var(--c-line); } .sw-d { color: var(--c-dc); } .sw-a { color: var(--c-ac); } .sw-e { color: var(--c-ess); }
 @media (max-width: 1000px) { .guide-grid { grid-template-columns: 1fr; } .guide dl { grid-template-columns: 1fr; } }
 
+/* ---------- trips & warnings ---------- */
+.alarms { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+.al-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.al-head h3 { margin: 0; }
+.al-head .btn { margin-left: auto; }
+.al-list { display: grid; gap: 6px; max-height: 300px; overflow: auto; }
+.al-row { display: grid; grid-template-columns: 104px minmax(0, 1fr) 120px 150px; gap: 12px; align-items: center; padding: 7px 10px; border-radius: 10px;
+  background: rgba(240, 48, 64, .09); border: 1px solid rgba(240, 48, 64, .35); }
+.al-row.warn { background: rgba(255, 216, 0, .06); border-color: rgba(255, 216, 0, .3); }
+.al-txt { display: grid; gap: 1px; min-width: 0; }
+.al-txt b { font-size: 13px; }
+.al-txt small { color: #e6c9cd; font-size: 12px; }
+.al-row.warn .al-txt small { color: #fde68a; }
+.al-meta { font-size: 11.5px; color: var(--muted); display: grid; }
+.al-meta span { color: var(--text); font-family: system-ui, sans-serif; }
+.al-hint { font-size: 11.5px; color: var(--muted); text-align: right; }
+.al-ok { padding: 9px 12px; border-radius: 10px; background: rgba(30, 195, 55, .08); border: 1px solid rgba(30, 195, 55, .3); color: var(--c-ok); font-size: 13px; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 600 11px/1.3 var(--mono); text-align: center; white-space: nowrap; }
+.badge.c0 { background: #7a0010; color: #fff; box-shadow: 0 0 0 1px #ff3348 inset; }
+.badge.c1 { background: #c8102e; color: #fff; }
+.badge.c2 { background: #F03040; color: #fff; }
+.badge.c3 { background: #FF7300; color: #1a0d00; }
+.badge.coff { background: #3D85FF; color: #fff; }
+.badge.cu { background: #a855f7; color: #fff; }
+.badge.cw { background: #FFD800; color: #262000; }
+#schem .box.fault { stroke: var(--c-bad); stroke-dasharray: 6 3; fill: rgba(240, 48, 64, .12); }
+#schem .sw.bad .lever { stroke: var(--c-bad); }
+#schem .led { stroke: #1a1a1a; stroke-width: 1.5; fill: #444; }
+#schem .led.on { fill: var(--c-ok); }
+#schem .led.bad { fill: var(--c-bad); }
+
+/* ---------- Trip Lab ---------- */
+.lab-top { display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.lab-top .lab-intro { max-width: 900px; margin-top: 6px; font-size: 12.5px; }
+.lab-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+.lab-cat { display: grid; gap: 16px; min-width: 0; }
+.lab-side { display: grid; gap: 16px; position: sticky; top: 76px; }
+.lab-row { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1.6fr) 150px; gap: 12px; align-items: center; padding: 10px 6px; border-top: 1px solid #2c2c2c; }
+.lab-row:first-of-type { border-top: 0; }
+.lab-row.off { opacity: .45; }
+.lab-row.armed { background: rgba(255, 115, 0, .07); border-radius: 10px; }
+.lab-row.active { background: rgba(240, 48, 64, .1); border-radius: 10px; }
+.lab-info { display: grid; gap: 2px; min-width: 0; }
+.lab-info b { font-size: 13px; }
+.lab-info small { font-size: 11.5px; color: var(--muted); }
+.lab-info small.dim { color: var(--dim); }
+.lab-info small.why { color: var(--c-line); }
+.lab-info .star { color: var(--c-ac); font-size: 11px; }
+.lab-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 8px; }
+.lab-opts label { display: grid; gap: 2px; font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; min-width: 0; }
+.lab-opts select { padding: 5px 7px; font-size: 12px; }
+.lab-act { display: grid; gap: 5px; justify-items: stretch; }
+.lab-act .inject { background: linear-gradient(180deg, #F03040, #B0000A); border-color: #F03040; color: #fff; }
+.lab-st { font-size: 10.5px; color: var(--c-line); text-align: center; }
+.lab-row.active .lab-st { color: #ff8a95; }
+.lv { display: grid; grid-template-columns: 110px 1fr 108px; gap: 10px; align-items: center; font-size: 12px; margin: 7px 0; }
+.lv span { color: var(--muted); }
+.lv b { text-align: right; font-size: 12px; }
+.lvbar { position: relative; height: 9px; border-radius: 5px; background: var(--bg2); border: 1px solid var(--border); }
+.lvbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--c-dc); transition: width .15s; }
+.lvbar.hot i { background: var(--c-bad); }
+.lvbar em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--c-ac); border-radius: 1px; }
+.lv-state { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; }
+.lv-state span { color: var(--muted); }
+.lv-box { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--bg2); border: 1px solid var(--border); }
+.ebst.ok { color: var(--c-ok); } .ebst.bad { color: var(--c-bad); }
+table.ct { width: 100%; border-collapse: collapse; font-size: 12px; margin: 4px 0; }
+table.ct th { color: var(--dim); font-weight: 500; font-size: 10.5px; text-align: center; }
+table.ct td { text-align: center; padding: 3px; }
+table.ct td:first-child { text-align: left; font-weight: 600; }
+i.led { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #3a3a3a; border: 1px solid #555; }
+i.led.on { background: var(--c-ok); border-color: #6BE07A; box-shadow: 0 0 6px rgba(30, 195, 55, .6); }
+i.led.bad { background: var(--c-bad); border-color: #ff8a95; box-shadow: 0 0 6px rgba(240, 48, 64, .7); }
+.lab-bottom { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.tbl-wrap { max-height: 420px; overflow: auto; }
+.dtable td.dim { color: var(--dim); }
+@media (max-width: 1300px) {
+  .lab-main, .lab-bottom { grid-template-columns: 1fr; }
+  .lab-side { position: static; }
+}
+@media (max-width: 900px) {
+  .al-row { grid-template-columns: 96px minmax(0, 1fr); }
+  .al-meta, .al-hint { grid-column: 2; text-align: left; }
+  .lab-row { grid-template-columns: 1fr; }
+}
+.al-list.compact .al-row { grid-template-columns: 1fr auto; gap: 4px 10px; }
+.al-list.compact .badge { justify-self: start; }
+.al-list.compact .al-txt { grid-column: 1 / -1; }
+.al-list.compact .al-meta { display: flex; gap: 8px; }
+.al-list.compact .al-hint { text-align: right; }
+
 </style>
   <script>
 /*! https://github.com/leeoniya/uPlot (v1.6.31) */
@@ -331,6 +421,7 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sim">Simulator</button>
       <button class="tab" data-tab="data">System data</button>
+      <button class="tab" data-tab="lab">Trip Lab</button>
       <button class="tab" data-tab="guide">How to use</button>
     </nav>
     <div class="status">
@@ -346,7 +437,6 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
         <div class="big mono" id="hud-speed">0</div><div class="unit">km/h</div>
         <div class="hud-sub mono" id="hud-dist">0.00 km</div>
       </div>
-      <div class="fault-banner" id="fault-banner" hidden></div>
     </section>
 
     <section class="row-main">
@@ -362,6 +452,14 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
           </div>
         </div>
         <svg id="schem" viewBox="0 0 1400 500"></svg>
+        <div class="alarms">
+          <div class="al-head">
+            <h3>Trips &amp; warnings</h3>
+            <span class="note" id="al-count"></span>
+            <button class="btn ghost small" id="btn-ack">↺ RESET / acknowledge</button>
+          </div>
+          <div class="al-list" id="alarms"></div>
+        </div>
       </div>
 
       <aside class="card side">
@@ -486,6 +584,55 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     </section>
   </main>
 
+  <main id="tab-lab" class="tabpane" hidden>
+    <section class="card lab-top">
+      <div>
+        <h2>Trip Lab</h2>
+        <p class="note lab-intro">Inject faults into the running system and watch how the protection detects them, which trip class is raised and how the converter reacts.
+          Choose <b>when</b> the fault appears, <b>how</b> it develops (step, slow ramp or intermittent bursts) and which <b>class</b> it is mapped to.
+          <span id="lab-sys"></span></p>
+      </div>
+      <div class="lab-btns">
+        <button class="btn start small" id="lab-start">▶ START</button>
+        <button class="btn stop small" id="lab-stop">■ STOP</button>
+        <button class="btn ghost small" id="lab-reset">↺ RESET</button>
+        <button class="btn ghost small" id="lab-ess-on">ESS connect</button>
+        <button class="btn ghost small" id="lab-ess-off">ESS disconnect</button>
+        <button class="btn ghost small" id="lab-clear">✕ Remove all faults</button>
+      </div>
+    </section>
+
+    <section class="lab-main">
+      <div class="lab-cat" id="lab-cat"></div>
+      <aside class="lab-side">
+        <div class="card">
+          <div class="card-head"><h2>Live status</h2><span class="pill" id="lab-phase">OFF</span></div>
+          <div id="lab-live"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Active trips &amp; warnings</h2></div>
+          <div class="al-list compact" id="lab-alarms"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Trip recorder</h2><span class="note" id="rec-note">waiting for a trip — 4 s before and 2 s after are frozen</span></div>
+      <div class="chart" id="c-rec"></div>
+    </section>
+
+    <section class="lab-bottom">
+      <div class="card">
+        <div class="card-head"><h2>Trip history</h2><span class="note">newest first</span></div>
+        <div class="tbl-wrap"><table class="dtable" id="lab-hist"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Trip classes and reactions</h2><span class="note">generic protection concept used by the simulator</span></div>
+        <div class="tbl-wrap"><table class="dtable" id="lab-classes"></table></div>
+      </div>
+    </section>
+  </main>
+
   <main id="tab-guide" class="tabpane guide" hidden>
     <section class="card guide-intro">
       <h2>How to use the simulator</h2>
@@ -518,7 +665,7 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
           <dt>▶ START</dt><dd>Runs the automatic start-up sequence step by step (shown in <i>Start-up sequence</i> with a progress bar per step).</dd>
           <dt>■ STOP</dt><dd>Brakes the train to a stop, then opens contactors and breakers and lowers the collector.</dd>
           <dt>⚠ EMERGENCY</dt><dd>Opens everything immediately and applies the emergency brake.</dd>
-          <dt>↺ RESET</dt><dd>Clears faults. Only possible with the train stopped.</dd>
+          <dt>↺ RESET</dt><dd>Acknowledges faults. System trips (Trip_SYS_0/1/2, OFF_SYS) need the train at standstill; unit trips (Trip_ESS, Trip_AUX, Trip_MC, OFF_FU) are reset while running and the unit restarts.</dd>
           <dt>Automatic</dt><dd>The sequence and the speed control are done for you.</dd>
           <dt>Manual</dt><dd>You operate the equipment yourself by <b>clicking the diagram</b>: pantograph / collector shoes, breaker (HSCB/VCB), ChCt, CtL, line converter, ESC, fuel cell, diesel engine, HBU, HWR and motor converter. Wrong sequences have real consequences — for example, closing CtL without pre-charge trips the breaker.</dd>
         </dl>
@@ -583,9 +730,20 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
       </section>
 
       <section class="card">
-        <h3>8 · Tips</h3>
+        <h3>8 · Trips &amp; warnings, Trip Lab</h3>
         <ul>
-          <li>A red <b>FAULT</b> status and a banner on the train view explain what tripped. Stop the train and press RESET.</li>
+          <li>The panel below the electrical diagram lists every active <b>trip</b> (class badge, fault, time, operating state, how to reset) and every active <b>warning</b>. Faulty modules are outlined in red in the diagram.</li>
+          <li>The <b>Trip Lab</b> tab injects faults: ESS connection box (CtPos, CtNeg, CtCh, welded contactor, pre-charge, tripline, BMS), converters (overcurrent, IGBT desaturation, earth fault, DC-link over/undervoltage and short circuit, MC and LC/GC faults) and auxiliaries (overload, overtemperature, fan).</li>
+          <li>For each fault choose <b>when</b> it appears (immediately, after a delay, during traction or braking, in an ESS state), <b>how</b> it develops (step, ramp with a warning first, or short bursts that are filtered and counted) and the <b>trip class</b>.</li>
+          <li>Contactor and pre-charge defects are <b>latent</b>: they are detected at the next command — start the system, or press STOP / ESS disconnect.</li>
+          <li>The <b>trip recorder</b> freezes 4 s before and 2 s after the latest trip; the <b>trip history</b> keeps the last 40 events.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h3>9 · Tips</h3>
+        <ul>
+          <li>A red <b>FAULT</b> status and the <i>Trips &amp; warnings</i> panel below the diagram explain what tripped and how to reset it.</li>
           <li>To see regeneration go to the VLU, set <i>Line receptivity</i> to 0 % and brake.</li>
           <li>With <b>ESC</b> fitted, switch to Manual and lower the pantograph while running: the battery keeps the train going.</li>
           <li>Compare 2-level and 3-level in the <i>Motor modulation</i> and <i>Harmonic spectrum</i> charts.</li>
@@ -685,6 +843,81 @@ function debounce(fn, ms) {
     shoe: { DC600: [2.5, 0.02, 0.015], DC750: [3, 0.018, 0.015] },
   };
   const RAIL = { dry: 1, wet: 0.7, leaves: 0.4 };
+
+  // ========================================================= trip classes
+  // Generic protection concept: every detected fault is assigned a class; the class decides the reaction.
+  // reset: "standstill" = manual RESET with the train stopped, "reset" = manual RESET, "auto" = automatic restart.
+  const TRIP_CLASSES = {
+    Trip_SYS_0: { sev: 0, reset: "standstill", cond: "DC-link short circuit or extremely critical fault",
+      react: "All pulses blocked, main breaker and every contactor opened at once, collector lowered, DC link fast-discharged" },
+    Trip_SYS_1: { sev: 1, reset: "standstill", cond: "Critical safety fault: welded contactor, risk of opening under load",
+      react: "All pulses blocked, main breaker opened, ESS contactors opened immediately, collector lowered" },
+    Trip_SYS_2: { sev: 2, reset: "standstill", cond: "Overcurrent, IGBT fault, earth fault, DC line fault",
+      react: "All pulses blocked, main breaker and line contactor opened, ESS disconnected without current" },
+    Trip_SYS_3: { sev: 3, reset: "auto", cond: "Transient supply condition (e.g. DC-link undervoltage)",
+      react: "Motor and auxiliary converter pulses blocked; automatic restart 2 s after the condition clears (3 restarts in 2 min → Trip_SYS_2)" },
+    OFF_SYS_1: { sev: 4, reset: "standstill", cond: "Controlled disconnection without urgency (complete system)",
+      react: "Electric braking to standstill, then the normal shutdown sequence without load, collector lowered" },
+    OFF_SYS_2: { sev: 4, reset: "standstill", cond: "Controlled disconnection without urgency (power circuit)",
+      react: "Start-up aborted / power circuit shut down in sequence without load; collector stays raised" },
+    OFF_FU: { sev: 5, reset: "reset", cond: "Fault confined to one function unit",
+      react: "Only the affected function unit is switched off in a controlled way; the rest keeps running" },
+    Trip_ESS: { sev: 5, reset: "reset", cond: "ESS fault that requires complete battery isolation",
+      react: "ESC pulses blocked, CtPos / CtNeg / CtCh opened immediately, ESS locked" },
+    Trip_AUX: { sev: 5, reset: "reset", cond: "Severe auxiliary converter fault",
+      react: "HBU and HWR blocked, 3AC train bus de-energized; traction continues with natural cooling (derated)" },
+    Trip_MC: { sev: 5, reset: "reset", cond: "Motor converter fault",
+      react: "Motor converter pulses blocked; supply and auxiliaries keep running" },
+    Trip_LC: { sev: 5, reset: "reset", cond: "Line converter or generator converter fault",
+      react: "Line / generator converter blocked (VCB and CtL opened on AC lines); the DC link is no longer fed" },
+    Warning: { sev: 9, reset: "auto", cond: "Limit exceeded without shutdown", react: "Indication only — no switching action" },
+  };
+
+  // Fault catalog for the Trip Lab. kind: latent (hidden defect, shows up at the next command),
+  // event (one-shot), analog (a measured quantity grows: step / ramp / intermittent bursts).
+  const T_EVT = ["now", "d5", "d15", "running", "traction", "braking"];
+  const T_AN = ["now", "d5", "running", "traction", "braking"];
+  const needESS = (D) => (D.bat ? null : "needs an ESS — choose Battery / Hydrogen or tick ESC");
+  const needMC = (D) => (D.motor ? null : "no motor converter in this system");
+  const TRIPS = [
+    { id: "ctpos_noclose", group: "ess", top: true, name: "CtPos does not close", cond: "Close command for CtPos, feedback still open after the timeout", states: "Precharge · Connecting", cls: "OFF_SYS_2", alt: ["OFF_FU", "Trip_SYS_2"], kind: "latent", need: needESS, trig: ["now"] },
+    { id: "ctpos_noopen", group: "ess", top: true, name: "CtPos does not open", cond: "Open command for CtPos, feedback stays closed (risk of welded contactor)", states: "Disconnecting · Trip", cls: "Trip_SYS_1", alt: ["Trip_SYS_2"], kind: "latent", need: needESS, trig: ["now"] },
+    { id: "ctneg_noclose", group: "ess", top: true, name: "CtNeg does not close", cond: "Close command for CtNeg, feedback does not follow", states: "Connecting", cls: "OFF_SYS_2", alt: ["OFF_FU", "Trip_SYS_2"], kind: "latent", need: needESS, trig: ["now"] },
+    { id: "ctneg_noopen", group: "ess", top: true, name: "CtNeg does not open", cond: "Open command for CtNeg, feedback stays closed", states: "Disconnecting · Trip", cls: "Trip_SYS_1", alt: ["OFF_SYS_2"], kind: "latent", need: needESS, trig: ["now"] },
+    { id: "ctch_unexp_close", group: "ess", top: true, name: "CtCh closes unexpectedly", cond: "Pre-charge contactor closes without command", states: "Idle · Connected", cls: "OFF_SYS_2", alt: ["OFF_FU", "Trip_SYS_1"], kind: "event", need: needESS, trig: ["now", "ess:Connected", "ess:Idle"] },
+    { id: "ctch_unexp_open", group: "ess", top: true, name: "CtCh opens unexpectedly", cond: "Pre-charge contactor opens during pre-charge — the pre-charge is no longer controlled", states: "Precharge · Connecting", cls: "OFF_SYS_2", alt: ["Trip_SYS_1", "OFF_FU"], kind: "event", need: needESS, trig: ["ess:chclosed"] },
+    { id: "welded", group: "ess", top: true, name: "Welded contactor", cond: "CtPos main contacts welded: the auxiliary contact reports open but the ESC input stays at battery voltage", states: "Disconnecting · Trip", cls: "Trip_SYS_1", alt: ["Trip_SYS_2"], kind: "latent", need: needESS, trig: ["now"] },
+    { id: "precharge_timeout", group: "ess", top: true, name: "Precharge timeout", cond: "Pre-charge resistor degraded (×6): the voltage does not equalize within the maximum time", states: "Precharge · Connecting", cls: "OFF_SYS_2", alt: ["OFF_FU", "Trip_SYS_2"], kind: "latent",
+      units: (D) => [D.bat && ["ess", "ESS connection box"], (D.src === "dcline" || D.src === "acline") && ["pre", "DC-link pre-charge (ChCt)"]].filter(Boolean),
+      need: (D) => (D.bat || D.src === "dcline" || D.src === "acline" ? null : "no pre-charge circuit in this system"), trig: ["now"] },
+    { id: "voltage_no_rise", group: "ess", top: true, name: "Voltage does not rise", cond: "Pre-charge path open (blown fuse / broken resistor): after closing CtCh the voltage stays near zero", states: "Precharge · Connecting", cls: "OFF_SYS_2", alt: ["OFF_FU", "Trip_SYS_2"], kind: "latent",
+      units: (D) => [D.bat && ["ess", "ESS connection box"], (D.src === "dcline" || D.src === "acline") && ["pre", "DC-link pre-charge (ChCt)"]].filter(Boolean),
+      need: (D) => (D.bat || D.src === "dcline" || D.src === "acline" ? null : "no pre-charge circuit in this system"), trig: ["now"] },
+    { id: "ess_tripline", group: "ess", top: true, name: "ESS tripline open", cond: "External ESS safety loop (tripline) opened", states: "Connected", cls: "Trip_ESS", alt: ["Trip_SYS_1"], kind: "event", need: needESS, trig: [...T_EVT, "ess:Connected"] },
+    { id: "bms_fault", group: "ess", name: "BMS critical fault", cond: "Battery management system reports a critical cell fault (cell overvoltage / overtemperature)", states: "Connected", cls: "Trip_ESS", alt: ["Trip_SYS_1", "OFF_FU"], kind: "event", need: needESS, trig: [...T_EVT, "ess:Connected"] },
+
+    { id: "mc_oc", group: "conv", top: true, name: "Overcurrent", cond: "Motor converter phase current above the trip level", states: "Connected", cls: "Trip_SYS_2", alt: ["Trip_MC", "Trip_SYS_0", "Warning"], kind: "analog", forms: ["step", "ramp", "intermittent"], need: needMC, trig: T_AN },
+    { id: "igbt_desat", group: "conv", top: true, name: "IGBT fault (desaturation)", cond: "Gate driver detects a short circuit on an IGBT (desaturation < 10 µs)", states: "Connected", cls: "Trip_SYS_2", alt: ["Trip_SYS_0", "Trip_MC", "Trip_LC", "Trip_ESS", "Trip_AUX"], kind: "event",
+      units: (D) => [D.motor && ["mc", "Motor converter"], (D.src === "acline" || D.src === "genset") && ["lc", D.src === "genset" ? "Generator converter" : "Line converter"], D.bat && ["ess", "ESC"], D.hasHBU && ["hbu", "HBU"], D.hasHWR && ["hwr", "HWR"]].filter(Boolean),
+      need: () => null, trig: T_EVT },
+    { id: "earth_fault", group: "conv", top: true, name: "Earth fault", cond: "Leakage current from the DC link / motor circuit to earth (insulation monitoring)", states: "Connected", cls: "Trip_SYS_2", alt: ["Trip_SYS_1", "Warning"], kind: "analog", forms: ["step", "ramp", "intermittent"], need: () => null, trig: T_AN },
+    { id: "dcl_ov", group: "conv", top: true, name: "DC-link overvoltage", cond: "DC lines: catenary overvoltage (50 ms rise). Regulated systems: DC-link voltage controller runaway with the brake chopper not firing", states: "Connected", cls: "Trip_SYS_2", alt: ["Trip_SYS_0", "Trip_SYS_1"], kind: "analog", forms: ["step", "ramp"], need: () => null, trig: T_AN },
+    { id: "dcl_uv", group: "conv", name: "DC-link undervoltage", cond: "Line voltage dip or loss of source power: DC link below the undervoltage limit", states: "Connected", cls: "Trip_SYS_3", alt: ["Trip_SYS_2", "Warning"], kind: "analog", forms: ["step", "ramp"], need: () => null, trig: T_AN },
+    { id: "dcl_short", group: "conv", name: "DC-link short circuit", cond: "Low-impedance short across the DC link (capacitor or busbar failure)", states: "Connected · transients", cls: "Trip_SYS_0", alt: ["Trip_SYS_1", "Trip_SYS_2"], kind: "event", need: () => null, trig: T_EVT },
+    { id: "mc_fault", group: "conv", name: "Motor converter fault", cond: "Motor converter internal fault (phase current sensor implausible)", states: "Connected", cls: "Trip_MC", alt: ["Trip_SYS_2", "OFF_FU"], kind: "event", need: needMC, trig: T_EVT },
+    { id: "lc_fault", group: "conv", name: "Line / generator converter fault", cond: "Line converter (4QC) or generator converter internal fault", states: "Connected", cls: "Trip_LC", alt: ["Trip_SYS_2", "OFF_SYS_2"], kind: "event",
+      need: (D) => (D.src === "acline" || D.src === "genset" ? null : "only AC line and diesel systems have a line / generator converter"), trig: T_EVT },
+
+    { id: "aux_ovl", group: "aux", top: true, name: "AUX overload", cond: "HBU load above the permitted overload curve (I²t)", states: "Connected", cls: "Trip_AUX", alt: ["OFF_FU", "Warning"], kind: "analog", forms: ["step", "ramp"], need: (D) => (D.hasHBU ? null : "needs the HBU"), trig: T_AN },
+    { id: "aux_ot", group: "aux", top: true, name: "AUX overtemperature", cond: "Filter / IGBT temperature of the auxiliary converter exceeded (cooling lost)", states: "Connected", cls: "Trip_AUX", alt: ["OFF_FU", "Warning"], kind: "analog", forms: ["step", "ramp"], need: (D) => (D.hasHBU || D.hasHWR ? null : "needs the HBU or HWR"), trig: T_AN },
+    { id: "fan_fail", group: "aux", name: "Fan failure", cond: "Cooling fan stopped: speed feedback below 50 % of the command", states: "Connected", cls: "Trip_AUX", alt: ["OFF_FU", "Warning"], kind: "event", need: (D) => (D.hasHWR ? null : "needs the HWR (cooling fans)"), trig: T_EVT },
+  ];
+  const TRIP_BY_ID = Object.fromEntries(TRIPS.map((x) => [x.id, x]));
+  const TRIGGERS = {
+    now: "Immediately", d5: "After 5 s", d15: "After 15 s", running: "When the system is READY", traction: "During traction", braking: "During electric braking",
+    "ess:Idle": "ESS state Idle", "ess:Connected": "ESS state Connected", "ess:chclosed": "While CtCh is closed (pre-charge)",
+  };
+  const UNIT_CLS = { mc: "Trip_SYS_2", lc: "Trip_SYS_2", ess: "Trip_ESS", hbu: "Trip_AUX", hwr: "Trip_AUX" };
 
   function defaultVehicle(sys, sup) {
     if (sys === "dc_3rail") return "metro";
@@ -887,6 +1120,9 @@ function debounce(fn, ms) {
     D.Pvlu = veh ? 1.0 * D.Pmc : 0;
     D.Rvlu = D.Pvlu ? (D.Von * D.Von) / D.Pvlu : 1e9;
     D.mcVmin = src === "dcline" ? 0.9 * sup.Umin2 : 0.75 * vdc;
+    D.Imc_trip = 2.6 * D.mcIr; // motor converter overcurrent trip (A rms, all motors)
+    // ESS connection box: ESC input capacitor pre-charged through CtCh + Rch (tau = 0.25 s)
+    if (D.bat) D.ebox = { Cec: 5e-3, Rch: 50, tPre: 3, tSup: 0.5 };
 
     // thermal
     D.Rth_hs = 55 / Math.max(0.0165 * D.Pmc, 1);
@@ -938,10 +1174,21 @@ function debounce(fn, ms) {
       speed: 0, pos: 0, force: 0, force_mech: 0, f_adh: 0, limit: "", p_wheel: 0,
       throttle: 0, ctrl: "throttle", f_cmd: 0, m_cmd: 0.5, vf_auto: true,
       t_hs: 25, t_j: 25, t_mot: 25, t_vlu: 25, f_hwr: 0, p_air: 9.5, comp: false, uv_t: 0,
-      faults: [], warned: {}, spark: 0, emergency: false, imax: 0,
+      faults: [], warns: {}, spark: 0, emergency: false, imax: 0,
+      sys3: null, keepCol: false, fastDis: false, vdc_prev: 0, i_mc_meas: 0, i_earth: 0, aux_pu: 0, aux_i2t: 0, t_aux: 25, f_hwr_cmd: 0, fan_t: 0,
+      eb: newBox(),
       E: { src: 0, regen: 0, vlu: 0, aux: 0, trac: 0, brake: 0, batOut: 0, batIn: 0, h2: 0, fuel: 0, dist: 0 },
     };
   }
+
+  // ESS connection box: CtPos (+), CtNeg (−), CtCh (pre-charge, parallel to CtPos).
+  // Each contactor has a command, an auxiliary feedback (fb) and the real main contacts (act).
+  function newBox() {
+    const ct = () => ({ cmd: false, fb: false, act: false, tm: 9, pend: false, mis: 0 });
+    return { st: "Idle", req: false, lock: false, t: 0, tch: 0, vec: 0, dis: false, escOn: false, c: { pos: ct(), neg: ct(), ch: ct() } };
+  }
+  const CT_NAME = { pos: "CtPos", neg: "CtNeg", ch: "CtCh" };
+  const SYS_LEVEL = ["Trip_SYS_0", "Trip_SYS_1", "Trip_SYS_2", "OFF_SYS_1", "OFF_SYS_2", "EMERGENCY"];
 
   // ============================================================ simulator
   class Simulator {
@@ -950,6 +1197,12 @@ function debounce(fn, ms) {
       this.events = [];
       this.seq = 0;
       this.TICK = 0.02;
+      this.inj = {};
+      this.clsMap = {};
+      this.hist = [];
+      this.restarts = [];
+      this.an = {};
+      this.rec = { buf: [], frozen: null, ver: 0, pending: null };
       this.rebuild();
     }
 
@@ -965,6 +1218,10 @@ function debounce(fn, ms) {
       const win = this.D.f2 ? Math.round(1 / (this.D.f2 * DT_SUB)) : 20;
       this.reg = { lc: makeReg(win), esc: makeReg(win) };
       this.curvesCache = null;
+      this.inj = {}; this.an = {}; this.burst = {};
+      this.rec = { buf: [], frozen: null, ver: (this.rec ? this.rec.ver : 0) + 1, pending: null };
+      this.hist = []; this.restarts = [];
+      this.s.t_aux = this.cfg.tAmb;
     }
 
     start() {
@@ -983,8 +1240,110 @@ function debounce(fn, ms) {
       this.events.push({ id: this.seq, t: Math.round(this.s.t * 100) / 100, msg, level });
       if (this.events.length > 200) this.events.shift();
     }
-    warnOnce(key, msg) { if (!this.s.warned[key]) { this.s.warned[key] = true; this.log(msg, "warn"); } }
-    fault(msg) { if (!this.s.faults.includes(msg)) { this.s.faults.push(msg); this.log(msg, "fault"); } }
+    // active warning: stays listed while it is refreshed (hold = seconds after the last refresh)
+    warn(code, msg, hold = 1) {
+      const w = this.s.warns[code];
+      if (!w) this.log(msg, "warn");
+      this.s.warns[code] = { code, msg, t: w ? w.t : Math.round(this.s.t * 100) / 100, until: this.s.t + hold };
+    }
+
+    // detected fault → class (Trip Lab choice, catalog default or the given default) → reaction
+    trip(code, msg, unit = "sys", clsDefault = "Trip_SYS_2") {
+      const s = this.s;
+      if (s.faults.some((f) => f.code === code)) return;
+      const cat = TRIP_BY_ID[code];
+      let cls = this.clsMap[code] || (cat ? cat.cls : clsDefault);
+      if (cls === "Warning") { if (!s.warns[code]) this.record(code, cls, msg, unit); this.warn(code, msg, 5); return; }
+      if (cls === "Trip_SYS_3" && this.restarts.filter((t) => s.t - t < 120).length >= 3) {
+        cls = "Trip_SYS_2"; msg += " — 3 automatic restarts in 2 min, escalated";
+      }
+      const f = { code, cls, msg, unit, t: Math.round(s.t * 100) / 100, state: this.stateOf(unit) };
+      s.faults.push(f);
+      this.log(`${cls} · ${msg}`, "fault");
+      this.record(code, cls, msg, unit, f.state);
+      this.react(cls, unit, code);
+      if (!this.rec.pending) this.rec.pending = { f, tEnd: s.t + 2 };
+    }
+    fault(msg, code = "fault", cls = "Trip_SYS_2", unit = "sys") { this.trip(code, msg, unit, cls); }
+
+    record(code, cls, msg, unit, state) {
+      const cat = TRIP_BY_ID[code];
+      this.hist.push({ t: Math.round(this.s.t * 100) / 100, code, name: cat ? cat.name : code, cls, msg, unit, state: state || this.stateOf(unit) });
+      if (this.hist.length > 60) this.hist.shift();
+    }
+
+    // operating state as used in protection concepts (Idle / Precharge / Connecting / Connected / Disconnecting / Trip)
+    stateOf(unit) {
+      const s = this.s, D = this.D;
+      if (unit === "ess" && D.bat) return "ESS " + s.eb.st;
+      const p = s.phase;
+      if (p === "TRIPPED" || p === "EMERGENCY") return "Trip";
+      if (p === "START") { const st = this.steps[s.stepIdx]; return st && /pre-charge|connection box/i.test(st.name) ? "Precharge" : "Connecting"; }
+      if (p === "SHUTDOWN" || p === "BRAKING") return "Disconnecting";
+      if (p === "OFF") return "Idle";
+      return this.sourceConnected() ? "Connected" : "Idle";
+    }
+
+    // reaction of each trip class
+    react(cls, unit, code) {
+      const s = this.s, D = this.D;
+      const blockAll = () => { s.mc = s.lc = s.esc = s.hbu = s.hbu_out = s.hwr = false; if (s.fc !== "off") s.fc = "off"; };
+      const openMain = () => {
+        if (!(D.src === "battery" || D.src === "fuelcell")) s.brk = false;
+        s.ctl = false; s.chct = false; s.iL = 0; s.i2 = 0;
+      };
+      const tripped = () => { if (s.mode === "auto") { s.phase = "TRIPPED"; s.pt = 0; } };
+      const unitOff = (u) => {
+        if (u === "ess") this.essOpen(false);
+        else if (u === "mc") s.mc = false;
+        else if (u === "lc") s.lc = false;
+        else if (u === "hbu" || u === "hwr" || u === "aux") { s.hbu = s.hbu_out = s.hwr = false; }
+        else this.offSeq(false);
+      };
+      switch (cls) {
+        case "Trip_SYS_0":
+          blockAll(); openMain(); this.essOpen(true); s.col_cmd = false; if (s.eng !== "off") s.eng = "off"; s.fastDis = true; tripped(); break;
+        case "Trip_SYS_1":
+          blockAll(); openMain(); this.essOpen(true); s.col_cmd = false; if (s.eng !== "off") s.eng = "off"; tripped(); break;
+        case "Trip_SYS_2":
+          blockAll(); openMain(); this.essOpen(false); tripped(); break;
+        case "Trip_SYS_3":
+          s.sys3 = { code, okT: 0, units: { mc: s.mc, hbu: s.hbu, hwr: s.hwr } };
+          s.mc = false; s.hbu = s.hbu_out = s.hwr = false; break;
+        case "OFF_SYS_1": this.offSeq(true); break;
+        case "OFF_SYS_2": this.offSeq(false); break;
+        case "OFF_FU": unitOff(unit); break;
+        case "Trip_ESS": s.esc = false; this.essOpen(true); break;
+        case "Trip_AUX": s.hbu = s.hbu_out = s.hwr = false; break;
+        case "Trip_MC": s.mc = false; break;
+        case "Trip_LC":
+          s.lc = false;
+          if (D.src === "acline") { s.brk = false; s.ctl = false; s.chct = false; s.i2 = 0; }
+          break;
+      }
+    }
+
+    // controlled shutdown (OFF classes): brake electrically if moving, then the normal shutdown sequence
+    offSeq(lowerCol) {
+      const s = this.s;
+      s.keepCol = !lowerCol;
+      if (s.phase === "OFF") return;
+      this.goto(s.mc && s.speed > 0.05 ? "BRAKING" : "SHUTDOWN");
+    }
+
+    // open the ESS connection box: hard = immediately (all contactors), otherwise the normal disconnection
+    essOpen(hard) {
+      const s = this.s, b = s.eb;
+      if (!this.D.bat) return;
+      s.esc = false; b.req = false; b.escOn = false;
+      if (hard) { b.st = "Trip"; b.lock = true; b.t = 0; for (const k of ["pos", "neg", "ch"]) this.setCt(k, false); }
+    }
+
+    setCt(k, v) {
+      const c = this.s.eb.c[k];
+      if (c.cmd !== v) { c.cmd = v; c.tm = 0; c.pend = true; }
+    }
+
     goto(p) { this.s.phase = p; this.s.pt = 0; }
     prog(k, p) { this.s.steps[k] = clip(p, 0, 100); }
 
@@ -1013,7 +1372,10 @@ function debounce(fn, ms) {
           this.goto(s.mc && s.flux > 0.9 ? "RUN" : allOff ? "OFF" : "SHUTDOWN");
           this.log("AUTOMATIC mode");
         }
-      } else if (cmd === "toggle") this.toggle(String(value));
+      } else if (cmd === "inject") this.inject(value || {});
+      else if (cmd === "clear_inj") this.clearInj(value);
+      else if (cmd === "ess") this.essRequest(!!value);
+      else if (cmd === "toggle") this.toggle(String(value));
       else if (cmd === "set") this.set(value || {});
       else if (cmd === "config") this.config(value || {});
     }
@@ -1085,12 +1447,16 @@ function debounce(fn, ms) {
           this.log((D.collector === "shoe" ? "Collector shoes " : "Pantograph ") + (s.col_cmd ? "raising" : "lowering"));
           break;
         case "brk":
+          if (D.src === "battery" || D.src === "fuelcell") { this.essRequest(!s.eb.req); return; }
           if (!s.brk && s.faults.length) { this.log(`${D.brkName} blocked: active faults (RESET)`, "warn"); return; }
           if (!s.brk && D.src === "genset" && s.eng !== "run") { this.log("Start the diesel engine first", "warn"); return; }
           s.brk = !s.brk; this.log(`${D.brkName} ${s.brk ? "CLOSED" : "OPEN"}`);
           if (!s.brk) { s.lc = false; s.iL = 0; }
           break;
-        case "chct": s.chct = !s.chct; this.log(`ChCt (pre-charge) ${s.chct ? "CLOSED" : "OPEN"}`); break;
+        case "essbox": case "ctpos": case "ctneg": this.essRequest(!s.eb.req); return;
+        case "chct":
+          if (D.src === "battery" || D.src === "fuelcell") { this.log("CtCh is operated by the ESS connection box (click CtPos / CtNeg)", "warn"); return; }
+          s.chct = !s.chct; this.log(`ChCt (pre-charge) ${s.chct ? "CLOSED" : "OPEN"}`); break;
         case "ctl": s.ctl = !s.ctl; this.log(`CtL ${s.ctl ? "CLOSED" : "OPEN"}`); if (!s.ctl && D.src === "acline") s.lc = false; break;
         case "lc":
           if (!s.lc && !this.canStartLC()) { this.log("Line converter start requires a pre-charged DC link", "warn"); return; }
@@ -1099,7 +1465,7 @@ function debounce(fn, ms) {
           break;
         case "esc":
           if (!D.bat) return;
-          if (!s.esc && D.src !== "dcline" && D.src !== "acline" && D.src !== "genset" && !s.brk) { this.log("Close the battery main contactor first", "warn"); return; }
+          if (!s.esc && s.eb.st !== "Connected") { this.log("Connect the ESS first (connection box: CtNeg → CtCh → CtPos)", "warn"); return; }
           s.esc = !s.esc; this.log(`ESC ${on(s.esc)}`);
           if (s.esc) this.startReg(this.reg.esc);
           break;
@@ -1136,6 +1502,204 @@ function debounce(fn, ms) {
 
     startReg(r) { r.buf.fill(this.s.vdc); r.sum = this.s.vdc * r.buf.length; r.int = 0; this.s.vref = Math.max(this.s.vdc, 1); }
 
+    // ------------------------------------------------------------ Trip Lab
+    inject({ id, cls, trig, form, unit }) {
+      const T = TRIP_BY_ID[id], D = this.D;
+      if (!T) return;
+      const why = T.need(D);
+      if (why) { this.log(`Trip Lab: ${T.name} not available — ${why}`, "warn"); return; }
+      const units = T.units ? T.units(D) : null;
+      if (units && !units.some(([u]) => u === unit)) unit = units[0][0];
+      const c = cls && TRIP_CLASSES[cls] ? cls : id === "igbt_desat" ? UNIT_CLS[unit] || T.cls : T.cls;
+      this.clsMap[id] = c;
+      this.inj[id] = { id, cls: c, trig: T.trig.includes(trig) ? trig : T.trig[0], form: T.forms && T.forms.includes(form) ? form : T.forms ? T.forms[0] : null,
+        unit: unit || (units ? units[0][0] : null), st: "armed", t0: this.s.t, ta: 0, n: 0, fired: false };
+      this.log(`Trip Lab: "${T.name}" armed (${TRIGGERS[this.inj[id].trig]}${this.inj[id].form ? ", " + this.inj[id].form : ""}) → ${this.inj[id].cls}`);
+    }
+
+    clearInj(id) {
+      const ids = id === "all" || !id ? Object.keys(this.inj) : [id];
+      for (const k of ids) if (this.inj[k]) { delete this.inj[k]; this.log(`Trip Lab: "${TRIP_BY_ID[k].name}" removed`); }
+    }
+
+    essRequest(on) {
+      const s = this.s;
+      if (!this.D.bat) return;
+      if (on && s.eb.lock) { this.log("ESS locked by a trip — RESET first", "warn"); return; }
+      s.eb.req = on;
+      if (!on) { s.esc = false; s.eb.escOn = false; } else s.eb.escOn = true;
+      this.log(`ESS connection box: ${on ? "connect" : "disconnect"} request`);
+    }
+
+    injOn(id, unit) { const j = this.inj[id]; return !!j && j.st === "active" && (!unit || j.unit === unit); }
+
+    // magnitude of an analog injection: step value, ramp (rate × time) or one-tick bursts every 2 s
+    injAmp(id, step, rate, burst) {
+      const j = this.inj[id];
+      if (!j || j.st !== "active") return 0;
+      if (j.form === "ramp") return rate * (this.s.t - j.ta);
+      if (j.form === "intermittent") { // 20 ms burst every 2 s (independent of the time scale)
+        const k = Math.floor((this.s.t - j.ta) / 2);
+        if (k !== j.bk) { j.bk = k; this.burst[id] = true; return burst; }
+        return 0;
+      }
+      return step;
+    }
+
+    injTick() {
+      const s = this.s, D = this.D;
+      for (const j of Object.values(this.inj)) {
+        if (j.st === "active") { j.n++; continue; }
+        let go = false;
+        switch (j.trig) {
+          case "now": go = true; break;
+          case "d5": go = s.t - j.t0 >= 5; break;
+          case "d15": go = s.t - j.t0 >= 15; break;
+          case "running": go = s.phase === "RUN" || (s.mode === "manual" && this.sourceConnected()); break;
+          case "traction": go = s.mc && s.p_mc > 0.15 * D.Pmc; break;
+          case "braking": go = s.mc && s.p_mc < -0.1 * D.Pmc; break;
+          case "ess:chclosed": go = s.eb.c.ch.fb; break;
+          default: if (j.trig.startsWith("ess:")) go = s.eb.st === j.trig.slice(4);
+        }
+        if (go) { j.st = "active"; j.ta = s.t; j.n = 0; this.log(`Trip Lab: "${TRIP_BY_ID[j.id].name}" active`, "warn"); }
+      }
+      // one-shot events
+      const ev = (id, msg, unit) => { const j = this.inj[id]; if (j && j.st === "active" && !j.fired) { j.fired = true; this.trip(id, msg, unit || j.unit || "sys"); } };
+      const uName = { mc: "motor converter", lc: D.src === "genset" ? "generator converter" : "line converter", ess: "ESC", hbu: "HBU", hwr: "HWR" };
+      const j = this.inj.igbt_desat;
+      if (j) ev("igbt_desat", `IGBT desaturation — ${uName[j.unit]} phase ${"UVW"[Math.floor(s.t * 7) % 3]} (gate driver short-circuit detection)`, j.unit);
+      ev("mc_fault", "Motor converter fault — phase current sensor implausible", "mc");
+      ev("lc_fault", `${D.src === "genset" ? "Generator" : "Line"} converter fault — internal protection`, "lc");
+      ev("ess_tripline", "ESS tripline open — external safety loop interrupted", "ess");
+      ev("bms_fault", "BMS critical fault — cell overvoltage reported by the battery management system", "ess");
+    }
+
+    // filtered analog protection: trip after 3 ticks above the level; shorter bursts are counted (3 in 30 s → trip)
+    analog(code, val, warnLv, tripLv, label, u, unit, d = 0) {
+      const s = this.s, a = (this.an[code] ||= { n: 0, ev: [], pk: 0 });
+      const f = (x) => x.toFixed(d) + " " + u, dt = this.dtTick;
+      const burst = this.burst[code]; this.burst[code] = false;
+      if (val >= tripLv && !burst) { a.n += dt; a.pk = Math.max(a.pk, val); if (a.n >= 0.04) this.trip(code, `${label} ${f(val)} (trip level ${f(tripLv)})`, unit); return; }
+      if (burst) { a.n = 1e-3; a.pk = val; }
+      if (a.n > 0) {
+        a.ev = a.ev.filter((t) => s.t - t < 30); a.ev.push(s.t);
+        this.warn(code + "_tr", `${label}: transient ${f(a.pk)} filtered (${a.ev.length}/3 in 30 s)`, 6);
+        if (a.ev.length >= 3) this.trip(code, `${label}: 3 transients above ${f(tripLv)} within 30 s`, unit);
+      }
+      a.n = 0; a.pk = 0;
+      if (val >= warnLv) this.warn(code + "_w", `${label} high: ${f(val)} (warning ${f(warnLv)}, trip ${f(tripLv)})`);
+    }
+
+    // ESS connection box: contactor mechanics, supervision, pre-charge and state machine
+    essBox(dt) {
+      const s = this.s, D = this.D, b = s.eb, E = D.ebox;
+      if (!D.bat) return;
+      const batMain = D.src === "battery" || D.src === "fuelcell";
+      const fault = {
+        pos: this.injOn("ctpos_noclose") ? "stuck_open" : this.injOn("ctpos_noopen") ? "stuck_closed" : this.injOn("welded") ? "welded" : null,
+        neg: this.injOn("ctneg_noclose") ? "stuck_open" : this.injOn("ctneg_noopen") ? "stuck_closed" : null,
+        ch: this.injOn("ctch_unexp_close") ? "force_closed" : this.injOn("ctch_unexp_open") ? "force_open" : null,
+      };
+      for (const k of ["pos", "neg", "ch"]) {
+        const c = b.c[k];
+        c.tm += dt;
+        let act = c.act, fb = c.fb;
+        if (c.tm >= 0.05) { act = c.cmd; fb = c.cmd; } // 50 ms operating time
+        switch (fault[k]) {
+          case "stuck_open": act = fb = false; break;
+          case "stuck_closed": if (c.act) act = fb = true; break;
+          case "welded": if (c.act) act = true; break;
+          case "force_closed": act = fb = true; break;
+          case "force_open": act = fb = false; break;
+        }
+        c.act = act; c.fb = fb;
+        // supervision of command vs feedback
+        if (c.fb === c.cmd) { c.pend = false; c.mis = 0; }
+        else {
+          c.mis += dt;
+          if (c.pend && c.tm > E.tSup) this.trip(`ct${k}_no${c.cmd ? "close" : "open"}`, `${CT_NAME[k]} does not ${c.cmd ? "close" : "open"} — feedback still ${c.fb ? "closed" : "open"} after ${E.tSup * 1000} ms`, "ess", c.cmd ? "OFF_SYS_2" : "Trip_SYS_1");
+          else if (!c.pend && c.mis > 0.1) this.trip(`ct${k}_unexp_${c.fb ? "close" : "open"}`, `${CT_NAME[k]} ${c.fb ? "closes" : "opens"} unexpectedly (no command)`, "ess", "OFF_SYS_2");
+        }
+      }
+      // ESC input capacitor
+      const ocv = D.bat.ns * OCV[D.bat.chem](s.soc);
+      const kR = this.injOn("voltage_no_rise", "ess") ? Infinity : this.injOn("precharge_timeout", "ess") ? 6 : 1;
+      if (b.c.pos.act && b.c.neg.act) b.vec = ocv - D.bat.R * s.i_bat;
+      else if (b.c.neg.act && b.c.ch.act && kR < Infinity) b.vec = ocv + (b.vec - ocv) * Math.exp(-dt / (E.Rch * kR * E.Cec));
+      else b.vec *= Math.exp(-dt / (b.dis ? 0.08 : 3));
+      // state machine
+      b.t += dt;
+      if (!b.req && ["Precharge", "Connecting"].includes(b.st)) { b.st = "Disconnecting"; b.t = 0; this.setCt("ch", false); this.setCt("pos", false); }
+      switch (b.st) {
+        case "Idle":
+          b.dis = false;
+          if (b.req && !b.lock) { b.st = "Precharge"; b.t = 0; b.tch = 0; this.setCt("neg", true); this.log("ESS: CtNeg closing — pre-charge"); }
+          break;
+        case "Precharge":
+          if (b.c.neg.fb && !b.c.ch.cmd) { this.setCt("ch", true); b.tch = 0; }
+          if (b.c.ch.cmd) {
+            b.tch += dt;
+            if (b.tch > 1 && b.vec < 0.05 * ocv) this.trip("voltage_no_rise", `ESS pre-charge: voltage does not rise (${b.vec.toFixed(0)} V after 1 s, battery ${ocv.toFixed(0)} V)`, "ess");
+            else if (b.tch > E.tPre && b.vec < 0.95 * ocv) this.trip("precharge_timeout", `ESS precharge timeout — ${b.vec.toFixed(0)} V of ${ocv.toFixed(0)} V after ${E.tPre} s`, "ess");
+          }
+          if (b.st === "Precharge" && b.c.ch.fb && b.vec >= 0.95 * ocv) { b.st = "Connecting"; b.t = 0; this.setCt("pos", true); this.log(`ESS pre-charged (${b.vec.toFixed(0)} V) — CtPos closing`); }
+          break;
+        case "Connecting":
+          if (b.c.pos.fb && b.c.ch.cmd && b.t > 0.15) this.setCt("ch", false);
+          if (b.c.pos.fb && !b.c.ch.cmd && !b.c.ch.fb) { b.st = "Connected"; b.t = 0; this.log("ESS connected (CtPos + CtNeg closed, CtCh open)"); }
+          break;
+        case "Connected":
+          if (!b.req) { s.esc = false; b.st = "Disconnecting"; b.t = 0; this.setCt("pos", false); this.setCt("ch", false); this.log("ESS: CtPos opening — disconnection"); }
+          else if (b.escOn) { b.escOn = false; s.esc = true; this.startReg(this.reg.esc); this.log("ESC ON"); }
+          break;
+        case "Disconnecting":
+          b.dis = !b.c.pos.fb; // ESC discharges its input capacitor after CtPos opened
+          if (!b.c.pos.cmd && !b.c.pos.fb && b.c.neg.cmd && b.t > 0.6) {
+            if (b.vec > 0.3 * ocv) this.trip("welded", `Welded contactor CtPos — ESC input still at ${b.vec.toFixed(0)} V after opening (feedback reports open)`, "ess");
+            this.setCt("neg", false);
+          }
+          if (!b.c.neg.cmd && !b.c.neg.fb && !b.c.pos.fb) { b.st = "Idle"; b.t = 0; b.dis = false; this.log("ESS disconnected"); }
+          break;
+        case "Trip":
+          b.dis = true;
+          for (const k of ["pos", "neg", "ch"]) this.setCt(k, false);
+          break;
+      }
+      if (b.st !== "Connected" && s.esc) s.esc = false;
+      if (batMain) { s.brk = b.c.pos.act && b.c.neg.act; s.chct = b.c.ch.act; }
+    }
+
+    // Trip_SYS_3: automatic restart 2 s after the condition clears
+    sys3Tick(dt) {
+      const s = this.s, D = this.D, r = s.sys3;
+      if (!r) return;
+      const ok = s.vdc >= 1.02 * Math.max(D.mcVmin, 1.15 * D.Vuv) && !s.faults.some((f) => f.cls !== "Trip_SYS_3");
+      r.okT = ok ? r.okT + dt : 0;
+      if (r.okT >= 2) {
+        s.faults = s.faults.filter((f) => f.cls !== "Trip_SYS_3");
+        s.sys3 = null;
+        this.restarts.push(s.t);
+        if (r.units.hbu && D.hasHBU) { s.hbu = true; s.hbu_t = 0; }
+        if (r.units.hwr && D.hasHWR) s.hwr = true;
+        if (r.units.mc && D.motor) { s.mc = true; s.f_cmd = s.fs; }
+        this.log("Trip_SYS_3 cleared — automatic restart");
+      }
+    }
+
+    // trip recorder: 6 s ring buffer, frozen 2 s after a trip (4 s before, 2 s after); re-arms for the next trip
+    recTick() {
+      const s = this.s, D = this.D, R = this.rec;
+      R.buf.push([s.t, s.vdc, D.bat ? s.eb.vec : null, D.bat && !D.supply ? s.i_bat : s.i_line, s.i_mc_meas, s.i_earth]);
+      while (R.buf.length && R.buf[0][0] < s.t - 6.05) R.buf.shift();
+      if (R.pending && s.t >= R.pending.tEnd) {
+        const t0 = R.pending.f.t;
+        R.frozen = { f: R.pending.f, cols: [0, 1, 2, 3, 4, 5].map((k) => R.buf.map((r) => (k === 0 ? Math.round((r[0] - t0) * 1000) / 1000 : r[k] == null ? null : Math.round(r[k] * 10) / 10))) };
+        R.ver++; R.pending = null;
+      }
+    }
+
+    recorder() { return { ver: this.rec.ver, frozen: this.rec.frozen }; }
+
     emergency() {
       const s = this.s;
       s.emergency = true;
@@ -1143,18 +1707,39 @@ function debounce(fn, ms) {
       s.col_cmd = false; s.throttle = 0;
       if (s.fc !== "off") s.fc = "off";
       if (s.eng !== "off") s.eng = "off";
+      this.essOpen(true);
       if (s.mode === "auto") s.phase = "EMERGENCY";
-      this.fault("EMERGENCY — everything open, emergency brake applied");
+      this.trip("emergency", "EMERGENCY — everything open, emergency brake applied", "sys", "EMERGENCY");
     }
 
     reset() {
-      if (this.s.speed > 0.1) { this.log("RESET is only possible with the train at standstill", "warn"); return; }
+      const s = this.s, D = this.D;
+      // unit-level trips: acknowledge and restart only the affected units
+      const sysLevel = s.faults.some((f) => SYS_LEVEL.includes(f.cls) || (f.cls === "Trip_LC" && D.src === "acline")) || s.phase === "EMERGENCY" || s.phase === "TRIPPED";
+      if (s.faults.length && !sysLevel) {
+        const run = s.mode === "auto" && s.phase === "RUN";
+        for (const f of s.faults) {
+          const u = f.cls === "Trip_AUX" ? "aux" : f.cls === "Trip_MC" ? "mc" : f.cls === "Trip_ESS" ? "ess" : f.cls === "Trip_LC" ? "lc" : f.unit;
+          if (u === "ess" && D.bat) { s.eb.lock = false; if (s.eb.st === "Trip") { s.eb.st = "Idle"; s.eb.t = 0; } if (run) { s.eb.req = true; s.eb.escOn = true; } }
+          if (!run) continue;
+          if ((u === "aux" || u === "hbu" || u === "hwr") && s.vdc > 0.6 * D.vdc) { if (D.hasHBU) { s.hbu = true; s.hbu_t = 0; } if (D.hasHWR) s.hwr = true; }
+          if (u === "mc" && D.motor && s.vdc >= D.mcVmin) { s.mc = true; s.f_cmd = s.fs; }
+          if (u === "lc" && this.canStartLC()) { s.lc = true; this.startReg(this.reg.lc); }
+        }
+        this.log(`RESET — ${s.faults.map((f) => f.cls).join(", ")} acknowledged${run ? ", units restarted" : ""}`);
+        s.faults = []; s.sys3 = null; this.an = {};
+        return;
+      }
+      if (this.s.speed > 0.1) { this.log("RESET of a system trip is only possible with the train at standstill", "warn"); return; }
       const keep = { mode: this.s.mode, pos: this.s.pos, soc: this.s.soc, h2: this.s.h2, fuel: this.s.fuel, E: this.s.E };
       this.s = newState(this.D);
       Object.assign(this.s, keep);
       this.s.phase = keep.mode === "manual" ? "MANUAL" : "OFF";
       this.s.steps = this.steps.map(() => 0);
-      this.log("RESET");
+      this.s.t_aux = this.cfg.tAmb;
+      this.an = {};
+      const live = Object.values(this.inj).filter((j) => j.st === "active").map((j) => TRIP_BY_ID[j.id].name);
+      this.log("RESET" + (live.length ? ` — fault still injected: ${live.join(", ")}` : ""));
     }
 
     // ----------------------------------------------------------- sequence
@@ -1178,6 +1763,8 @@ function debounce(fn, ms) {
           const want = clip((this.cfg.target_kmh - s.speed * 3.6) / 4, -0.7, 1);
           s.throttle += clip(want - s.throttle, -0.6 * dt, 0.6 * dt);
         }
+      } else if (s.phase === "TRIPPED") {
+        s.throttle = s.speed > 0.05 ? -0.8 : 0; // mechanical brake to standstill, wait for RESET
       } else if (s.phase === "BRAKING") {
         s.throttle += clip(-0.8 - s.throttle, -0.6 * dt, 0.6 * dt);
         if (s.speed < 0.05) { s.throttle = 0; this.log("Train stopped"); this.goto("SHUTDOWN"); }
@@ -1191,13 +1778,20 @@ function debounce(fn, ms) {
         if (pt >= 0.8 && s.esc && this.D.essAddon) { s.esc = false; this.log("ESC OFF"); }
         if (pt >= 1.2 && (s.ctl || s.chct)) { s.ctl = s.chct = false; this.log("CtL OPEN"); }
         if (pt >= 1.2 && s.esc) { s.esc = false; this.log("ESC OFF"); }
-        if (pt >= 1.8 && s.brk) { s.brk = false; this.log(`${this.D.brkName} OPEN`); }
-        if (pt >= 2.4) {
+        const D = this.D, batMain = D.src === "battery" || D.src === "fuelcell";
+        if (pt >= 1.4 && D.bat && s.eb.req) { s.eb.req = false; this.log("ESS connection box: disconnect"); }
+        if (pt >= 1.8 && s.brk && !batMain) { s.brk = false; this.log(`${D.brkName} OPEN`); }
+        if (pt >= 2.4 && !s.keepCol) {
           if (s.col_cmd) s.col_cmd = false;
           if (s.eng !== "off") { s.eng = "off"; this.log("Diesel engine stop"); }
         }
         s.steps = s.steps.map(() => 0);
-        if (pt >= 2.4 && s.col_pos <= 0 && s.n_eng < 1) { this.log("System OFF"); this.goto("OFF"); }
+        const boxDone = !D.bat || ["Idle", "Trip"].includes(s.eb.st);
+        if (pt >= 2.4 && boxDone && (s.keepCol || (s.col_pos <= 0 && s.n_eng < 1))) {
+          this.log(s.keepCol ? "Power circuit OFF (collector kept raised)" : "System OFF");
+          s.keepCol = false;
+          this.goto(s.mode === "manual" ? "MANUAL" : "OFF");
+        }
       }
     }
 
@@ -1229,7 +1823,7 @@ function debounce(fn, ms) {
         s.fuel_rate = s.eng === "off" && s.n_eng < 1 ? 0 : (pOut / 1e3) * bsfc / 3600 + 0.8 * (s.n_eng / D.nIdle) ** 2; // g/s
         s.fuel = Math.max(0, s.fuel - s.fuel_rate * dt / 835);
         s.E.fuel += s.fuel_rate * dt / 835;
-        if (s.fuel <= 0 && s.eng === "run") { s.eng = "off"; this.fault("Fuel tank empty — engine stopped"); }
+        if (s.fuel <= 0 && s.eng === "run") { s.eng = "off"; this.trip("fuel_empty", "Fuel tank empty — engine stopped", "sys", "OFF_SYS_2"); }
       }
 
       // fuel cell
@@ -1240,7 +1834,7 @@ function debounce(fn, ms) {
         if (s.fc === "run") {
           const pmax = F.n * F.Pgross;
           pRef = clip(s.p_load_avg + 2 * pmax * (0.6 - s.soc), 0.05 * pmax, pmax);
-          if (s.h2 <= 0) { pRef = 0; this.fault("Hydrogen tank empty"); s.fc = "off"; }
+          if (s.h2 <= 0) { pRef = 0; this.trip("h2_empty", "Hydrogen tank empty", "sys", "OFF_SYS_2"); s.fc = "off"; }
         }
         s.p_fc_gross += clip(pRef - s.p_fc_gross, -2 * F.ramp * F.n * dt, F.ramp * F.n * dt);
         if (s.fc === "off") s.p_fc_gross = 0;
@@ -1344,9 +1938,9 @@ function debounce(fn, ms) {
           op = motorEval(M, s.fs, s.fs - fRot, V);
           op.F = op.T * M.nm * M.gear * (op.T >= 0 ? M.etaG : 1 / M.etaG) / M.r;
           op.limit = "";
-          if (op.Is > 2.2 * M.Ir) { s.mc = false; this.fault(`Motor converter overcurrent (${(op.Is * M.nm).toFixed(0)} A) — slip too high`); }
+          if (op.Is > 2.2 * M.Ir) { s.mc = false; this.trip("mc_oc", `Motor converter overcurrent (${(op.Is * M.nm).toFixed(0)} A) — slip too high`, "mc"); }
           Fe = op.F;
-          if (Math.abs(Fe) > s.f_adh) { this.warnOnce("slip" + Math.floor(s.t), "Wheel slip/slide — adhesion exceeded"); Fe = Math.sign(Fe) * s.f_adh; }
+          if (Math.abs(Fe) > s.f_adh) { this.warn("slip", "Wheel slip/slide — adhesion exceeded", 2); Fe = Math.sign(Fe) * s.f_adh; }
         } else s.fs = 0;
       } else {
         let thr = s.throttle;
@@ -1403,17 +1997,24 @@ function debounce(fn, ms) {
       if (D.hasHBU && s.hbu && s.vdc > 0.5 * D.vdc) {
         const hvac = 0.55 * P * clip(0.35 + Math.abs(c.tAmb - 20) / 25, 0.35, 1.25);
         s.aux_loads = s.hbu_out ? { hvac, light: 0.12 * P, charger: 0.08 * P, comp: s.comp ? 0.18 * P : 0 } : { hvac: 0, light: 0, charger: 0, comp: 0 };
+        if (s.hbu_out) s.aux_loads.extra = this.injAmp("aux_ovl", 0.75, 0.12, 0) * D.Shbu; // Trip Lab: additional load
         const out = Object.values(s.aux_loads).reduce((a, b) => a + b, 0);
         s.p_hbu_out = out;
         s.p_hbu = out / 0.94 + 0.01 * D.Shbu;
       } else { s.p_hbu = 0; s.p_hbu_out = 0; s.aux_loads = { hvac: 0, light: 0, charger: 0, comp: 0 }; }
+      s.aux_pu = D.hasHBU ? s.p_hbu_out / D.Shbu : 0;
+      // HBU hot spot (filter / IGBT): first order, tau 40 s; Trip Lab "cooling lost" adds a heating rate
+      const heat = this.injAmp("aux_ot", 4, 0.4, 0);
+      const tTarget = c.tAmb + (D.hasHBU && s.hbu ? 18 + 40 * s.aux_pu : 0) + (s.hwr ? 8 : 0);
+      s.t_aux += ((tTarget - s.t_aux) / 40 + heat) * dt;
       if (D.hasHWR && s.hwr && s.vdc > 0.5 * D.vdc) {
         const demand = Math.max((s.t_hs - 35) / 30, (s.t_mot - 50) / 70, (s.t_vlu - 150) / 300, s.mc ? 0.15 : 0, s.lc ? 0.3 : 0);
         const fT = 20 + 30 * clip(demand, 0, 1);
-        s.f_hwr += clip(fT - s.f_hwr, -5 * dt, 5 * dt);
-        s.f_hwr = Math.max(s.f_hwr, 20);
+        s.f_hwr_cmd = fT;
+        if (this.injOn("fan_fail")) s.f_hwr = Math.max(0, s.f_hwr - 8 * dt); // fan stalled: speed feedback falls
+        else { s.f_hwr += clip(fT - s.f_hwr, -5 * dt, 5 * dt); s.f_hwr = Math.max(s.f_hwr, 20); }
         s.p_hwr = D.Phwr * (s.f_hwr / 50) ** 3 / 0.94;
-      } else { s.f_hwr = Math.max(0, s.f_hwr - 10 * dt); s.p_hwr = 0; }
+      } else { s.f_hwr = Math.max(0, s.f_hwr - 10 * dt); s.p_hwr = 0; s.f_hwr_cmd = 0; }
     }
 
     // ESS add-on energy management (power mode); grid-forming handled in the sub-steps
@@ -1434,7 +2035,23 @@ function debounce(fn, ms) {
       const pLoad = s.p_mc + s.p_hbu + s.p_hwr;
       const col = D.collector ? s.col_pos >= 1 : true;
       const lineConn = this.sourceConnected();
-      const discharge = !s.brk && !s.esc && !s.mc && !s.hbu && (s.phase === "OFF" || s.mode === "manual" || s.phase === "EMERGENCY" || s.phase === "SHUTDOWN");
+      const discharge = s.fastDis || (!s.brk && !s.esc && !s.mc && !s.hbu && (s.phase === "OFF" || s.mode === "manual" || ["EMERGENCY", "SHUTDOWN", "TRIPPED"].includes(s.phase)));
+      // Trip Lab: line surge / dip, loss of source power, DC-link short, pre-charge resistor defects
+      const regulated = D.src !== "dcline";
+      // line surge / dip with a 50 ms rise time (a slow catenary overvoltage, not a lightning impulse)
+      const ovT = this.injAmp("dcl_ov", 0.5, 0.08, 0), uvT = Math.min(1, this.injAmp("dcl_uv", 1, 0.15, 0));
+      this.ovF = this.ovF || 0; this.uvF = this.uvF || 0;
+      const ov = ovT;
+      let lineK = 1, srcK = 1;
+      const filt = (hh) => {
+        this.ovF += (ovT - this.ovF) * Math.min(1, hh / 0.05); this.uvF += (uvT - this.uvF) * Math.min(1, hh / 0.05);
+        lineK = regulated ? 1 : (1 + this.ovF) * (1 - 0.6 * this.uvF); srcK = regulated ? 1 - this.uvF : 1;
+      };
+      this.vrefK = regulated ? 1 + Math.min(ov, 0.6) : 1;
+      const kPre = this.injOn("voltage_no_rise", "pre") ? Infinity : this.injOn("precharge_timeout", "pre") ? 6 : 1;
+      const rShort = this.injOn("dcl_short") ? 0.02 : 0;
+      // converter current limits (a source converter cannot push unlimited current into a collapsed DC link)
+      const iEscLim = D.bat ? 2 * D.bat.Pesc / D.vdc : 0, iLcLim = D.Plc ? 4 * D.Plc / D.vdc : 0;
       const Imax = 3 * Math.max(D.Pline, 2e5) / D.vdc;
       const damp = D.src === "dcline" && s.mc, tauD = D.f0 ? 1 / (2 * PI * 0.25 * D.f0) : 0.02;
       if (!s.vlp) s.vlp = s.vdc;
@@ -1444,12 +2061,13 @@ function debounce(fn, ms) {
       let psrc = 0, pvlu = 0, pesc = 0, imax = 0, iline = 0, vline = 0, vmax = 0;
       const B = this.buf;
       for (let k = 0; k < n; k++) {
+        filt(h);
         const v = s.vdc;
         let iSrc = 0, vS = 0, iShow = 0, iEsc = 0;
         if (D.src === "dcline") {
-          const Vnl = col ? c.lineV : 0;
-          if (col && s.brk && (s.ctl || s.chct)) {
-            const Rc = this.rCat(s.iL), R = Rc + D.RL + (s.ctl ? 0 : D.Rpre);
+          const Vnl = col ? c.lineV * lineK : 0;
+          if (col && s.brk && (s.ctl || (s.chct && kPre < Infinity))) {
+            const Rc = this.rCat(s.iL), R = Rc + D.RL + (s.ctl ? 0 : D.Rpre * kPre);
             const iInf = (Vnl - v) / R;
             s.iL = iInf + (s.iL - iInf) * Math.exp(-R * h / D.L);
           } else s.iL = 0;
@@ -1462,12 +2080,12 @@ function debounce(fn, ms) {
           const v2 = col && s.brk ? SQ2 * V2 * Math.sin(s.th) : 0;
           vS = v2;
           if (s.lc && s.brk && s.ctl && col) {
-            const P = this.regulate(this.reg.lc, v, h, -D.Plc, D.Plc * Math.min(1, c.lineV / (0.9 * D.sup.Un)), pLoad - (s.esc ? s.p_esc_cmd : 0));
-            iSrc = P * (1 - Math.cos(2 * s.th)) / Math.max(v, 50);
+            const P = this.regulate(this.reg.lc, v, h, -D.Plc, D.Plc * Math.min(1, c.lineV / (0.9 * D.sup.Un)) * srcK, pLoad - (s.esc ? s.p_esc_cmd : 0));
+            iSrc = clip(P * (1 - Math.cos(2 * s.th)) / Math.max(v, 50), -iLcLim, iLcLim);
             s.i2 = SQ2 * P / V2 * Math.sin(s.th);
             psrc += P;
           } else if (col && s.brk && (s.ctl || s.chct)) {
-            iSrc = Math.max(0, Math.abs(v2) - v) / (s.ctl ? D.Rtr : D.Rpre);
+            iSrc = Math.max(0, Math.abs(v2) - v) / (s.ctl ? D.Rtr : D.Rpre * kPre);
             s.i2 = Math.sign(v2) * iSrc;
             psrc += iSrc * v;
           } else s.i2 = 0;
@@ -1477,26 +2095,26 @@ function debounce(fn, ms) {
           if (s.brk && s.exc > 0) {
             const E = D.Vgen * (s.n_eng / D.nMax) * s.exc;
             vS = 1.35 * E;
-            if (s.lc) { const P = this.regulate(this.reg.lc, v, h, 0, s.p_eng_avail * 0.96, pLoad - (s.esc ? s.p_esc_cmd : 0)); iSrc = P / Math.max(v, 50); psrc += P; }
+            if (s.lc) { const P = this.regulate(this.reg.lc, v, h, 0, s.p_eng_avail * 0.96 * srcK, pLoad - (s.esc ? s.p_esc_cmd : 0)); iSrc = Math.min(P / Math.max(v, 50), iLcLim / 2); psrc += iSrc * v; }
             else { iSrc = Math.max(0, vS - v) / D.Rgen; psrc += iSrc * v; }
           }
           iShow = iSrc; vline += vS; iline += iSrc;
         } else {
           if (s.esc && s.brk) {
-            const P = this.regulate(this.reg.esc, v, h, -s.esc_pch, s.esc_pdis, pLoad - s.p_fc_dc);
-            iEsc = P / Math.max(v, 50); pesc += P;
+            const P = this.regulate(this.reg.esc, v, h, -s.esc_pch, s.esc_pdis * srcK, pLoad - s.p_fc_dc * srcK);
+            iEsc = clip(P / Math.max(v, 50), -iEscLim, iEscLim); pesc += iEsc * v;
           }
           vS = s.v_bat; iShow = iEsc; vline += s.v_bat;
         }
         // ESS add-on: grid-forming when the main source is lost, otherwise power command
         if (D.essAddon && s.esc) {
           const P = lineConn ? clip(s.p_esc_cmd, -s.esc_pch, s.esc_pdis)
-            : this.regulate(this.reg.esc, v, h, -s.esc_pch, s.esc_pdis, pLoad);
-          iEsc = P / Math.max(v, 50); pesc += P;
+            : this.regulate(this.reg.esc, v, h, -s.esc_pch, s.esc_pdis * srcK, pLoad);
+          iEsc = clip(P / Math.max(v, 50), -iEscLim, iEscLim); pesc += iEsc * v;
         }
-        const iFc = s.p_fc_dc / Math.max(v, 50);
+        const iFc = s.p_fc_dc * srcK / Math.max(v, 50);
         // VLU hysteresis chopper
-        if (D.vlu && s.vlu_duty > 0) { if (v > D.Von) s.vlu_on = true; else if (v < D.Voff) s.vlu_on = false; } else s.vlu_on = false;
+        if (D.vlu && s.vlu_duty > 0 && !(regulated && ov > 0.01)) { if (v > D.Von) s.vlu_on = true; else if (v < D.Voff) s.vlu_on = false; } else s.vlu_on = false;
         const iV = s.vlu_on ? v / D.Rvlu * s.vlu_duty : 0;
         pvlu += iV * v;
         // 2f series-resonant filter (always connected to the DC link)
@@ -1514,8 +2132,9 @@ function debounce(fn, ms) {
         // undervoltage power limiter: traction reduced when the supply cannot hold the DC link
         else if (pMc > 0) { const km = clip((v - vU1) / (vU2 - vU1), 0, 1); pMc *= km; mk += km; nm++; }
         const iLoad = v > 30 ? Math.min((pMc + s.p_hbu + s.p_hwr) / v, Imax) : 0;
-        const iDis = discharge ? v / (3 / C) : 0; // discharge resistor (tau = 3 s) when the converter is switched off
-        s.vdc = Math.max(0, v + (iSrc + iEsc + iFc - iLoad - iV - i2f - iDis) * h / C);
+        const iDis = discharge ? v / ((s.fastDis ? 0.2 : 3) / C) : 0; // discharge resistor (tau = 3 s; 0.2 s fast discharge after Trip_SYS_0)
+        const iSh = rShort ? v / rShort : 0;
+        s.vdc = Math.max(0, v + (iSrc + iEsc + iFc - iLoad - iV - i2f - iDis - iSh) * h / C);
         if (D.src === "dcline") psrc += iSrc * v;
         imax = Math.max(imax, Math.abs(D.src === "acline" ? s.i2 : iSrc));
         // fast breaker: opens within the sub-step when the trip current is exceeded
@@ -1537,7 +2156,7 @@ function debounce(fn, ms) {
       const s = this.s, D = this.D;
       r.sum += v - r.buf[r.idx]; r.buf[r.idx] = v; r.idx = (r.idx + 1) % r.buf.length;
       const vf = r.sum / r.buf.length;
-      s.vref += clip(D.vdc - s.vref, -0.6 * D.vdc * h, 0.6 * D.vdc * h);
+      s.vref += clip(D.vdc * (this.vrefK || 1) - s.vref, -0.6 * D.vdc * h, 0.6 * D.vdc * h);
       const e = 0.5 * D.C * (s.vref * s.vref - vf * vf);
       let P = Pff + 40 * e + r.int;
       if (P > Pmax) { P = Pmax; if (e < 0) r.int += 400 * e * h; }
@@ -1563,10 +2182,10 @@ function debounce(fn, ms) {
       const disc = ocv * ocv - 4 * b.R * P;
       const I = disc > 0 ? (ocv - Math.sqrt(disc)) / (2 * b.R) : ocv / (2 * b.R);
       s.i_bat = I;
-      s.v_bat = s.brk || D.essAddon ? ocv - b.R * I : ocv;
+      s.v_bat = (D.essAddon ? s.eb.st === "Connected" : s.brk) ? ocv - b.R * I : ocv;
       s.soc = clip(s.soc - I * dt / (b.Ah * 3600), 0, 1);
       if (P > 0) s.E.batOut += P * dt; else s.E.batIn += -P * dt;
-      if (s.soc <= 0.05 && s.esc && D.src === "battery") this.fault("Battery empty (SoC < 5 %) — ESC stopped");
+      if (s.soc <= 0.05 && s.esc && D.src === "battery") this.trip("bat_empty", "Battery empty (SoC < 5 %) — ESC stopped", "ess", "OFF_SYS_2");
     }
 
     // --------------------------------------------------------------- thermal
@@ -1578,12 +2197,12 @@ function debounce(fn, ms) {
         s.t_hs += ((s.p_loss_mc - (s.t_hs - Tamb) * cool / D.Rth_hs) / D.Cth_hs) * dt;
         s.t_j = s.t_hs + 22 * s.p_loss_mc / Math.max(0.0165 * D.Pmc, 1);
         s.t_mot += ((s.p_mot_loss || 0) / D.motor.nm - (s.t_mot - Tamb) * cool / D.Rth_m) / D.Cth_m * dt;
-        if (s.t_j > 125) this.warnOnce("tj", "IGBT junction temperature > 125 °C — traction derated");
+        if (s.t_j > 125) this.warn("tj", "IGBT junction temperature > 125 °C — traction derated");
       }
       if (D.vlu) {
         s.t_vlu += ((s.p_vlu - (s.t_vlu - Tamb) / D.Rth_v) / D.Cth_v) * dt;
         s.vlu_duty = clip((650 - s.t_vlu) / 100, 0, 1);
-        if (s.t_vlu > 550) this.warnOnce("vlu", "Brake resistor > 550 °C — VLU power reduced");
+        if (s.t_vlu > 550) this.warn("vlu", "Brake resistor > 550 °C — VLU power reduced");
       }
     }
 
@@ -1610,23 +2229,50 @@ function debounce(fn, ms) {
     // ------------------------------------------------------------ protection
     protect(dt) {
       const s = this.s, D = this.D, c = this.cfg;
-      if (s.trip_i || (s.brk && s.imax > D.Itrip)) {
+      // DC-link short circuit: the DC link collapses within one tick
+      if (s.vdc_prev > 0.6 * D.vdc && s.vdc < 0.25 * D.vdc)
+        this.trip("dcl_short", `DC-link short circuit — Vdc collapsed ${s.vdc_prev.toFixed(0)} → ${s.vdc.toFixed(0)} V in ${(dt * 1000).toFixed(0)} ms`, "sys");
+      s.vdc_prev = s.vdc;
+      if (s.trip_i || (s.brk && s.imax > D.Itrip && (D.src === "dcline" || D.src === "acline"))) {
         const what = D.src === "dcline" ? "HSCB" : D.src === "acline" ? "VCB" : D.brkName;
         s.imax = s.trip_i || s.imax; s.trip_i = 0;
         s.brk = false; s.ctl = false; s.chct = false; s.lc = false; s.iL = 0;
-        this.fault(`${what} tripped — overcurrent ${s.imax.toFixed(0)} A (trip ${D.Itrip.toFixed(0)} A)`);
+        this.trip("line_oc", `${what} tripped — overcurrent ${s.imax.toFixed(0)} A (trip ${D.Itrip.toFixed(0)} A)`, "sys", "Trip_SYS_2");
       }
       if (s.vmax_tick > D.Vovp) {
-        s.mc = false; s.lc = false;
-        if (D.src === "dcline" || D.src === "acline") { s.ctl = false; s.brk = false; }
-        this.fault(`DC link overvoltage ${s.vmax_tick.toFixed(0)} V — converters blocked`);
-      }
-      if (s.mc && s.vdc < D.Vuv) { s.uv_t += dt; if (s.uv_t > 0.15) { s.mc = false; this.fault(`DC link undervoltage (${s.vdc.toFixed(0)} V) — motor converter blocked`); } }
-      else s.uv_t = 0;
+        this.trip("dcl_ov", `DC-link overvoltage ${s.vmax_tick.toFixed(0)} V (limit ${D.Vovp.toFixed(0)} V)`, "sys");
+      } else if (s.vdc > D.Von + 0.7 * (D.Vovp - D.Von)) this.warn("dcl_hi", `DC-link voltage high: ${s.vdc.toFixed(0)} V (trip at ${D.Vovp.toFixed(0)} V)`);
+      if ((s.mc || s.hbu || s.hwr) && s.vdc < D.Vuv) {
+        s.uv_t += dt;
+        if (s.uv_t > 0.15) this.trip("dcl_uv", `DC-link undervoltage ${s.vdc.toFixed(0)} V (limit ${D.Vuv.toFixed(0)} V)`, "sys");
+      } else s.uv_t = 0;
       if (D.sup && s.brk && (!D.collector || s.col_pos >= 1)) {
-        if (c.lineV > D.sup.Umax2) this.warnOnce("umax2", `Line voltage ${c.lineV.toFixed(0)} V above Umax2 (${D.sup.Umax2} V, EN 50163)`);
-        if (c.lineV < D.sup.Umin2) this.warnOnce("umin2", `Line voltage ${c.lineV.toFixed(0)} V below Umin2 (${D.sup.Umin2} V, EN 50163)`);
+        if (c.lineV > D.sup.Umax2) this.warn("umax2", `Line voltage ${c.lineV.toFixed(0)} V above Umax2 (${D.sup.Umax2} V, EN 50163)`);
+        if (c.lineV < D.sup.Umin2) this.warn("umin2", `Line voltage ${c.lineV.toFixed(0)} V below Umin2 (${D.sup.Umin2} V, EN 50163)`);
       }
+      // motor converter overcurrent (measured current incl. injected fault current)
+      if (D.motor) {
+        const extra = this.injAmp("mc_oc", 1.6 * D.Imc_trip, 0.35 * D.mcIr, 1.6 * D.Imc_trip);
+        s.i_mc_meas = s.mc ? s.Is + extra : 0;
+        this.analog("mc_oc", s.i_mc_meas, 0.85 * D.Imc_trip, D.Imc_trip, "Motor converter current", "A", "mc");
+      }
+      // earth fault (leakage current, only with an energized DC link)
+      s.i_earth = s.vdc > 50 ? this.injAmp("earth_fault", 15, 0.15, 12) * Math.min(1, s.vdc / D.vdc) : 0;
+      this.analog("earth_fault", s.i_earth, 0.5, 2, "Earth fault current", "A", "sys", 2);
+      // auxiliary converter: overload curve (I²t), temperature, fan speed
+      if (D.hasHBU && s.hbu_out) {
+        s.aux_i2t = Math.max(0, s.aux_i2t + (s.aux_pu > 1 ? s.aux_pu * s.aux_pu - 1 : -0.2) * dt);
+        if (s.aux_pu > 1) this.warn("aux_ovl_w", `AUX load ${(s.aux_pu * 100).toFixed(0)} % of ${(D.Shbu / 1e3).toFixed(0)} kVA — overload curve ${Math.min(100, s.aux_i2t / 2.5 * 100).toFixed(0)} %`);
+        if (s.aux_i2t > 2.5) this.trip("aux_ovl", `AUX overload — ${(s.aux_pu * 100).toFixed(0)} % load, permitted overload curve exceeded`, "aux");
+      } else s.aux_i2t = 0;
+      if (s.hbu || s.hwr) this.analog("aux_ot", s.t_aux, 85, 95, "AUX converter temperature", "°C", "aux");
+      if (s.hwr && s.f_hwr_cmd > 15 && s.f_hwr < 0.5 * s.f_hwr_cmd) {
+        s.fan_t += dt;
+        this.warn("fan_w", `Cooling fan speed ${s.f_hwr.toFixed(1)} Hz, command ${s.f_hwr_cmd.toFixed(1)} Hz`);
+        if (s.fan_t > 2) this.trip("fan_fail", `Fan failure — speed feedback ${s.f_hwr.toFixed(1)} Hz < 50 % of ${s.f_hwr_cmd.toFixed(1)} Hz`, "hwr");
+      } else s.fan_t = 0;
+      // warnings expire when they are no longer refreshed
+      for (const [k, w] of Object.entries(s.warns)) if (s.t > w.until) delete s.warns[k];
     }
 
     energy(dt) {
@@ -1641,8 +2287,11 @@ function debounce(fn, ms) {
     step(dt) {
       const s = this.s;
       s.t += dt;
-      if (s.mode === "auto") this.sequence(dt);
+      this.dtTick = dt;
+      this.injTick();
+      if (s.mode === "auto" || ["SHUTDOWN", "BRAKING", "TRIPPED"].includes(s.phase)) this.sequence(dt);
       this.devices(dt);
+      this.essBox(dt);
       this.traction(dt);
       this.aux(dt);
       this.ems();
@@ -1651,6 +2300,8 @@ function debounce(fn, ms) {
       this.thermal(dt);
       this.dynamics(dt);
       this.protect(dt);
+      this.sys3Tick(dt);
+      this.recTick();
       this.energy(dt);
       if (s.emergency && s.speed <= 0 && s.col_pos <= 0) s.emergency = false;
     }
@@ -1668,6 +2319,10 @@ function debounce(fn, ms) {
       d.events = this.events.slice(-40);
       d.dist_ss = D.line ? Math.min((s.pos / 1000) % D.line.spacing, D.line.spacing - (s.pos / 1000) % D.line.spacing) : null;
       d.lineConnected = this.sourceConnected();
+      d.hist = this.hist.slice(-40);
+      d.inj = Object.values(this.inj);
+      d.recVer = this.rec.ver;
+      d.sysState = this.stateOf("sys");
       if (wave) { d.wave = this.waves(); d.zoom = this.zoom(); }
       return d;
     }
@@ -1765,7 +2420,7 @@ function debounce(fn, ms) {
         cu: on && s.pulse.mode !== "block" ? r1(P.cu.map((x) => x * V)) : new Array(n).fill(null),
         cl: on && D.levels === 3 && s.pulse.mode !== "block" ? r1(P.cl.map((x) => x * V)) : new Array(n).fill(null),
         pole: r1(pole[0]), van: r1(van), uab: r1(uab), ia: r1(cur[0]), ib: r1(cur[1]), ic: r1(cur[2]),
-        spec: on && f >= 1 ? this.spectrum(V, f) : null,
+        spec: on && f >= 1 && V > 1 ? this.spectrum(V, f) : null,
       };
       return out;
     }
@@ -1844,6 +2499,7 @@ function debounce(fn, ms) {
       Pmc: D.Pmc, Paux: D.Paux, Shbu: D.Shbu, Phwr: D.Phwr, Plc: D.Plc || 0, Peng: D.Peng || 0, Pvlu: D.Pvlu, Rvlu: D.Rvlu,
       Von: D.Von, Vovp: D.Vovp, Vuv: D.Vuv, Itrip: D.Itrip, Ilim: D.Ilim || 0, brkName: D.brkName, V2: D.V2 || 0, fg: D.fg || 0,
       f2: D.f2 || 0, line: D.line || null, bat: D.bat ? { ...D.bat } : null, fc_mod: D.fc_mod || null, ess: D.ess, essAddon: D.essAddon,
+      Imc_trip: D.Imc_trip || 0, mcIr: D.mcIr, ebox: D.ebox || null, mcVmin: D.mcVmin,
       vlu: D.vlu, hasHF: D.hasHF, hasHBU: D.hasHBU, hasHWR: D.hasHWR, modules: D.modules, nIdle: D.nIdle, nMax: D.nMax, fuelCap: D.fuelCap || 0,
     };
     if (D.motor) {
@@ -1870,8 +2526,10 @@ function debounce(fn, ms) {
         const s = st(sim);
         if (!s.chct) { s.chct = true; sim.log(`ChCt CLOSED — pre-charge via Rpre = ${D.Rpre.toFixed(0)} Ω (τ = ${(D.Rpre * D.C).toFixed(2)} s)`); }
         const target = D.src === "dcline" ? sim.cfg.lineV : SQ2 * D.V2 * sim.cfg.lineV / D.sup.Un;
+        const tPre = D.src === "acline" ? 20 : 5; // ≈ 2.5 × the nominal pre-charge time
         sim.prog(k, s.vdc / (0.9 * target) * 100);
-        if (t > 20 && s.vdc < 0.9 * target) sim.fault("Pre-charge timeout");
+        if (t > 1 && s.vdc < 0.05 * target) sim.trip("voltage_no_rise", `DC-link pre-charge: voltage does not rise (${s.vdc.toFixed(0)} V after 1 s)`, "pre");
+        else if (t > tPre && s.vdc < 0.9 * target) sim.trip("precharge_timeout", `DC-link precharge timeout — ${s.vdc.toFixed(0)} V of ${(0.9 * target).toFixed(0)} V after ${tPre} s`, "pre");
         if (s.vdc >= 0.9 * target && !s.pc_ok) { s.pc_ok = t; sim.log(`DC link pre-charged: ${s.vdc.toFixed(0)} V in ${t.toFixed(2)} s`); }
         return s.pc_ok && t - s.pc_ok > 0.4;
       });
@@ -1906,11 +2564,16 @@ function debounce(fn, ms) {
         return t > 1 && Math.abs(s.vdc - D.vdc) < 0.03 * D.vdc;
       });
     } else {
-      add("Battery pre-charge", (sim, k, t) => { const s = st(sim); if (!s.chct) { s.chct = true; sim.log("Battery pre-charge contactor CLOSED"); } sim.prog(k, t / 1.5 * 100); return t > 1.5; });
-      add("Close battery main contactor", (sim, k, t) => { const s = st(sim); if (!s.brk) { s.brk = true; s.chct = false; sim.log(`Battery main contactor CLOSED (${s.v_bat.toFixed(0)} V)`); } sim.prog(k, 100); return t > 0.5; });
+      add("ESS connection box: CtNeg → pre-charge (CtCh) → CtPos", (sim, k, t) => {
+        const s = st(sim), b = s.eb;
+        if (!b.req && !b.lock && b.st === "Idle") { b.req = true; b.escOn = false; }
+        const ocv = D.bat.ns * OCV[D.bat.chem](s.soc);
+        sim.prog(k, b.st === "Connected" ? 100 : b.st === "Connecting" ? 90 : b.st === "Precharge" ? 10 + 75 * b.vec / ocv : 0);
+        return b.st === "Connected" && t > 0.3;
+      });
       add("ESC start — DC link soft-start", (sim, k, t) => {
         const s = st(sim);
-        if (!s.esc) { s.esc = true; sim.startReg(sim.reg.esc); sim.log(`ESC ON — DC link ramp to ${D.vdc} V`); }
+        if (!s.esc && s.eb.st === "Connected") { s.esc = true; sim.startReg(sim.reg.esc); sim.log(`ESC ON — DC link ramp to ${D.vdc} V`); }
         sim.prog(k, s.vdc / D.vdc * 100);
         return t > 1 && Math.abs(s.vdc - D.vdc) < 0.03 * D.vdc;
       });
@@ -1921,7 +2584,12 @@ function debounce(fn, ms) {
         return s.fc === "run";
       });
     }
-    if (D.essAddon) add("ESS online (battery contactor + ESC)", (sim, k, t) => { const s = st(sim); if (!s.esc) { s.esc = true; sim.startReg(sim.reg.esc); sim.log(`ESC ON — ${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh battery connected`); } sim.prog(k, t * 100); return t > 1; });
+    if (D.essAddon) add("ESS online (connection box + ESC)", (sim, k, t) => {
+      const s = st(sim), b = s.eb;
+      if (!b.req && !b.lock && b.st === "Idle") { b.req = true; b.escOn = true; }
+      sim.prog(k, b.st === "Connected" ? 100 : b.st === "Connecting" ? 85 : b.st === "Precharge" ? 15 + 60 * b.vec / (D.bat.Vn || 1) : 0);
+      return s.esc && t > 0.5;
+    });
     if (D.hasHBU || D.hasHWR) add(`Start auxiliary converters (${[D.hasHBU && "HBU", D.hasHWR && "HWR"].filter(Boolean).join(", ")})`, (sim, k, t) => {
       const s = st(sim);
       if (D.hasHBU && !s.hbu) { s.hbu = true; s.hbu_t = 0; sim.log("HBU ON — 3AC 400 V 50 Hz"); }
@@ -1966,7 +2634,7 @@ function debounce(fn, ms) {
     return out;
   }
 
-  global.TractionSim = { Simulator, SUPPLIES, SYSTEMS, VEHICLES, makeDesign, makeMotor, motorEval, motorSolve, rfftMag };
+  global.TractionSim = { Simulator, SUPPLIES, SYSTEMS, VEHICLES, TRIPS, TRIP_CLASSES, TRIGGERS, UNIT_CLS, makeDesign, makeMotor, motorEval, motorSolve, rfftMag };
 })(typeof window !== "undefined" ? window : globalThis);
 
 </script>
@@ -2358,15 +3026,22 @@ class Schematic {
       // battery (main ESS) feeding the DC link through the ESC
       this.batFill = this.battery(g, 26, 200, "bat");
       text(70, 190, D.bat.chem + " battery", "ttl");
-      text(14, 318, `${(D.bat.E / 1e3).toFixed(0)} kWh · ${D.bat.Vn} V`, "small", "start");
+      text(14, 318, `${(D.bat.E / 1e3).toFixed(0)} kWh`, "small", "start");
       this.t.bat = text(14, 334, "", "val", "start");
+      // ESS connection box: CtPos (+), CtCh + Rch in parallel, CtNeg (−)
+      svgEl("rect", { x: 140, y: YP - 64, width: 190, height: YN - YP + 110, rx: 10, fill: "none", stroke: "#3a3a3a", "stroke-dasharray": "5 4" }, g);
+      text(140, YP - 50, "ESS connection box", "small", "start");
+      this.t.ebox = text(324, YP - 50, "", "val", "end");
       wire("bat", `M70,200 L70,${YP} L170,${YP}`);
-      sw("brk", 170, YP, "Battery contactor", "", false);
+      sw("ctpos", 170, YP, "CtPos", "", false);
       wire("bat2", `M226,${YP} L400,${YP}`);
       wire("pre1", `M150,${YP} L150,250 L170,250`);
-      sw("chct", 170, 250, "Pre-charge", "", true);
+      sw("chct", 170, 250, "CtCh", "", true);
       wire("pre2", `M226,250 L230,250 ${resistor(230, 250)} L270,250 L270,${YP}`);
-      wire("bat_ret", `M70,290 L70,${YN} L400,${YN}`);
+      text(288, 266, "Rch", "small");
+      wire("bat_ret", `M70,290 L70,${YN} L170,${YN}`);
+      sw("ctneg", 170, YN, "CtNeg", "", true);
+      wire("bat_ret2", `M226,${YN} L400,${YN}`);
       conv("esc", 400, YP - 10, 70, 190, "ESC", "=", "=", "esc");
     }
 
@@ -2434,10 +3109,20 @@ class Schematic {
     const yOut = 420;
     if (xs.esc) {
       const cx = xs.esc + 35;
-      wire("esc_out", `M${cx},${BY1} L${cx},${yOut - 58}`);
-      this.batFill = this.battery(g, cx - 22, yOut - 52, "bat");
-      text(cx, yOut + 52, `${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh`, "small");
-      this.t.bat = text(cx, yOut + 68, "", "val");
+      wire("esc_out", `M${cx},${BY1} L${cx},352 M${cx},404 L${cx},408`);
+      // ESS connection box with contactor LEDs (click = connect / disconnect in manual mode)
+      const eg = clickable("essbox", svgEl("g", {}, g));
+      this.box.ebox = svgEl("rect", { x: cx - 40, y: 352, width: 80, height: 52, rx: 6, class: "box" }, eg);
+      text(cx, 366, "ESS box", "small", "middle", eg);
+      this.leds = {};
+      [["neg", "Neg"], ["ch", "Ch"], ["pos", "Pos"]].forEach(([k, l], i) => {
+        this.leds[k] = svgEl("circle", { cx: cx - 22 + i * 22, cy: 380, r: 5, class: "led" }, eg);
+        text(cx - 22 + i * 22, 398, l, "small", "middle", eg);
+      });
+      this.t.ebox = text(cx + 46, 382, "", "val", "start");
+      this.batFill = this.battery(g, cx - 22, 414, "bat");
+      text(cx, 524, `${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh`, "small");
+      this.t.bat = text(cx, 540, "", "val");
     }
     if (xs.fcc) {
       const cx = xs.fcc + 35;
@@ -2558,6 +3243,7 @@ class Schematic {
     this.setWire("bat", batLive ? "ess" : "", s.brk ? P(s.p_esc) : 0, s.p_esc < 0);
     this.setWire("bat2", s.brk ? "ess" : "", s.brk ? P(s.p_esc) : 0, s.p_esc < 0);
     this.setWire("bat_ret", batLive ? "ess" : "");
+    this.setWire("bat_ret2", s.brk ? "ess" : "");
     // bus and modules
     const busFlow = Math.max(P(s.p_mc), P(s.p_src), P(s.p_esc));
     this.setWire("busp", dc, busFlow, s.p_mc < 0);
@@ -2577,6 +3263,14 @@ class Schematic {
     this.setWire("mot", s.mc ? "ac" : "", s.mc ? Math.max(P(s.p_mc), 5) : 0, s.p_mc < 0);
 
     this.setSwitch("brk", s.brk); this.setSwitch("ctl", s.ctl); this.setSwitch("chct", s.chct);
+    const eb = s.eb, ctBad = (c) => c.cmd !== c.fb || c.act !== c.fb;
+    if (D.bat) {
+      this.setSwitch("ctpos", eb.c.pos.act); this.setSwitch("ctneg", eb.c.neg.act);
+      for (const [id, k] of [["ctpos", "pos"], ["ctneg", "neg"], ["chct", "ch"]]) if (this.sw[id] && (D.src === "battery" || D.src === "fuelcell")) this.sw[id].grp.classList.toggle("bad", ctBad(eb.c[k]));
+      if (this.leds) for (const k of ["pos", "neg", "ch"]) this.leds[k].setAttribute("class", "led" + (eb.c[k].act ? " on" : "") + (ctBad(eb.c[k]) ? " bad" : ""));
+      if (this.t.ebox) this.t.ebox.textContent = eb.st;
+      this.setBox("ebox", eb.st === "Trip" ? "fault" : eb.st === "Connected" ? "liveg" : eb.st === "Idle" ? "" : "warm");
+    }
     this.setBox("lc", s.lc ? "live" : "");
     this.setBox("esc", s.esc ? "liveg" : "");
     this.setBox("fcc", s.fc === "run" ? "liveg" : s.fc === "start" ? "warm" : "");
@@ -2586,6 +3280,14 @@ class Schematic {
     this.setBox("mc", s.mc ? "livea" : "");
     this.setBox("vlu", s.p_vlu > 1000 ? "hot" : "");
     this.setBox("eng", s.eng === "run" ? "live" : s.eng === "crank" ? "warm" : "");
+    // modules with an active trip are outlined in red
+    const bad = new Set();
+    for (const f of s.faults) {
+      const u = f.cls === "Trip_AUX" ? "aux" : f.cls === "Trip_MC" ? "mc" : f.cls === "Trip_ESS" ? "ess" : f.cls === "Trip_LC" ? "lc" : f.unit;
+      if (u === "aux") { bad.add("hbu"); bad.add("hwr"); } else if (u === "ess") bad.add("esc"); else if (u) bad.add(u);
+      if (f.code === "dcl_short" || f.code === "dcl_ov" || f.code === "dcl_uv") bad.add("dcl");
+    }
+    for (const id of ["mc", "lc", "esc", "hbu", "hwr"]) if (bad.has(id)) this.setBox(id, "fault");
 
     // values
     const sup = D.supply;
@@ -2810,11 +3512,223 @@ function initData(sim) {
 
 </script>
   <script>
+// Active trips and warnings, shared by the simulator tab and the Trip Lab. Author: Rafael Tavares
+const TRIP_BADGE = {
+  Trip_SYS_0: "c0", Trip_SYS_1: "c1", Trip_SYS_2: "c2", Trip_SYS_3: "c3", EMERGENCY: "c0",
+  OFF_SYS_1: "coff", OFF_SYS_2: "coff", OFF_FU: "coff", Trip_ESS: "cu", Trip_AUX: "cu", Trip_MC: "cu", Trip_LC: "cu", Warning: "cw",
+};
+const EXTRA_NAMES = {
+  line_oc: "Line overcurrent", emergency: "Emergency", fuel_empty: "Fuel tank empty", h2_empty: "Hydrogen tank empty", bat_empty: "Battery empty",
+  ctpos_unexp_open: "CtPos opens unexpectedly", ctpos_unexp_close: "CtPos closes unexpectedly", ctneg_unexp_open: "CtNeg opens unexpectedly",
+  ctneg_unexp_close: "CtNeg closes unexpectedly", ctch_noclose: "CtCh does not close", ctch_noopen: "CtCh does not open",
+};
+const TRIP_INDEX = Object.fromEntries(TractionSim.TRIPS.map((t) => [t.id, t]));
+
+const clsLabel = (cls, D) => (cls === "Trip_LC" && D && D.src === "genset" ? "Trip_GC" : cls);
+const tripName = (code) => (TRIP_INDEX[code] ? TRIP_INDEX[code].name : EXTRA_NAMES[code] || code);
+const esc = (x) => String(x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+
+function resetHint(f, s) {
+  if (f.cls === "Trip_SYS_3") {
+    const ok = s.sys3 ? s.sys3.okT : 0;
+    return ok > 0 ? `auto-restart in ${Math.max(0, 2 - ok).toFixed(1)} s` : "auto-restart when the condition clears";
+  }
+  if (f.cls === "EMERGENCY") return "RESET at standstill";
+  const p = (TractionSim.TRIP_CLASSES[f.cls] || {}).reset;
+  return p === "standstill" ? "RESET at standstill" : p === "reset" ? "RESET restarts the unit" : "";
+}
+
+function renderAlarms(el, s) {
+  const D = s.D, rows = [];
+  const faults = [...s.faults].sort((a, b) => ((TractionSim.TRIP_CLASSES[a.cls] || { sev: 0 }).sev - (TractionSim.TRIP_CLASSES[b.cls] || { sev: 0 }).sev));
+  for (const f of faults) {
+    rows.push(`<div class="al-row"><span class="badge ${TRIP_BADGE[f.cls] || "c2"}">${clsLabel(f.cls, D)}</span>
+      <div class="al-txt"><b>${esc(tripName(f.code))}</b><small>${esc(f.msg)}</small></div>
+      <div class="al-meta mono">${f.t.toFixed(2)} s<span>${esc(f.state)}</span></div>
+      <div class="al-hint">${resetHint(f, s)}</div></div>`);
+  }
+  for (const w of Object.values(s.warns)) {
+    rows.push(`<div class="al-row warn"><span class="badge cw">Warning</span>
+      <div class="al-txt"><small>${esc(w.msg)}</small></div>
+      <div class="al-meta mono">${w.t.toFixed(2)} s</div><div class="al-hint"></div></div>`);
+  }
+  el.innerHTML = rows.length ? rows.join("") : `<div class="al-ok">● No active trips or warnings</div>`;
+  return { trips: faults.length, warns: Object.keys(s.warns).length };
+}
+
+</script>
+  <script>
+// Trip Lab: fault injection, live protection status, trip recorder and history. Author: Rafael Tavares
+const LAB_GROUPS = { ess: "ESS / connection box", conv: "Traction converter — MC / LC / GC", aux: "Auxiliary converter — AUX" };
+const LAB_FORMS = { step: "Step", ramp: "Ramp (slow rise)", intermittent: "Intermittent bursts" };
+
+class TripLab {
+  constructor(sim) {
+    this.sim = sim;
+    this.key = "";
+    this.recVer = -1;
+    this.histN = -1;
+    this.rows = {};
+    this.chart = new Chart($("#c-rec"), {
+      height: 260,
+      scales: { x: { time: false }, V: { auto: true }, A: { auto: true }, E: { auto: true, range: (u, a, b) => [0, Math.max(3, b * 1.1)] } },
+      axes: [axisX("time from trip [s]"), axisY("V", "V"), axisY("A", "A", 1), axisY("earth A", "E", 1, { size: 50 })],
+      series: [{ label: "t", value: val("s", 2) },
+        { label: "Vdc", stroke: COL.dc, width: 2, scale: "V", value: val("V") },
+        { label: "ESC input", stroke: COL.ess, width: 1.5, scale: "V", value: val("V") },
+        { label: "Supply / battery I", stroke: COL.line, width: 1.5, scale: "A", value: val("A") },
+        { label: "MC current", stroke: COL.ac, width: 1.5, scale: "A", value: val("A") },
+        { label: "Earth current", stroke: COL.bad, width: 1.5, dash: [4, 3], scale: "E", value: val("A", 2) }],
+      hooks: { draw: [(u) => {
+        const x = u.valToPos(0, "x", true);
+        if (!Number.isFinite(x)) return;
+        const c = u.ctx;
+        c.save(); c.strokeStyle = "#F03040"; c.setLineDash([6, 4]); c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(x, u.bbox.top); c.lineTo(x, u.bbox.top + u.bbox.height); c.stroke(); c.restore();
+      }] },
+    }, 6);
+    this.classTable();
+    const cmd = (c, v) => this.sim.command(c, v);
+    $("#lab-start").onclick = () => cmd("start");
+    $("#lab-stop").onclick = () => cmd("stop");
+    $("#lab-reset").onclick = () => cmd("reset");
+    $("#lab-ess-on").onclick = () => cmd("ess", true);
+    $("#lab-ess-off").onclick = () => cmd("ess", false);
+    $("#lab-clear").onclick = () => cmd("clear_inj", "all");
+  }
+
+  classTable() {
+    const C = TractionSim.TRIP_CLASSES;
+    const rs = { standstill: "RESET at standstill", reset: "RESET (unit restarts)", auto: "automatic" };
+    $("#lab-classes").innerHTML = "<tr><th>Class</th><th>Typical condition</th><th>Reaction</th><th>Reset</th></tr>" +
+      Object.entries(C).map(([k, c]) => `<tr><td><span class="badge ${TRIP_BADGE[k]}">${k === "Trip_LC" ? "Trip_LC / GC" : k}</span></td><td>${c.cond}</td><td>${c.react}</td><td>${rs[c.reset]}</td></tr>`).join("");
+  }
+
+  // catalog of injectable faults for the current system
+  build(S) {
+    const D = S.D;
+    if (D.key === this.key) return;
+    this.key = D.key;
+    const Dfull = this.sim.D;
+    const root = $("#lab-cat");
+    root.innerHTML = "";
+    this.rows = {};
+    for (const [g, title] of Object.entries(LAB_GROUPS)) {
+      const card = document.createElement("div");
+      card.className = "card lab-group";
+      card.innerHTML = `<div class="card-head"><h2>${title}</h2></div>`;
+      for (const T of TractionSim.TRIPS.filter((x) => x.group === g)) card.appendChild(this.row(T, Dfull));
+      root.appendChild(card);
+    }
+    $("#lab-sys").textContent = `System: ${D.system}${D.supply ? " " + D.supply.label : ""}${D.ess ? " · ESS" : ""}.`;
+  }
+
+  row(T, D) {
+    const why = T.need(D);
+    const el = document.createElement("div");
+    el.className = "lab-row" + (why ? " off" : "");
+    const opt = (pairs, v) => pairs.map(([k, t]) => `<option value="${k}"${k === v ? " selected" : ""}>${t}</option>`).join("");
+    const units = T.units ? T.units(D) : null;
+    const cls0 = T.id === "igbt_desat" && units && units.length ? TractionSim.UNIT_CLS[units[0][0]] : T.cls;
+    const clsList = [...new Set([cls0, T.cls, ...T.alt])];
+    const lc = (k) => (k === "Trip_LC" && D.src === "genset" ? "Trip_GC" : k);
+    el.innerHTML = `
+      <div class="lab-info">
+        <b>${T.name}${T.top ? ' <span class="star" title="Most common in projects">★</span>' : ""}</b>
+        <small>${T.cond}</small>
+        <small class="dim">Typical state: ${T.states}${T.kind === "latent" ? " · latent defect, detected at the next command" : ""}</small>
+        ${why ? `<small class="why">Not available: ${why}</small>` : ""}
+      </div>
+      <div class="lab-opts">
+        ${units ? `<label>Converter / circuit<select data-k="unit">${opt(units)}</select></label>` : ""}
+        ${T.forms ? `<label>Form<select data-k="form">${opt(T.forms.map((f) => [f, LAB_FORMS[f]]))}</select></label>` : ""}
+        <label>When<select data-k="trig">${opt(T.trig.map((t) => [t, TractionSim.TRIGGERS[t]]))}</select></label>
+        <label>Trip class<select data-k="cls">${opt(clsList.map((c) => [c, lc(c) + (c === cls0 ? " (default)" : "")]), cls0)}</select></label>
+      </div>
+      <div class="lab-act">
+        <button class="btn small inject"${why ? " disabled" : ""}>Inject</button>
+        <span class="lab-st mono"></span>
+        <button class="btn ghost small clear" hidden>Remove</button>
+      </div>`;
+    const get = (k) => { const s = el.querySelector(`[data-k=${k}]`); return s ? s.value : undefined; };
+    if (T.id === "igbt_desat") {
+      const u = el.querySelector("[data-k=unit]");
+      if (u) u.onchange = () => { el.querySelector("[data-k=cls]").value = TractionSim.UNIT_CLS[u.value]; };
+    }
+    el.querySelector(".inject").onclick = () => this.sim.command("inject", { id: T.id, unit: get("unit"), form: get("form"), trig: get("trig"), cls: get("cls") });
+    el.querySelector(".clear").onclick = () => this.sim.command("clear_inj", T.id);
+    this.rows[T.id] = { el, st: el.querySelector(".lab-st"), clear: el.querySelector(".clear") };
+    return el;
+  }
+
+  live(S) {
+    const D = S.D, s = S, out = [];
+    const bar = (label, v, max, txt, marks = [], cls = "") => {
+      const pct = (x) => Math.max(0, Math.min(100, (x / max) * 100));
+      out.push(`<div class="lv"><span>${label}</span><div class="lvbar ${cls}"><i style="width:${pct(v)}%"></i>${marks.map(([m, t]) => `<em style="left:${pct(m)}%" title="${t}"></em>`).join("")}</div><b class="mono">${txt}</b></div>`);
+    };
+    out.push(`<div class="lv-state"><span>Operating state</span><b>${S.sysState}</b></div>`);
+    bar("DC link", s.vdc, D.Vovp * 1.1, `${s.vdc.toFixed(0)} V`, [[D.Vuv, "undervoltage"], [D.Von, "VLU on"], [D.Vovp, "overvoltage trip"]], s.vdc > D.Von ? "hot" : "");
+    if (D.motor) bar("MC current", s.i_mc_meas, D.Imc_trip * 1.3, `${s.i_mc_meas.toFixed(0)} A`, [[0.85 * D.Imc_trip, "warning"], [D.Imc_trip, "trip"]], s.i_mc_meas > 0.85 * D.Imc_trip ? "hot" : "");
+    bar("Earth current", s.i_earth, 3, `${s.i_earth.toFixed(2)} A`, [[0.5, "warning"], [2, "trip"]], s.i_earth > 0.5 ? "hot" : "");
+    if (D.hasHBU) bar("AUX load", s.aux_pu * 100, 200, `${(s.aux_pu * 100).toFixed(0)} %`, [[100, "rated"]], s.aux_pu > 1 ? "hot" : "");
+    if (D.hasHBU || D.hasHWR) bar("AUX temperature", s.t_aux, 110, `${s.t_aux.toFixed(0)} °C`, [[85, "warning"], [95, "trip"]], s.t_aux > 85 ? "hot" : "");
+    if (D.hasHWR) bar("Fan speed", s.f_hwr, 55, `${s.f_hwr.toFixed(1)} / ${s.f_hwr_cmd.toFixed(1)} Hz`, [[s.f_hwr_cmd * 0.5, "50 % of command"]], s.hwr && s.f_hwr < 0.5 * s.f_hwr_cmd ? "hot" : "");
+    if (D.bat) {
+      const b = s.eb, led = (on, bad) => `<i class="led${on ? " on" : ""}${bad ? " bad" : ""}"></i>`;
+      const rows = ["neg", "ch", "pos"].map((k) => {
+        const c = b.c[k], bad = c.cmd !== c.fb || c.act !== c.fb;
+        return `<tr><td>${{ pos: "CtPos", neg: "CtNeg", ch: "CtCh" }[k]}</td><td>${led(c.cmd)}</td><td>${led(c.fb, bad)}</td><td>${led(c.act, c.act !== c.fb)}</td></tr>`;
+      }).join("");
+      out.push(`<div class="lv-box"><div class="lv-state"><span>ESS connection box</span><b class="ebst ${b.st === "Trip" ? "bad" : b.st === "Connected" ? "ok" : ""}">${b.st}${b.lock ? " · locked" : ""}</b></div>
+        <table class="ct"><tr><th></th><th>command</th><th>feedback</th><th>contacts</th></tr>${rows}</table>
+        <div class="lv-state"><span>ESC input / battery</span><b class="mono">${b.vec.toFixed(0)} V / ${s.v_bat.toFixed(0)} V</b></div></div>`);
+    }
+    $("#lab-live").innerHTML = out.join("");
+  }
+
+  update(S) {
+    this.build(S);
+    const [ptxt, pcls] = PHASES[S.phase] || [S.phase, ""];
+    const pill = $("#lab-phase");
+    pill.textContent = S.faults.length ? "FAULT" : ptxt;
+    pill.className = "pill " + (S.faults.length ? "bad" : pcls);
+    $("#lab-start").disabled = S.mode !== "auto";
+    $("#lab-ess-on").hidden = $("#lab-ess-off").hidden = !S.D.bat;
+    const inj = Object.fromEntries(S.inj.map((j) => [j.id, j]));
+    for (const [id, r] of Object.entries(this.rows)) {
+      const j = inj[id];
+      r.el.classList.toggle("armed", !!j && j.st === "armed");
+      r.el.classList.toggle("active", !!j && j.st === "active");
+      r.clear.hidden = !j;
+      r.st.textContent = !j ? "" : j.st === "armed" ? `armed · ${TractionSim.TRIGGERS[j.trig].toLowerCase()}` : `active since ${j.ta.toFixed(1)} s → ${clsLabel(j.cls, S.D)}`;
+    }
+    this.live(S);
+    renderAlarms($("#lab-alarms"), S);
+    if (S.hist.length !== this.histN || (S.hist.length && S.hist[S.hist.length - 1].t !== this.histT)) {
+      this.histN = S.hist.length; this.histT = S.hist.length ? S.hist[S.hist.length - 1].t : null;
+      $("#lab-hist").innerHTML = "<tr><th>t [s]</th><th>Class</th><th>Fault</th><th>Message</th><th>State</th></tr>" +
+        (S.hist.length ? [...S.hist].reverse().map((h) => `<tr><td class="mono">${h.t.toFixed(2)}</td><td><span class="badge ${TRIP_BADGE[h.cls] || "c2"}">${clsLabel(h.cls, S.D)}</span></td><td>${esc(h.name)}</td><td>${esc(h.msg)}</td><td>${esc(h.state)}</td></tr>`).join("")
+          : `<tr><td colspan="5" class="dim">No trips yet</td></tr>`);
+    }
+    if (S.recVer !== this.recVer) {
+      this.recVer = S.recVer;
+      const R = this.sim.recorder().frozen;
+      if (R) {
+        this.chart.set(R.cols);
+        $("#rec-note").textContent = `${clsLabel(R.f.cls, S.D)} · ${tripName(R.f.code)} at t = ${R.f.t.toFixed(2)} s (${R.f.state}) — red line = trip`;
+      } else { this.chart.set([[], [], [], [], [], []]); }
+    }
+  }
+}
+
+</script>
+  <script>
 // Main application: runs the simulation engine in the browser and renders it.
 // Author: Rafael Tavares
 const PHASES = {
   OFF: ["OFF", ""], START: ["STARTING", "seq"], RUN: ["READY", "run"], BRAKING: ["BRAKING", "seq"],
-  SHUTDOWN: ["SHUTTING DOWN", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGENCY", "bad"],
+  SHUTDOWN: ["SHUTTING DOWN", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGENCY", "bad"], TRIPPED: ["TRIPPED", "bad"],
 };
 const TS = [1, 2, 3, 5, 8, 10];
 
@@ -2826,6 +3740,7 @@ const scene = new TrainScene($("#scene"));
 const schem = new Schematic($("#schem"), (id) => cmd("toggle", id));
 const charts = makeCharts();
 const data = initData(SIM);
+const lab = new TripLab(SIM);
 let G = {};
 const hDC = new History(5, 60);
 const hTrain = new History(5, 120);
@@ -2881,9 +3796,7 @@ function buildConfigUI(s) {
 function bindControls() {
   $$(".tab").forEach((b) => b.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
-    $("#tab-sim").hidden = b.dataset.tab !== "sim";
-    $("#tab-data").hidden = b.dataset.tab !== "data";
-    $("#tab-guide").hidden = b.dataset.tab !== "guide";
+    $$(".tabpane").forEach((p) => { p.hidden = p.id !== "tab-" + b.dataset.tab; });
     window.dispatchEvent(new Event("resize"));
   }));
   $$("#mode-seg button").forEach((b) => b.addEventListener("click", () => cmd("mode", b.dataset.mode)));
@@ -2891,6 +3804,7 @@ function bindControls() {
   $("#btn-stop").onclick = () => cmd("stop");
   $("#btn-emerg").onclick = () => cmd("emergency");
   $("#btn-reset").onclick = () => cmd("reset");
+  $("#btn-ack").onclick = () => cmd("reset");
   $("#sel-system").onchange = (e) => cmd("config", { system: e.target.value });
   $("#sel-supply").onchange = (e) => cmd("config", { supply: e.target.value });
   $("#sel-vehicle").onchange = (e) => cmd("config", { vehicle: e.target.value });
@@ -2944,7 +3858,7 @@ function tiles(s) {
     T.push(["Tractive effort", `${(s.force / 1e3).toFixed(1)} kN`, s.limit ? `limit: ${s.limit}` : `adhesion ${(s.f_adh / 1e3).toFixed(0)} kN`]);
     T.push(["Converter output current", `${s.Is.toFixed(0)} A rms`, s.mc ? `m = ${s.m.toFixed(3)}` : ""]);
     T.push(["Pulse pattern", s.pulse.label || "—", s.mc ? `${(s.pulse.fdev || 0).toFixed(0)} Hz device switching` : ""]);
-    T.push(["THD U–V / current", s.wave && s.wave.spec ? `${s.wave.spec.thd_uab.toFixed(1)} %` : "—", s.wave && s.wave.spec && s.wave.spec.thd_i != null ? `current THD ${s.wave.spec.thd_i.toFixed(1)} %` : ""]);
+    T.push(["THD U–V / current", s.wave && s.wave.spec && s.wave.spec.thd_uab != null ? `${s.wave.spec.thd_uab.toFixed(1)} %` : "—", s.wave && s.wave.spec && s.wave.spec.thd_i != null ? `current THD ${s.wave.spec.thd_i.toFixed(1)} %` : ""]);
     T.push(["Motor PF · efficiency", s.mc && s.Is > 1 ? `${s.pf.toFixed(2)} · ${(Math.min(Math.abs(s.eta_m), 0.99) * 100).toFixed(1)} %` : "—", `${s.rpm.toFixed(0)} rpm`]);
     T.push(["IGBT junction · motor", `${s.t_j.toFixed(0)} °C · ${s.t_mot.toFixed(0)} °C`, `heatsink ${s.t_hs.toFixed(0)} °C, fans ${s.f_hwr.toFixed(0)} Hz`]);
   }
@@ -3019,9 +3933,9 @@ function renderState(s) {
   flow(s);
   $("#hud-dist").textContent = `${(s.pos / 1000).toFixed(2)} km · ${PHASES[s.phase]?.[0] || s.phase}${s.grade ? "" : ""}`;
 
-  const fb = $("#fault-banner");
-  fb.hidden = !s.faults.length;
-  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Press RESET with the train at standstill.</small>";
+  const n = renderAlarms($("#alarms"), s);
+  $("#al-count").textContent = n.trips || n.warns ? `${n.trips} trip${n.trips === 1 ? "" : "s"} · ${n.warns} warning${n.warns === 1 ? "" : "s"}` : "";
+  $("#btn-ack").disabled = !n.trips;
 
   if (s.events.length && s.events[s.events.length - 1].id < lastEvent) { $("#log").innerHTML = ""; lastEvent = 0; }
   for (const e of s.events.filter((e) => e.id > lastEvent)) {
@@ -3047,7 +3961,7 @@ function renderState(s) {
     charts.mot.set([w.t, w.pole, w.ia, w.ib, w.ic]);
     charts.uv.set([w.t, w.uab]);
     $("#mot-note").textContent = (D.levels === 3 ? "Leg U–0: 3 levels (±Vdc/2, 0) · Line U–V: 5 levels (±Vdc, ±Vdc/2, 0)" : "Leg U–0: 2 levels (±Vdc/2) · Line U–V: 3 levels (±Vdc, 0)") + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
-    if (w.spec) {
+    if (w.spec && w.spec.thd_uab != null) {
       charts.spec.set([w.spec.f, w.spec.a]);
       $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD ${w.spec.thd_uab.toFixed(1)} %` + (w.spec.thd_i != null ? ` · current THD ${w.spec.thd_i.toFixed(1)} %` : "");
     } else { charts.spec.set([[], []]); $("#spec-note").textContent = "inverter stopped"; }
@@ -3061,6 +3975,7 @@ function renderState(s) {
     $("#zoom-note").textContent = `simulated at 0.25 ms · DC link ripple ${(vmax - vmin).toFixed(0)} V p-p` + (D.f2 ? ` · 2f = ${D.f2.toFixed(1)} Hz` : D.f0 ? ` · line filter f0 = ${D.f0.toFixed(1)} Hz` : "");
   }
   data.update(s);
+  if (!$("#tab-lab").hidden) lab.update(s);
 }
 
 function frame(now) {

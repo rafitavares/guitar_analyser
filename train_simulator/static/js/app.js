@@ -2,7 +2,7 @@
 // Author: Rafael Tavares
 const PHASES = {
   OFF: ["OFF", ""], START: ["STARTING", "seq"], RUN: ["READY", "run"], BRAKING: ["BRAKING", "seq"],
-  SHUTDOWN: ["SHUTTING DOWN", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGENCY", "bad"],
+  SHUTDOWN: ["SHUTTING DOWN", "seq"], MANUAL: ["MANUAL", "man"], EMERGENCY: ["EMERGENCY", "bad"], TRIPPED: ["TRIPPED", "bad"],
 };
 const TS = [1, 2, 3, 5, 8, 10];
 
@@ -14,6 +14,7 @@ const scene = new TrainScene($("#scene"));
 const schem = new Schematic($("#schem"), (id) => cmd("toggle", id));
 const charts = makeCharts();
 const data = initData(SIM);
+const lab = new TripLab(SIM);
 let G = {};
 const hDC = new History(5, 60);
 const hTrain = new History(5, 120);
@@ -69,9 +70,7 @@ function buildConfigUI(s) {
 function bindControls() {
   $$(".tab").forEach((b) => b.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
-    $("#tab-sim").hidden = b.dataset.tab !== "sim";
-    $("#tab-data").hidden = b.dataset.tab !== "data";
-    $("#tab-guide").hidden = b.dataset.tab !== "guide";
+    $$(".tabpane").forEach((p) => { p.hidden = p.id !== "tab-" + b.dataset.tab; });
     window.dispatchEvent(new Event("resize"));
   }));
   $$("#mode-seg button").forEach((b) => b.addEventListener("click", () => cmd("mode", b.dataset.mode)));
@@ -79,6 +78,7 @@ function bindControls() {
   $("#btn-stop").onclick = () => cmd("stop");
   $("#btn-emerg").onclick = () => cmd("emergency");
   $("#btn-reset").onclick = () => cmd("reset");
+  $("#btn-ack").onclick = () => cmd("reset");
   $("#sel-system").onchange = (e) => cmd("config", { system: e.target.value });
   $("#sel-supply").onchange = (e) => cmd("config", { supply: e.target.value });
   $("#sel-vehicle").onchange = (e) => cmd("config", { vehicle: e.target.value });
@@ -132,7 +132,7 @@ function tiles(s) {
     T.push(["Tractive effort", `${(s.force / 1e3).toFixed(1)} kN`, s.limit ? `limit: ${s.limit}` : `adhesion ${(s.f_adh / 1e3).toFixed(0)} kN`]);
     T.push(["Converter output current", `${s.Is.toFixed(0)} A rms`, s.mc ? `m = ${s.m.toFixed(3)}` : ""]);
     T.push(["Pulse pattern", s.pulse.label || "—", s.mc ? `${(s.pulse.fdev || 0).toFixed(0)} Hz device switching` : ""]);
-    T.push(["THD U–V / current", s.wave && s.wave.spec ? `${s.wave.spec.thd_uab.toFixed(1)} %` : "—", s.wave && s.wave.spec && s.wave.spec.thd_i != null ? `current THD ${s.wave.spec.thd_i.toFixed(1)} %` : ""]);
+    T.push(["THD U–V / current", s.wave && s.wave.spec && s.wave.spec.thd_uab != null ? `${s.wave.spec.thd_uab.toFixed(1)} %` : "—", s.wave && s.wave.spec && s.wave.spec.thd_i != null ? `current THD ${s.wave.spec.thd_i.toFixed(1)} %` : ""]);
     T.push(["Motor PF · efficiency", s.mc && s.Is > 1 ? `${s.pf.toFixed(2)} · ${(Math.min(Math.abs(s.eta_m), 0.99) * 100).toFixed(1)} %` : "—", `${s.rpm.toFixed(0)} rpm`]);
     T.push(["IGBT junction · motor", `${s.t_j.toFixed(0)} °C · ${s.t_mot.toFixed(0)} °C`, `heatsink ${s.t_hs.toFixed(0)} °C, fans ${s.f_hwr.toFixed(0)} Hz`]);
   }
@@ -207,9 +207,9 @@ function renderState(s) {
   flow(s);
   $("#hud-dist").textContent = `${(s.pos / 1000).toFixed(2)} km · ${PHASES[s.phase]?.[0] || s.phase}${s.grade ? "" : ""}`;
 
-  const fb = $("#fault-banner");
-  fb.hidden = !s.faults.length;
-  if (s.faults.length) fb.innerHTML = s.faults.map((f) => "⚠ " + f).join("<br>") + "<br><small>Press RESET with the train at standstill.</small>";
+  const n = renderAlarms($("#alarms"), s);
+  $("#al-count").textContent = n.trips || n.warns ? `${n.trips} trip${n.trips === 1 ? "" : "s"} · ${n.warns} warning${n.warns === 1 ? "" : "s"}` : "";
+  $("#btn-ack").disabled = !n.trips;
 
   if (s.events.length && s.events[s.events.length - 1].id < lastEvent) { $("#log").innerHTML = ""; lastEvent = 0; }
   for (const e of s.events.filter((e) => e.id > lastEvent)) {
@@ -235,7 +235,7 @@ function renderState(s) {
     charts.mot.set([w.t, w.pole, w.ia, w.ib, w.ic]);
     charts.uv.set([w.t, w.uab]);
     $("#mot-note").textContent = (D.levels === 3 ? "Leg U–0: 3 levels (±Vdc/2, 0) · Line U–V: 5 levels (±Vdc, ±Vdc/2, 0)" : "Leg U–0: 2 levels (±Vdc/2) · Line U–V: 3 levels (±Vdc, 0)") + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
-    if (w.spec) {
+    if (w.spec && w.spec.thd_uab != null) {
       charts.spec.set([w.spec.f, w.spec.a]);
       $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD ${w.spec.thd_uab.toFixed(1)} %` + (w.spec.thd_i != null ? ` · current THD ${w.spec.thd_i.toFixed(1)} %` : "");
     } else { charts.spec.set([[], []]); $("#spec-note").textContent = "inverter stopped"; }
@@ -249,6 +249,7 @@ function renderState(s) {
     $("#zoom-note").textContent = `simulated at 0.25 ms · DC link ripple ${(vmax - vmin).toFixed(0)} V p-p` + (D.f2 ? ` · 2f = ${D.f2.toFixed(1)} Hz` : D.f0 ? ` · line filter f0 = ${D.f0.toFixed(1)} Hz` : "");
   }
   data.update(s);
+  if (!$("#tab-lab").hidden) lab.update(s);
 }
 
 function frame(now) {

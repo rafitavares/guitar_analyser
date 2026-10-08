@@ -39,6 +39,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sim">Simulator</button>
       <button class="tab" data-tab="data">System data</button>
+      <button class="tab" data-tab="lab">Trip Lab</button>
       <button class="tab" data-tab="guide">How to use</button>
     </nav>
     <div class="status">
@@ -54,7 +55,6 @@
         <div class="big mono" id="hud-speed">0</div><div class="unit">km/h</div>
         <div class="hud-sub mono" id="hud-dist">0.00 km</div>
       </div>
-      <div class="fault-banner" id="fault-banner" hidden></div>
     </section>
 
     <section class="row-main">
@@ -70,6 +70,14 @@
           </div>
         </div>
         <svg id="schem" viewBox="0 0 1400 500"></svg>
+        <div class="alarms">
+          <div class="al-head">
+            <h3>Trips &amp; warnings</h3>
+            <span class="note" id="al-count"></span>
+            <button class="btn ghost small" id="btn-ack">↺ RESET / acknowledge</button>
+          </div>
+          <div class="al-list" id="alarms"></div>
+        </div>
       </div>
 
       <aside class="card side">
@@ -194,6 +202,55 @@
     </section>
   </main>
 
+  <main id="tab-lab" class="tabpane" hidden>
+    <section class="card lab-top">
+      <div>
+        <h2>Trip Lab</h2>
+        <p class="note lab-intro">Inject faults into the running system and watch how the protection detects them, which trip class is raised and how the converter reacts.
+          Choose <b>when</b> the fault appears, <b>how</b> it develops (step, slow ramp or intermittent bursts) and which <b>class</b> it is mapped to.
+          <span id="lab-sys"></span></p>
+      </div>
+      <div class="lab-btns">
+        <button class="btn start small" id="lab-start">▶ START</button>
+        <button class="btn stop small" id="lab-stop">■ STOP</button>
+        <button class="btn ghost small" id="lab-reset">↺ RESET</button>
+        <button class="btn ghost small" id="lab-ess-on">ESS connect</button>
+        <button class="btn ghost small" id="lab-ess-off">ESS disconnect</button>
+        <button class="btn ghost small" id="lab-clear">✕ Remove all faults</button>
+      </div>
+    </section>
+
+    <section class="lab-main">
+      <div class="lab-cat" id="lab-cat"></div>
+      <aside class="lab-side">
+        <div class="card">
+          <div class="card-head"><h2>Live status</h2><span class="pill" id="lab-phase">OFF</span></div>
+          <div id="lab-live"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Active trips &amp; warnings</h2></div>
+          <div class="al-list compact" id="lab-alarms"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Trip recorder</h2><span class="note" id="rec-note">waiting for a trip — 4 s before and 2 s after are frozen</span></div>
+      <div class="chart" id="c-rec"></div>
+    </section>
+
+    <section class="lab-bottom">
+      <div class="card">
+        <div class="card-head"><h2>Trip history</h2><span class="note">newest first</span></div>
+        <div class="tbl-wrap"><table class="dtable" id="lab-hist"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Trip classes and reactions</h2><span class="note">generic protection concept used by the simulator</span></div>
+        <div class="tbl-wrap"><table class="dtable" id="lab-classes"></table></div>
+      </div>
+    </section>
+  </main>
+
   <main id="tab-guide" class="tabpane guide" hidden>
     <section class="card guide-intro">
       <h2>How to use the simulator</h2>
@@ -226,7 +283,7 @@
           <dt>▶ START</dt><dd>Runs the automatic start-up sequence step by step (shown in <i>Start-up sequence</i> with a progress bar per step).</dd>
           <dt>■ STOP</dt><dd>Brakes the train to a stop, then opens contactors and breakers and lowers the collector.</dd>
           <dt>⚠ EMERGENCY</dt><dd>Opens everything immediately and applies the emergency brake.</dd>
-          <dt>↺ RESET</dt><dd>Clears faults. Only possible with the train stopped.</dd>
+          <dt>↺ RESET</dt><dd>Acknowledges faults. System trips (Trip_SYS_0/1/2, OFF_SYS) need the train at standstill; unit trips (Trip_ESS, Trip_AUX, Trip_MC, OFF_FU) are reset while running and the unit restarts.</dd>
           <dt>Automatic</dt><dd>The sequence and the speed control are done for you.</dd>
           <dt>Manual</dt><dd>You operate the equipment yourself by <b>clicking the diagram</b>: pantograph / collector shoes, breaker (HSCB/VCB), ChCt, CtL, line converter, ESC, fuel cell, diesel engine, HBU, HWR and motor converter. Wrong sequences have real consequences — for example, closing CtL without pre-charge trips the breaker.</dd>
         </dl>
@@ -291,9 +348,20 @@
       </section>
 
       <section class="card">
-        <h3>8 · Tips</h3>
+        <h3>8 · Trips &amp; warnings, Trip Lab</h3>
         <ul>
-          <li>A red <b>FAULT</b> status and a banner on the train view explain what tripped. Stop the train and press RESET.</li>
+          <li>The panel below the electrical diagram lists every active <b>trip</b> (class badge, fault, time, operating state, how to reset) and every active <b>warning</b>. Faulty modules are outlined in red in the diagram.</li>
+          <li>The <b>Trip Lab</b> tab injects faults: ESS connection box (CtPos, CtNeg, CtCh, welded contactor, pre-charge, tripline, BMS), converters (overcurrent, IGBT desaturation, earth fault, DC-link over/undervoltage and short circuit, MC and LC/GC faults) and auxiliaries (overload, overtemperature, fan).</li>
+          <li>For each fault choose <b>when</b> it appears (immediately, after a delay, during traction or braking, in an ESS state), <b>how</b> it develops (step, ramp with a warning first, or short bursts that are filtered and counted) and the <b>trip class</b>.</li>
+          <li>Contactor and pre-charge defects are <b>latent</b>: they are detected at the next command — start the system, or press STOP / ESS disconnect.</li>
+          <li>The <b>trip recorder</b> freezes 4 s before and 2 s after the latest trip; the <b>trip history</b> keeps the last 40 events.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h3>9 · Tips</h3>
+        <ul>
+          <li>A red <b>FAULT</b> status and the <i>Trips &amp; warnings</i> panel below the diagram explain what tripped and how to reset it.</li>
           <li>To see regeneration go to the VLU, set <i>Line receptivity</i> to 0 % and brake.</li>
           <li>With <b>ESC</b> fitted, switch to Manual and lower the pantograph while running: the battery keeps the train going.</li>
           <li>Compare 2-level and 3-level in the <i>Motor modulation</i> and <i>Harmonic spectrum</i> charts.</li>
@@ -312,6 +380,8 @@
   <script src="/static/js/schematic.js"></script>
   <script src="/static/js/charts.js"></script>
   <script src="/static/js/data.js"></script>
+  <script src="/static/js/alarms.js"></script>
+  <script src="/static/js/triplab.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>
