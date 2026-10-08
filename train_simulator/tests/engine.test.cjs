@@ -65,3 +65,29 @@ test("motor model: rated torque reached with plausible slip and current", () => 
 test("EN 50163 table is consistent", () => {
   for (const s of Object.values(SUPPLIES)) assert.ok(s.Umin2 <= s.Umin1 && s.Umin1 < s.Un && s.Un < s.Umax1 && s.Umax1 < s.Umax2, s.id);
 });
+
+for (const cfg of [{ system: "dc_ohl", supply: "DC3000" }, { system: "ac_ohl", supply: "AC15" }, { system: "diesel" }, { system: "hydrogen" }]) {
+  test(`runs with all optional modules removed: ${cfg.system}`, () => {
+    const r = run({ ...cfg, mods: { hf: false, vlu: false, hbu: false, hwr: false } }, { T: 90 });
+    assert.deepStrictEqual(r.faults, [], r.faults.join("; "));
+    assert.ok(r.run.kmh > 40);
+    assert.strictEqual(parseFloat(r.energy_kWh.vlu), 0);
+  });
+}
+
+test("2f filter reduces the DC link ripple on 15 kV 16.7 Hz", () => {
+  const ripple = (hf) => {
+    const s = new Simulator();
+    s.command("config", { system: "ac_ohl", supply: "AC15", mods: { hf } }); s.command("start");
+    for (let i = 0; i < 45 / 0.02; i++) s.step(0.02);
+    const z = s.zoom();
+    return Math.max(...z.v) - Math.min(...z.v);
+  };
+  assert.ok(ripple(false) > 4 * ripple(true));
+});
+
+test("diesel without VLU cannot brake electrically (no regeneration path)", () => {
+  const a = run({ system: "diesel" }, { T: 90 }), b = run({ system: "diesel", mods: { vlu: false } }, { T: 90 });
+  // only the auxiliaries (HBU, HWR) can absorb braking energy
+  assert.ok(parseFloat(b.energy_kWh.brake) < 0.4 * parseFloat(a.energy_kWh.brake));
+});

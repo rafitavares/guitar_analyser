@@ -88,9 +88,14 @@ class Schematic {
       this.t.iline = text(138, YP + 48, "", "val");
       let x = 166;
       if (src === "dcline") {
-        wire("filt", `M166,${YP} L186,${YP} ${coil(186, YP)} L262,${YP}`);
-        text(222, YP - 22, "Line filter L", "ttl");
-        text(222, YP + 24, `${(D.L * 1e3).toFixed(1)} mH · HF`, "small");
+        if (D.hasHF) {
+          wire("filt", `M166,${YP} L186,${YP} ${coil(186, YP)} L262,${YP}`);
+          text(222, YP - 22, "Line filter L", "ttl");
+          text(222, YP + 24, `${(D.L * 1e3).toFixed(1)} mH · HF`, "small");
+        } else {
+          wire("filt", `M166,${YP} L262,${YP}`);
+          text(214, YP + 24, "no line filter", "small");
+        }
         x = 262;
         if (!shoe) { wire("ret", `M72,${YN} L470,${YN}`); ground(72, YN); text(72, YN + 32, "rail return"); }
         else { wire("ret", `M75,${YN} L470,${YN}`); ground(75, YN); text(75, YN + 32, "running rails"); }
@@ -160,7 +165,8 @@ class Schematic {
     if (D.vlu) mods.push("vlu");
     if (D.essAddon) mods.push("esc");
     if (D.fc_mod) mods.push("fcc");
-    mods.push("hbu", "hwr");
+    if (D.hasHBU) mods.push("hbu");
+    if (D.hasHWR) mods.push("hwr");
     if (D.traction) mods.push("mc");
     const slot = 128, x0 = 488;
     const xs = {};

@@ -29,6 +29,12 @@ and run the tests with `node --test tests/engine.test.cjs`.
 | Hydrogen fuel cell + ESS | — | Battery + ESC (grid-forming) and PEM fuel cells + FC converter with energy management |
 | Auxiliary converter only | all EN 50163 supplies | Line chain (+ 4QC on AC) → DC link → HBU, HWR |
 
+**Optional modules** — HF (harmonic filter), VLU, HBU, HWR and ESC can be switched on or off in the side panel to build
+the exact converter you need (LC and MC are fitted whenever the system requires them). Removing a module has its
+physical consequence: without VLU the braking energy the supply cannot take goes to the mechanical brake, without HWR
+the converter and motors rely on natural convection and derate earlier, without the 2f filter the DC link ripple on AC
+rises about tenfold, without the line filter the DC line sees the converter switching directly.
+
 Energy storage (ESC + LTO battery) can be added to the overhead-line, third-rail and diesel systems:
 it stores braking energy, shaves traction peaks and keeps the train running when the pantograph is lowered.
 

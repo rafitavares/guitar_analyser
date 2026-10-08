@@ -101,7 +101,14 @@
               </select>
             </label>
           </div>
-          <label class="check" id="lbl-ess"><input type="checkbox" id="in-ess"> Energy storage (ESC + battery)</label>
+          <div class="mods">
+            <span class="mods-title">Optional modules</span>
+            <label class="check" id="lbl-hf" title="Line filter (DC) or 2f resonant filter (AC)"><input type="checkbox" data-mod="hf"> HF — harmonic filter</label>
+            <label class="check" id="lbl-vlu" title="Brake chopper with braking resistor"><input type="checkbox" data-mod="vlu"> VLU — brake chopper</label>
+            <label class="check" title="3AC 400 V 50 Hz train bus"><input type="checkbox" data-mod="hbu"> HBU — auxiliary converter</label>
+            <label class="check" title="Variable-frequency cooling fans"><input type="checkbox" data-mod="hwr"> HWR — cooling inverter</label>
+            <label class="check" id="lbl-ess"><input type="checkbox" id="in-ess"> ESC — energy storage</label>
+          </div>
         </div>
 
         <h3>Start-up sequence</h3>

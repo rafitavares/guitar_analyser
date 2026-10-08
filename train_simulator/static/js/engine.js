@@ -163,7 +163,9 @@
     const aux = cfg.system === "aux";
     const veh = sys.traction ? VEHICLES[cfg.vehicle] : null;
     const levels = cfg.levels;
-    const D = { key: [cfg.system, cfg.supply, cfg.vehicle, levels, cfg.ess].join("|"), sys, sup, src, aux, veh, levels, traction: sys.traction };
+    const mods = cfg.mods;
+    const D = { key: [cfg.system, cfg.supply, cfg.vehicle, levels, cfg.ess, mods.hf, mods.vlu, mods.hbu, mods.hwr].join("|"), sys, sup, src, aux, veh, levels, traction: sys.traction };
+    D.hasHF = mods.hf; D.hasHBU = mods.hbu; D.hasHWR = mods.hwr;
     D.collector = sys.collector && (src === "dcline" || src === "acline") ? sys.collector : null;
 
     let vdc;
@@ -196,7 +198,8 @@
     if (src === "dcline") {
       const [spacing, rkm, Rss] = DC_LINES[D.collector][sup.id];
       D.line = { spacing, rkm, Rss };
-      D.L = sup.Un <= 750 ? 2.5e-3 : sup.Un <= 1500 ? 6e-3 : 10e-3;
+      // without the line filter only the cable/catenary inductance remains
+      D.L = !mods.hf ? 0.3e-3 : sup.Un <= 750 ? 2.5e-3 : sup.Un <= 1500 ? 6e-3 : 10e-3;
       D.RL = 0.01 + 0.02 * sup.Un / 3000;
       D.f0 = 1 / (2 * PI * Math.sqrt(D.L * D.C));
       D.Ilim = D.Pline / (0.9 * sup.Un);
@@ -210,7 +213,7 @@
       D.Plc = 1.15 * D.Pline;
       D.Itrip = 2.2 * SQ2 * D.Plc / D.V2;
       D.brkName = "VCB";
-      if (!aux) {
+      if (!aux && mods.hf) {
         D.f2 = 2 * sup.f;
         D.C2 = 0.4 * D.C;
         D.L2 = 1 / ((2 * PI * D.f2) ** 2 * D.C2);
@@ -245,7 +248,7 @@
     if (src === "fuelcell") D.fc_mod = { n: 2, cells: 440, area: 900, bop: 0.09, Pgross: 220e3, ramp: 25e3, tank: 180 };
 
     // VLU (brake chopper) and DC link protection thresholds
-    D.vlu = !aux;
+    D.vlu = !aux && mods.vlu;
     if (src === "dcline") { D.Von = 1.03 * sup.Umax2; D.Vovp = 1.12 * sup.Umax2; D.Vuv = 0.85 * sup.Umin2; }
     else { D.Von = 1.12 * vdc; D.Vovp = 1.25 * vdc; D.Vuv = 0.6 * vdc; }
     D.Voff = D.Von - 0.02 * vdc;
@@ -270,14 +273,14 @@
     const add = (id, name, detail) => L.push({ id, name, detail });
     if (D.src === "acline") add("LC", "Line converter (4QC)", `Single-phase AC → DC, ${kW(D.Plc)}, transformer secondary ${D.V2} V, unity power factor`);
     if (D.src === "genset") add("LC", "Line converter (active rectifier)", `3AC generator → DC, ${kW(D.Plc)}, diesel engine ${kW(D.Peng)}`);
-    if (D.src === "dcline") add("HF", "Harmonic filter (line filter)", `L = ${(D.L * 1e3).toFixed(1)} mH with DC link C, resonance ${D.f0.toFixed(1)} Hz`);
+    if (D.src === "dcline" && D.hasHF) add("HF", "Harmonic filter (line filter)", `L = ${(D.L * 1e3).toFixed(1)} mH with DC link C, resonance ${D.f0.toFixed(1)} Hz`);
     if (D.f2) add("HF", "Harmonic filter (2f resonant)", `Series LC tuned to ${D.f2.toFixed(1)} Hz, L2 = ${(D.L2 * 1e3).toFixed(2)} mH, C2 = ${(D.C2 * 1e3).toFixed(1)} mF`);
     add("DCL", "DC link", `${D.vdc} V nominal${D.dcFollowsLine ? " (follows line)" : " (regulated)"}, C = ${(D.C * 1e3).toFixed(1)} mF, pre-charge ${D.Rpre.toFixed(0)} Ω`);
     if (D.vlu) add("VLU", "Voltage limiting unit (brake chopper)", `On at ${D.Von.toFixed(0)} V, ${kW(D.Pvlu)}, R = ${D.Rvlu.toFixed(2)} Ω`);
     if (D.bat) add("ESC", "Energy storage converter", `Bidirectional DC/DC, ${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh, ${D.bat.Vn} V, ±${kW(D.bat.Pesc)}`);
     if (D.fc_mod) add("FCC", "Fuel cell converter", `DC/DC boost, ${D.fc_mod.n} × ${kW(D.fc_mod.Pgross)} PEM stacks, H₂ tank ${D.fc_mod.tank} kg`);
-    add("HBU", "Auxiliary converter (HBU)", `3AC 400 V 50 Hz train bus, ${(D.Shbu / 1e3).toFixed(0)} kVA, sine filter`);
-    add("HWR", "Auxiliary inverter (HWR)", `Variable V/f 20–50 Hz for cooling fans and pumps, ${kW(D.Phwr)}`);
+    if (D.hasHBU) add("HBU", "Auxiliary converter (HBU)", `3AC 400 V 50 Hz train bus, ${(D.Shbu / 1e3).toFixed(0)} kVA, sine filter`);
+    if (D.hasHWR) add("HWR", "Auxiliary inverter (HWR)", `Variable V/f 20–50 Hz for cooling fans and pumps, ${kW(D.Phwr)}`);
     if (D.motor) add("MC", "Motor converter", `${D.levels === 3 ? "3-level NPC" : "2-level"}, ${D.igbt}, ${kW(D.Pmc)}, ${D.motor.nm} × ${kW(D.motor.P)} induction motors`);
     return L;
   }
@@ -286,6 +289,7 @@
   function newConfig() {
     return {
       system: "dc_ohl", supply: "DC3000", vehicle: "emu", levels: 2, pwm: "traction", ess: false,
+      mods: { hf: true, vlu: true, hbu: true, hwr: true },
       lineV: 3300, recept: 0.5, tAmb: 28, grade: 0, rail: "dry", target_kmh: 100, time_scale: 1, fswScale: 1,
     };
   }
@@ -403,7 +407,7 @@
 
     config(kv) {
       const c = this.cfg;
-      if (this.s.speed > 0.1 && (kv.system || kv.supply || kv.vehicle || kv.levels !== undefined || kv.ess !== undefined)) {
+      if (this.s.speed > 0.1 && (kv.system || kv.supply || kv.vehicle || kv.levels !== undefined || kv.ess !== undefined || kv.mods)) {
         this.log("Stop the train before changing the system configuration", "warn");
         return;
       }
@@ -425,6 +429,9 @@
       if (kv.levels !== undefined && [2, 3].includes(+kv.levels) && +kv.levels !== c.levels) { c.levels = +kv.levels; rebuild = true; }
       if (kv.ess !== undefined && SYSTEMS[c.system].ess === "optional" && !!kv.ess !== c.ess) { c.ess = !!kv.ess; rebuild = true; }
       if (kv.pwm === "traction" || kv.pwm === "svpwm") c.pwm = kv.pwm;
+      if (kv.mods) {
+        for (const k of ["hf", "vlu", "hbu", "hwr"]) if (k in kv.mods && !!kv.mods[k] !== c.mods[k]) { c.mods = { ...c.mods, [k]: !!kv.mods[k] }; rebuild = true; }
+      }
       if (rebuild) {
         const sup = SUPPLIES[c.supply];
         if (SYSTEMS[c.system].supplies.length) c.lineV = sup.kind === "DC" ? Math.round(1.1 * sup.Un) : sup.Un;
@@ -475,6 +482,7 @@
           else { s.eng = "off"; this.log("Diesel engine stop"); }
           break;
         case "hbu": case "hwr":
+          if (!(id === "hbu" ? D.hasHBU : D.hasHWR)) return;
           if (!s[id] && s.vdc < 0.6 * D.vdc) { this.log(`${id.toUpperCase()} start requires DC link ≥ 60 %`, "warn"); return; }
           s[id] = !s[id]; this.log(`${id.toUpperCase()} ${on(s[id])}`);
           if (id === "hbu") s.hbu_t = 0;
@@ -755,19 +763,19 @@
       const P = D.Paux;
       // air system: compressor cycles between 8.5 and 10 bar
       const mechUse = Math.min(1, Math.abs(s.force_mech) / ((D.veh ? D.veh.bmax : 100) * 1e3));
-      s.p_air -= (0.004 + 0.03 * mechUse) * dt;
+      if (D.hasHBU) s.p_air -= (0.004 + 0.03 * mechUse) * dt;
       if (s.p_air < 8.5 && s.hbu_out) s.comp = true;
       if (s.p_air > 10 || !s.hbu_out) s.comp = false;
       if (s.comp) s.p_air += 0.08 * dt;
       s.p_air = clip(s.p_air, 0, 10.2);
-      if (s.hbu && s.vdc > 0.5 * D.vdc) {
+      if (D.hasHBU && s.hbu && s.vdc > 0.5 * D.vdc) {
         const hvac = 0.55 * P * clip(0.35 + Math.abs(c.tAmb - 20) / 25, 0.35, 1.25);
         s.aux_loads = s.hbu_out ? { hvac, light: 0.12 * P, charger: 0.08 * P, comp: s.comp ? 0.18 * P : 0 } : { hvac: 0, light: 0, charger: 0, comp: 0 };
         const out = Object.values(s.aux_loads).reduce((a, b) => a + b, 0);
         s.p_hbu_out = out;
         s.p_hbu = out / 0.94 + 0.01 * D.Shbu;
       } else { s.p_hbu = 0; s.p_hbu_out = 0; s.aux_loads = { hvac: 0, light: 0, charger: 0, comp: 0 }; }
-      if (s.hwr && s.vdc > 0.5 * D.vdc) {
+      if (D.hasHWR && s.hwr && s.vdc > 0.5 * D.vdc) {
         const demand = Math.max((s.t_hs - 35) / 30, (s.t_mot - 50) / 70, (s.t_vlu - 150) / 300, s.mc ? 0.15 : 0, s.lc ? 0.3 : 0);
         const fT = 20 + 30 * clip(demand, 0, 1);
         s.f_hwr += clip(fT - s.f_hwr, -5 * dt, 5 * dt);
@@ -932,7 +940,7 @@
     // --------------------------------------------------------------- thermal
     thermal(dt) {
       const s = this.s, D = this.D, c = this.cfg;
-      const fan = s.f_hwr / 50, cool = 0.25 + 0.75 * fan;
+      const fan = s.f_hwr / 50, cool = 0.25 + 0.75 * fan; // 0.25 = natural convection only (no HWR fans)
       const Tamb = c.tAmb;
       if (D.motor) {
         s.t_hs += ((s.p_loss_mc - (s.t_hs - Tamb) * cool / D.Rth_hs) / D.Cth_hs) * dt;
@@ -1204,7 +1212,7 @@
       Pmc: D.Pmc, Paux: D.Paux, Shbu: D.Shbu, Phwr: D.Phwr, Plc: D.Plc || 0, Peng: D.Peng || 0, Pvlu: D.Pvlu, Rvlu: D.Rvlu,
       Von: D.Von, Vovp: D.Vovp, Vuv: D.Vuv, Itrip: D.Itrip, Ilim: D.Ilim || 0, brkName: D.brkName, V2: D.V2 || 0, fg: D.fg || 0,
       f2: D.f2 || 0, line: D.line || null, bat: D.bat ? { ...D.bat } : null, fc_mod: D.fc_mod || null, ess: D.ess, essAddon: D.essAddon,
-      vlu: D.vlu, modules: D.modules, nIdle: D.nIdle, nMax: D.nMax, fuelCap: D.fuelCap || 0,
+      vlu: D.vlu, hasHF: D.hasHF, hasHBU: D.hasHBU, hasHWR: D.hasHWR, modules: D.modules, nIdle: D.nIdle, nMax: D.nMax, fuelCap: D.fuelCap || 0,
     };
     if (D.motor) {
       const M = D.motor;
@@ -1282,12 +1290,12 @@
       });
     }
     if (D.essAddon) add("ESS online (battery contactor + ESC)", (sim, k, t) => { const s = st(sim); if (!s.esc) { s.esc = true; sim.startReg(sim.reg.esc); sim.log(`ESC ON — ${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh battery connected`); } sim.prog(k, t * 100); return t > 1; });
-    add("Start auxiliary converters (HBU, HWR)", (sim, k, t) => {
+    if (D.hasHBU || D.hasHWR) add(`Start auxiliary converters (${[D.hasHBU && "HBU", D.hasHWR && "HWR"].filter(Boolean).join(", ")})`, (sim, k, t) => {
       const s = st(sim);
-      if (!s.hbu) { s.hbu = true; s.hbu_t = 0; sim.log("HBU ON — 3AC 400 V 50 Hz"); }
-      if (t > 0.5 && !s.hwr) { s.hwr = true; sim.log("HWR ON — cooling fans"); }
+      if (D.hasHBU && !s.hbu) { s.hbu = true; s.hbu_t = 0; sim.log("HBU ON — 3AC 400 V 50 Hz"); }
+      if (D.hasHWR && t > 0.5 && !s.hwr) { s.hwr = true; sim.log("HWR ON — cooling fans"); }
       sim.prog(k, t / 1.5 * 100);
-      return t > 1.5 && s.hbu_out;
+      return t > 1.5 && (!D.hasHBU || s.hbu_out);
     });
     if (D.traction) {
       add("Motor converter: magnetize motors", (sim, k, t) => {

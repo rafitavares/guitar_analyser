@@ -43,6 +43,9 @@ function buildConfigUI(s) {
   $("#sel-levels").value = String(c.levels);
   $("#sel-pwm").value = c.pwm;
   $("#lbl-ess").hidden = sys.ess !== "optional";
+  $$(".mods [data-mod]").forEach((el) => { el.checked = c.mods[el.dataset.mod]; });
+  $("#lbl-hf").hidden = !(D.src === "dcline" || (D.src === "acline" && !D.aux));
+  $("#lbl-vlu").hidden = D.aux;
   $("#in-ess").checked = c.ess;
   // line voltage slider follows EN 50163
   const sup = D.supply;
@@ -88,6 +91,10 @@ function bindControls() {
   $("#sel-levels").onchange = (e) => cmd("config", { levels: +e.target.value });
   $("#sel-pwm").onchange = (e) => cmd("config", { pwm: e.target.value });
   $("#in-ess").onchange = (e) => cmd("config", { ess: e.target.checked });
+  $$(".mods [data-mod]").forEach((el) => (el.onchange = () => {
+    cmd("config", { mods: { [el.dataset.mod]: el.checked } });
+    el.checked = SIM.cfg.mods[el.dataset.mod]; // refused while moving
+  }));
   $("#sel-rail").onchange = (e) => cmd("set", { rail: e.target.value });
 
   const slide = (id, out, f, send) => {
