@@ -233,7 +233,8 @@ function renderState(s) {
     charts.pwm.set([w.t, w.pole, w.ref, w.cu, w.cl]);
     $("#pwm-note").textContent = s.mc ? `${D.levels}L · ${s.pulse.label} · f = ${s.fs.toFixed(1)} Hz · m = ${s.m.toFixed(3)}` : "pulses blocked";
     charts.mot.set([w.t, w.pole, w.ia, w.ib, w.ic]);
-    $("#mot-note").textContent = `Leg U–0 · ${D.levels === 3 ? "3 levels: +Vdc/2, 0, −Vdc/2" : "2 levels: ±Vdc/2"}` + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
+    charts.uv.set([w.t, w.uab]);
+    $("#mot-note").textContent = (D.levels === 3 ? "Leg U–0: 3 levels (±Vdc/2, 0) · Line U–V: 5 levels (±Vdc, ±Vdc/2, 0)" : "Leg U–0: 2 levels (±Vdc/2) · Line U–V: 3 levels (±Vdc, 0)") + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
     if (w.spec) {
       charts.spec.set([w.spec.f, w.spec.a]);
       $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD ${w.spec.thd_uab.toFixed(1)} %` + (w.spec.thd_i != null ? ` · current THD ${w.spec.thd_i.toFixed(1)} %` : "");

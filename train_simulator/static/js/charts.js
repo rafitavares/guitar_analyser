@@ -51,11 +51,19 @@ function makeCharts() {
     scales: { x: { time: false }, V: { auto: true }, A: { auto: true } },
     axes: [axisX("t [ms]"), axisY("V", "V"), axisY("A", "A", 1)],
     series: [{ label: "t" },
-      { label: "Leg U–0", stroke: "rgba(61,133,255,.7)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "Leg U–0", stroke: "rgba(61,133,255,.9)", width: 1.2, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
       { label: "iU", stroke: COL.ia, width: 2, scale: "A" },
       { label: "iV", stroke: COL.ib, width: 2, scale: "A" },
       { label: "iW", stroke: COL.ic, width: 2, scale: "A" }],
   }, 5);
+
+  C.uv = new Chart($("#c-uv"), {
+    height: 190,
+    scales: { x: { time: false }, V: { auto: true } },
+    axes: [axisX("t [ms]"), axisY("V", "V")],
+    series: [{ label: "t" },
+      { label: "Line U–V", stroke: COL.ac, width: 1.2, scale: "V", fill: "rgba(255,216,0,.12)", paths: uPlot.paths.stepped({ align: 1 }) }],
+  }, 2);
 
   C.spec = new Chart($("#c-spec"), {
     scales: { x: { time: false }, y: { auto: true } },

@@ -464,7 +464,7 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     <section class="charts">
       <div class="card chart-card"><div class="card-head"><h2>DC link &amp; supply</h2><span class="note">last 60 s</span></div><div class="chart" id="c-dc"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Motor converter PWM — phase U</h2><span class="note" id="pwm-note">—</span></div><div class="chart" id="c-pwm"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Motor modulation</h2><span class="note" id="mot-note">—</span></div><div class="chart" id="c-mot"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Motor modulation</h2><span class="note" id="mot-note">—</span></div><div class="chart" id="c-mot"></div><div class="chart" id="c-uv"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Harmonic spectrum U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Train dynamics</h2><span class="note">last 120 s</span></div><div class="chart" id="c-train"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>DC link &amp; line side — 100 ms</h2><span class="note" id="zoom-note">—</span></div><div class="chart" id="c-zoom"></div></div>
@@ -564,7 +564,7 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
         <dl>
           <dt>DC link &amp; supply</dt><dd>Last 60 s of DC link voltage, supply voltage, supply current and motor converter current.</dd>
           <dt>Motor converter PWM — phase U</dt><dd>How the switching is generated: reference signal compared with the carrier(s). The note shows the pulse pattern in use (asynchronous, synchronous N-pulse or block).</dd>
-          <dt>Motor modulation</dt><dd>Output voltage of one inverter leg (Leg U–0) with the three motor currents. 2-level: two levels (±Vdc/2). 3-level NPC: three levels (+Vdc/2, 0, −Vdc/2).</dd>
+          <dt>Motor modulation</dt><dd>Two stacked charts. Top: <b>Leg U–0</b> (blue) with the three motor currents: output of one inverter leg against the DC-link midpoint — 2-level: ±Vdc/2; 3-level NPC: +Vdc/2, 0, −Vdc/2. Bottom: <b>Line U–V</b> (yellow): voltage between two motor terminals, the difference of two legs — 2-level: 3 levels (+Vdc, 0, −Vdc); 3-level: 5 levels (±Vdc, ±Vdc/2, 0). In 3-level at low speed (m &lt; 0.5) Line U–V only uses 0 and ±Vdc/2; the ±Vdc steps appear as the modulation index rises. More levels means a waveform closer to a sine and lower current ripple.</dd>
           <dt>Harmonic spectrum U–V</dt><dd>Frequency content of the line-to-line voltage, with voltage and current THD.</dd>
           <dt>Train dynamics</dt><dd>Last 120 s of speed, electric effort, mechanical brake and motor converter power.</dd>
           <dt>DC link &amp; line side — 100 ms</dt><dd>High-resolution view of the DC link: ripple, line filter oscillations, and the AC line voltage and current on AC systems.</dd>
@@ -2672,11 +2672,19 @@ function makeCharts() {
     scales: { x: { time: false }, V: { auto: true }, A: { auto: true } },
     axes: [axisX("t [ms]"), axisY("V", "V"), axisY("A", "A", 1)],
     series: [{ label: "t" },
-      { label: "Leg U–0", stroke: "rgba(61,133,255,.7)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "Leg U–0", stroke: "rgba(61,133,255,.9)", width: 1.2, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
       { label: "iU", stroke: COL.ia, width: 2, scale: "A" },
       { label: "iV", stroke: COL.ib, width: 2, scale: "A" },
       { label: "iW", stroke: COL.ic, width: 2, scale: "A" }],
   }, 5);
+
+  C.uv = new Chart($("#c-uv"), {
+    height: 190,
+    scales: { x: { time: false }, V: { auto: true } },
+    axes: [axisX("t [ms]"), axisY("V", "V")],
+    series: [{ label: "t" },
+      { label: "Line U–V", stroke: COL.ac, width: 1.2, scale: "V", fill: "rgba(255,216,0,.12)", paths: uPlot.paths.stepped({ align: 1 }) }],
+  }, 2);
 
   C.spec = new Chart($("#c-spec"), {
     scales: { x: { time: false }, y: { auto: true } },
@@ -3037,7 +3045,8 @@ function renderState(s) {
     charts.pwm.set([w.t, w.pole, w.ref, w.cu, w.cl]);
     $("#pwm-note").textContent = s.mc ? `${D.levels}L · ${s.pulse.label} · f = ${s.fs.toFixed(1)} Hz · m = ${s.m.toFixed(3)}` : "pulses blocked";
     charts.mot.set([w.t, w.pole, w.ia, w.ib, w.ic]);
-    $("#mot-note").textContent = `Leg U–0 · ${D.levels === 3 ? "3 levels: +Vdc/2, 0, −Vdc/2" : "2 levels: ±Vdc/2"}` + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
+    charts.uv.set([w.t, w.uab]);
+    $("#mot-note").textContent = (D.levels === 3 ? "Leg U–0: 3 levels (±Vdc/2, 0) · Line U–V: 5 levels (±Vdc, ±Vdc/2, 0)" : "Leg U–0: 2 levels (±Vdc/2) · Line U–V: 3 levels (±Vdc, 0)") + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
     if (w.spec) {
       charts.spec.set([w.spec.f, w.spec.a]);
       $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD ${w.spec.thd_uab.toFixed(1)} %` + (w.spec.thd_i != null ? ` · current THD ${w.spec.thd_i.toFixed(1)} %` : "");
