@@ -658,7 +658,7 @@
       if (c.pwm === "svpwm") { s.pulseN = 0; return { mode: "async", fc, fdev: dev(fc), label: `Async SVPWM ${fc.toFixed(0)} Hz` }; }
       if (m >= 1.22) { s.pulseN = -1; return { mode: "block", fc: fs, fdev: fs, label: "Block (six-step)" }; }
       if (fc / fs >= 21) { s.pulseN = 0; return { mode: "async", fc, fdev: dev(fc), label: `Async SVPWM ${fc.toFixed(0)} Hz` }; }
-      const Ns = [21, 15, 9, 7, 5, 3];
+      const Ns = [21, 15, 9, 3]; // multiples of 3 keep the three phases symmetric
       const fits = (N) => N * fs <= fc * 1.1;
       let N = s.pulseN > 0 ? s.pulseN : 0;
       if (!N || !fits(N) || (N * fs < 0.6 * fc && Ns.some((x) => x > N && fits(x)))) N = Ns.find(fits) || 3;
@@ -1043,8 +1043,33 @@
     }
 
     // phase-leg PWM for three phases at angles th[] (rad), absolute time ta[] (s)
-    modulate(th, ta, m, pulse) {
+    // Synchronous PWM with few pulses does not reproduce the reference amplitude exactly
+    // (sampling effect); like a real drive, the reference is pre-corrected with a table.
+    syncComp(N, m) {
+      const L = this.D.levels, key = L + "_" + N;
+      this._sync = this._sync || {};
+      if (!this._sync[key]) {
+        const n = 8192, th = [], ta = [], ms = [], fund = [];
+        for (let i = 0; i < n; i++) { th.push(2 * PI * i / n); ta.push(0); }
+        for (let mr = 0; mr <= 1.4001; mr += 0.01) {
+          const P = this.modulate(th, ta, mr, { mode: "sync", N }, true);
+          let a = 0, bq = 0;
+          for (let i = 0; i < n; i++) { a += P.pole[0][i] * Math.sin(th[i]); bq += P.pole[0][i] * Math.cos(th[i]); }
+          ms.push(mr); fund.push(Math.max(2 * Math.hypot(a, bq) / n, fund.length ? fund[fund.length - 1] : 0)); // magnitude, monotonic
+        }
+        this._sync[key] = { ms, fund };
+      }
+      const { ms, fund } = this._sync[key];
+      if (m >= fund[fund.length - 1]) return ms[ms.length - 1];
+      let i = 1;
+      while (i < fund.length - 1 && fund[i] < m) i++;
+      const f0 = fund[i - 1], f1 = fund[i];
+      return ms[i - 1] + (ms[i] - ms[i - 1]) * (f1 > f0 ? (m - f0) / (f1 - f0) : 0);
+    }
+
+    modulate(th, ta, m, pulse, raw) {
       const L = this.D.levels, n = th.length;
+      if (pulse.mode === "sync" && !raw) m = this.syncComp(pulse.N, m);
       const ref = [[], [], []], pole = [[], [], []], cu = [], cl = [];
       const tri = (x) => 1 - 4 * Math.abs(x - Math.floor(x) - 0.5);
       for (let i = 0; i < n; i++) {
@@ -1058,7 +1083,7 @@
           const x = clip(r[k] + z, -1.2, 1.2);
           ref[k].push(x);
           let p;
-          if (pulse.mode === "block") { const sn = Math.sin(th[i] - k * 2 * PI / 3); p = L === 3 ? (Math.abs(sn) > 0.2588 ? Math.sign(sn) : 0) : (sn >= 0 ? 1 : -1); }
+          if (pulse.mode === "block") { const sn = Math.sin(th[i] - k * 2 * PI / 3); p = sn >= 0 ? 1 : -1; } // six-step: full square wave (maximum fundamental, 2L and 3L)
           else if (L === 3) { const u = (car + 1) / 2; p = x > u ? 1 : x < u - 1 ? -1 : 0; }
           else p = x > car ? 1 : -1;
           pole[k].push(p);
@@ -1107,8 +1132,9 @@
 
     spectrum(V, f) {
       const s = this.s, D = this.D;
-      const periods = s.pulse.mode === "async" ? Math.max(1, Math.round(0.15 * f)) : 1;
-      const T = periods / f, n = 8192;
+      // async: long window (≈0.4 s) so that the carrier sidebands fc ± kf are resolved
+      const periods = s.pulse.mode === "async" ? Math.max(1, Math.round(0.4 * f)) : 1;
+      const T = periods / f, n = s.pulse.mode === "async" ? 16384 : 8192;
       const th = [], ta = [];
       for (let i = 0; i < n; i++) { th.push(2 * PI * f * T * i / n); ta.push(T * i / n); }
       const P = this.modulate(th, ta, s.m, s.pulse);

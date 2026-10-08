@@ -41,7 +41,7 @@ it stores braking energy, shaves traction peaks and keeps the train running when
 - **ESC / FC converter**: bidirectional DC/DC with battery OCV and internal resistance, PEM polarization curve, H₂ consumption.
 - **HBU**: 3AC 400 V 50 Hz train bus (HVAC depends on ambient temperature, lighting, battery charger, air compressor cycling).
 - **HWR**: variable-frequency cooling fans driven by converter and motor temperatures.
-- **MC — motor converter**: 2-level or 3-level NPC, SVPWM asynchronous → synchronous (21…3 pulses) → block (six-step),
+- **MC — motor converter**: 2-level or 3-level NPC, SVPWM asynchronous → synchronous (21, 15, 9, 3 pulses — multiples of 3 for three-phase symmetry, amplitude-compensated) → block (six-step),
   induction motors solved with the T-equivalent circuit (slip, current, power factor, efficiency, breakdown torque).
 
 ## Physics and data sources
