@@ -17,16 +17,6 @@ ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 OUT = ROOT / "dist" / "traction_simulator.html"
 
-# replaces fetch() calls to the server with direct calls to the JS engine
-SHIM = """
-(function () {
-  const sim = new TractionSim.Simulator();
-  const api = TractionSim.makeLocalApi(sim);
-  sim.start();
-  window.apiGet = async (url) => api.get(url);
-  window.apiCmd = async (cmd, value) => { api.command(cmd, value); return { ok: true }; };
-})();
-"""
 
 
 def _read(url_path: str) -> str:
@@ -43,14 +33,7 @@ def build() -> Path:
     html = re.sub(r'<link rel="stylesheet" href="([^"]+)">',
                   lambda m: "<style>\n" + _read(m.group(1)) + "\n</style>", html)
 
-    def inline_js(m: re.Match) -> str:
-        src = m.group(1)
-        block = _script(_read(src))
-        if src.endswith("/util.js"):  # engine + shim right after apiGet/apiCmd are defined
-            block += "\n" + _script(_read("/static/js/engine.js")) + "\n" + _script(SHIM)
-        return block
-
-    html = re.sub(r'<script src="([^"]+)"></script>', inline_js, html)
+    html = re.sub(r'<script src="([^"]+)"></script>', lambda m: _script(_read(m.group(1))), html)
     assert 'src="/static' not in html and 'href="/static' not in html, "external resource not inlined"
 
     OUT.parent.mkdir(exist_ok=True)

@@ -2,6 +2,7 @@
 class Gauge {
   constructor(svg, { min, max, label, unit, digits = 0, color = "#3D85FF", zones = [], bipolar = false, mark }) {
     Object.assign(this, { svg, min, max, label, unit, digits, color, bipolar });
+    svg.innerHTML = "";
     svg.setAttribute("viewBox", "0 0 200 150");
     this.cx = 100; this.cy = 92; this.r = 70;
     this.a0 = -210; this.a1 = 30;

@@ -1,4 +1,4 @@
-// Animated side view: train, catenary, pantograph and parallax landscape
+// Animated side view: train, supply (catenary / third rail), roof equipment and parallax landscape
 class TrainScene {
   constructor(svg) {
     this.svg = svg;
@@ -29,20 +29,26 @@ class TrainScene {
       return p + `L${x + 1200},170 L${x},170 Z`;
     }, "#121c33");
     // catenary masts + wire
-    this.masts = svgEl("g", {}, svg);
+    this.ohl = svgEl("g", {}, svg);
+    this.masts = svgEl("g", {}, this.ohl);
     for (let i = 0; i < 10; i++) {
       const x = i * 150;
       svgEl("rect", { x: x, y: 6, width: 5, height: 160, fill: "#555555" }, this.masts);
       svgEl("rect", { x: x - 2, y: 8, width: 70, height: 3, fill: "#555555" }, this.masts);
       for (let k = 1; k < 5; k++) svgEl("line", { x1: x + k * 30, y1: 12, x2: x + k * 30, y2: 26, stroke: "#666666", "stroke-width": 1 }, this.masts);
     }
-    svgEl("line", { x1: 0, y1: 12, x2: 1200, y2: 12, stroke: "#666666", "stroke-width": 1.2 }, svg);
-    this.wire = svgEl("line", { x1: 0, y1: 26, x2: 1200, y2: 26, stroke: "#8a5a2e", "stroke-width": 2 }, svg);
+    svgEl("line", { x1: 0, y1: 12, x2: 1200, y2: 12, stroke: "#666666", "stroke-width": 1.2 }, this.ohl);
+    this.wire = svgEl("line", { x1: 0, y1: 26, x2: 1200, y2: 26, stroke: "#8a5a2e", "stroke-width": 2 }, this.ohl);
     // track
     svgEl("rect", { x: 0, y: 168, width: 1200, height: 22, fill: "#222222" }, svg);
     this.sleepers = svgEl("g", {}, svg);
     for (let i = 0; i < 52; i++) svgEl("rect", { x: i * 24, y: 166, width: 12, height: 6, fill: "#3a3226" }, this.sleepers);
     svgEl("rect", { x: 0, y: 163, width: 1200, height: 3, fill: "#b0b0b0" }, svg);
+    // third rail with insulator posts
+    this.rail3 = svgEl("g", {}, svg);
+    this.rail3posts = svgEl("g", {}, this.rail3);
+    for (let i = 0; i < 26; i++) svgEl("rect", { x: i * 48, y: 160, width: 6, height: 8, fill: "#c9b37a" }, this.rail3posts);
+    this.rail3bar = svgEl("rect", { x: 0, y: 155, width: 1200, height: 5, fill: "#7a7a7a" }, this.rail3);
 
     // headlight beam (behind the train)
     this.beam = svgEl("path", { d: "M902,128 L1200,96 L1200,165 Z", fill: "url(#beam)", opacity: 0 }, svg);
@@ -59,6 +65,20 @@ class TrainScene {
       this.windows.push(svgEl("rect", { x, y: 90, width: 34, height: 22, rx: 3, fill: "#262626" }, tr));
     }
     svgEl("rect", { x: 520, y: 70, width: 130, height: 7, rx: 2, fill: "#7a7a7a" }, tr); // roof equipment
+    // roof variants: hydrogen tanks, battery containers, diesel exhaust
+    this.h2 = svgEl("g", {}, tr);
+    for (const x of [330, 400]) { svgEl("rect", { x, y: 62, width: 62, height: 14, rx: 7, fill: "#d8dde6", stroke: "#8a8a8a" }, this.h2); }
+    const h2t = svgEl("text", { x: 395, y: 59, fill: "#8AB4FF", "font-size": 10, "font-weight": 700, "text-anchor": "middle", "font-family": "system-ui" }, this.h2); h2t.textContent = "H₂";
+    this.batRoof = svgEl("g", {}, tr);
+    for (const x of [670, 720]) svgEl("rect", { x, y: 64, width: 44, height: 12, rx: 2, fill: "#2f6f3a", stroke: "#1EC337" }, this.batRoof);
+    this.exhaust = svgEl("g", {}, tr);
+    svgEl("rect", { x: 680, y: 60, width: 10, height: 16, fill: "#444" }, this.exhaust);
+    this.smoke = svgEl("g", {}, svg);
+    this.puffs = [];
+    for (let i = 0; i < 10; i++) this.puffs.push(svgEl("circle", { cx: 685, cy: 58, r: 4, fill: "#8a8a8a", opacity: 0 }, this.smoke));
+    // collector shoes (third rail)
+    this.shoes = svgEl("g", {}, tr);
+    for (const bx of [400, 800]) svgEl("rect", { x: bx - 8, y: 152, width: 16, height: 4, fill: "#dedede", class: "shoe" }, this.shoes);
     this.headlight = svgEl("circle", { cx: 899, cy: 130, r: 3.5, fill: "#444444" }, tr);
     this.tail = svgEl("circle", { cx: 303, cy: 130, r: 3, fill: "#3a1a22" }, tr);
     this.wheels = [];
@@ -97,28 +117,56 @@ class TrainScene {
     this.headY = yh;
   }
 
+  configure(D) {
+    if (D.key === this.key) return;
+    this.key = D.key;
+    const ohl = D.sysCollector === "pantograph", rail = D.sysCollector === "shoe";
+    this.ohl.style.display = ohl ? "" : "none";
+    this.panto.style.display = ohl ? "" : "none";
+    this.rail3.style.display = rail ? "" : "none";
+    this.shoes.style.display = rail ? "" : "none";
+    this.h2.style.display = D.src === "fuelcell" ? "" : "none";
+    this.batRoof.style.display = D.bat ? "" : "none";
+    this.exhaust.style.display = this.smoke.style.display = D.src === "genset" ? "" : "none";
+    this.D = D;
+  }
+
   update(s, pos) {
+    const D = s.D;
+    this.configure(D);
     const W = 1200;
     const mod = (a, b) => ((a % b) + b) % b;
     this.far.setAttribute("transform", `translate(${-mod(pos * 0.6, W)},0)`);
     this.near.setAttribute("transform", `translate(${-mod(pos * 2.2, W)},0)`);
     this.masts.setAttribute("transform", `translate(${-mod(pos * this.PX, 150)},0)`);
+    this.rail3posts.setAttribute("transform", `translate(${-mod(pos * this.PX, 48)},0)`);
     this.sleepers.setAttribute("transform", `translate(${-mod(pos * this.PX, 24)},0)`);
     const ang = (pos / 0.46) * 180 / Math.PI;
     for (const w of this.wheels) w.setAttribute("transform", `rotate(${ang % 360})`);
-    this.setPanto(s.panto_pos);
+    this.setPanto(D.sysCollector === "pantograph" ? s.col_pos : 0);
+    for (const sh of this.shoes.children) sh.setAttribute("y", 148 + 4 * s.col_pos);
 
-    const vnom = s.cfg.vnom;
-    const aux = s.vdc > 0.5 * vnom;
+    const aux = s.hbu_out;
     for (const w of this.windows) w.setAttribute("fill", aux ? "#f6dd9a" : "#262626");
     this.headlight.setAttribute("fill", aux ? "#fffbe6" : "#444444");
     this.tail.setAttribute("fill", aux ? "#ff3b5c" : "#3a1a22");
     this.beam.setAttribute("opacity", aux ? 0.9 : 0);
-    const live = s.panto_pos >= 1;
-    this.wire.setAttribute("stroke", live && s.mcb ? "#FF7300" : "#8a5a2e");
+    const live = s.col_pos >= 1 && D.sysCollector === "pantograph";
+    this.wire.setAttribute("stroke", live && s.brk ? "#FF7300" : "#8a5a2e");
+    this.rail3bar.setAttribute("fill", s.col_pos >= 1 && s.brk ? "#FF7300" : "#7a7a7a");
+    // diesel exhaust: puff rate and darkness follow engine load
+    if (D.src === "genset") {
+      const load = clamp(s.p_src / Math.max(D.Peng, 1), 0, 1), run = s.n_eng > 100;
+      this.puffs.forEach((p, i) => {
+        const ph = ((s.t * (0.6 + load) + i / this.puffs.length) % 1);
+        p.setAttribute("cx", 685 - ph * 60); p.setAttribute("cy", 58 - ph * 40); p.setAttribute("r", 3 + ph * 10);
+        p.setAttribute("opacity", run ? (1 - ph) * (0.15 + 0.5 * load) : 0);
+        p.setAttribute("fill", load > 0.6 ? "#5a5a5a" : "#9a9a9a");
+      });
+    }
 
     // sparks at the contact: arc when lowered under load, or flicker proportional to current
-    const iRatio = Math.abs(s.i_src) / 600;
+    const iRatio = live ? Math.abs(s.i_line) / 1500 : 0;
     const flick = s.spark > 0 ? s.spark : (live && Math.random() < iRatio * 0.25 ? 0.7 : 0);
     this.spark.setAttribute("opacity", flick);
     if (flick > 0) {

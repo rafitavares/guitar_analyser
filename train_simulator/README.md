@@ -2,82 +2,69 @@
 
 **Author: Rafael Tavares**
 
-Railway traction converter simulator based on the `simulator.xlsm` spreadsheet. It reproduces the
-start-up sequence (pantograph, MCB, DC link pre-charge, line contactor, inverter) and runs the train
-with animated diagrams and live charts, using the same PWM, pre-charge and ripple formulas as the Excel file.
+Interactive simulator of railway traction converters for all common European supply systems and
+on-board energy sources. The complete converter is modelled module by module — line converter,
+harmonic filter, DC link, VLU, energy storage converter, auxiliary converters and motor converter —
+and the train runs with realistic start-up sequences, protections and driving dynamics.
 
-## Single-file version (nothing to install)
+## Running it
 
-`dist/traction_simulator.html` is one file (~150 KB) that opens with a double click in any browser
-(Chrome, Edge, Firefox, Safari), works offline and can be shared by e-mail, Teams or WhatsApp.
-In this version the engine runs in JavaScript (`static/js/engine.js`), a port of `sim/engine.py` that
-`tests/test_js_port.py` validates against the Python engine (same states, events, waveforms and spectrum).
+**Single file (nothing to install):** open `dist/traction_simulator.html` in any browser
+(Chrome, Edge, Firefox, Safari). It works offline and can be shared as one file.
 
-To rebuild after changing the code: `python build_standalone.py`.
+**Local server:** `python app.py` (Python 3.8+, no packages needed) opens `http://127.0.0.1:8050`.
 
-## Python version
+After changing the code, rebuild the single file with `python build_standalone.py`
+and run the tests with `node --test tests/engine.test.cjs`.
 
-```bash
-cd train_simulator
-pip install -r requirements.txt
-python app.py              # opens http://127.0.0.1:8050
-```
+## Systems
 
-Options: `--port 8080`, `--no-browser`. Works offline (uPlot is bundled in `static/vendor`).
+| System | Supply (EN 50163) | Converter chain |
+|---|---|---|
+| DC overhead line | 600 V, 750 V, 1.5 kV, 3 kV | Pantograph → HSCB → line filter (HF) → pre-charge / CtL → DC link → MC, VLU, HBU, HWR |
+| Third rail DC | 600 V, 750 V | Collector shoes → HSCB → line filter → pre-charge / CtL → DC link → … |
+| AC overhead line | 15 kV 16.7 Hz, 25 kV 50 Hz | Pantograph → VCB → transformer → pre-charge / CtL → line converter (4QC) → DC link with 2f harmonic filter → … |
+| Diesel-electric | — | Diesel engine → generator → line converter (active rectifier) → DC link → … (rheostatic braking in the VLU) |
+| Battery (ESS) | — | Battery → pre-charge / main contactor → ESC (grid-forming DC/DC) → DC link → … |
+| Hydrogen fuel cell + ESS | — | Battery + ESC (grid-forming) and PEM fuel cells + FC converter with energy management |
+| Auxiliary converter only | all EN 50163 supplies | Line chain (+ 4QC on AC) → DC link → HBU, HWR |
 
-## Features
+Energy storage (ESC + LTO battery) can be added to the overhead-line, third-rail and diesel systems:
+it stores braking energy, shaves traction peaks and keeps the train running when the pantograph is lowered.
 
-**Simulator tab**
-- **START** (automatic mode) runs the same sequence as the Excel `CommandButton1_Click` macro:
-  pantograph raises → MCB closes → ChCt closes and the DC link charges through Rpre (RC curve from the
-  *Pre-charge* sheet) → at 95 % the CtL closes and the ChCt opens → stabilization (in AC the 4QC regulates
-  3000 V) → inverter enables and magnetizes → traction up to the target speed.
-- **STOP** brakes (regenerative + mechanical blending), disables the inverter, opens CtL and MCB and lowers the pantograph.
-- **EMERGENCY** opens everything and applies full mechanical braking. **RESET** clears faults (train at standstill).
-- **Manual mode**: click the pantograph, MCB, CtL, ChCt, 4QC and inverter on the diagram. Protections:
-  closing CtL without pre-charge causes inrush and trips the MCB; the inverter will not enable with the DC
-  link below 60 %; undervoltage blocks the inverter; the VLU (brake chopper) clamps overvoltage during regeneration.
-  Drive with the master controller (traction/brake, ↑/↓ keys) or with **frequency + amplitude** (like the Excel
-  scroll bars), with automatic V/f or free amplitude (weak flux = less torque).
-- **Topologies**: 3 kV DC catenary (line filter L) or 25 kV 50 Hz AC (transformer + 4QC, 100 Hz ripple);
-  2-level or 3-level NPC inverter; "Excel" modulation (spreadsheet formulas) or "classic".
-- Charts: DC link voltage/current, phase U PWM (reference × carrier), line voltage U–V and three-phase currents,
-  harmonic spectrum with THD, train dynamics and a 40 ms zoom of the DC link ripple.
+## Modules
 
-**Excel Lab tab** — direct reproduction of the hidden *PWM Level2/3*, *Pre-charge* and *Ripple SImulator*
-sheets, with the same limits as the spreadsheet scroll bars.
+- **LC — line converter**: 4QC on AC (single-phase power pulsation simulated, unity power factor), active rectifier on diesel.
+- **HF — harmonic filter**: LC line filter on DC (with active damping of its resonance), 2f series-resonant filter on AC.
+- **DC link**: time-domain simulation at 0.25 ms, pre-charge resistor, discharge resistor.
+- **VLU**: brake chopper with hysteresis, resistor thermal model and derating.
+- **ESC / FC converter**: bidirectional DC/DC with battery OCV and internal resistance, PEM polarization curve, H₂ consumption.
+- **HBU**: 3AC 400 V 50 Hz train bus (HVAC depends on ambient temperature, lighting, battery charger, air compressor cycling).
+- **HWR**: variable-frequency cooling fans driven by converter and motor temperatures.
+- **MC — motor converter**: 2-level or 3-level NPC, SVPWM asynchronous → synchronous (21…3 pulses) → block (six-step),
+  induction motors solved with the T-equivalent circuit (slip, current, power factor, efficiency, breakdown torque).
 
-## Fidelity to the Excel file
+## Physics and data sources
 
-`sim/excel_models.py` translates the formulas column by column. The tests compare against the values saved in the spreadsheet:
+- Supply voltage limits from **EN 50163** (Umin2, Umin1, Un, Umax1, Umax2).
+- DC lines: substation spacing, line resistance, receptivity for regenerated energy, line current limitation (power ∝ voltage).
+- Train: Davis running resistance, gradient, Curtius–Kniffler adhesion (dry / wet / contaminated rail), blended braking.
+- Protections: breaker overcurrent (fast, inside the 0.25 ms step), DC link over/undervoltage, IGBT and motor thermal derating.
 
-```bash
-pip install pytest openpyxl
-SIMULATOR_XLSM=/path/simulator.xlsm pytest tests
-```
-
-Notes on the spreadsheet:
-- The Excel "PWM Level 2" compares |ref| with a 0…1500 carrier and outputs 0/±1500 — in practice this is
-  **unipolar** PWM (3 pole-voltage levels). The "classic" mode shows true bipolar 2-level PWM (±Vdc/2) and
-  3-level NPC with phase-disposition carriers.
-- The "Ripple SImulator" uses `|sin(2π·100·t)|`, which has a 5 ms period (200 Hz ripple). The live simulator
-  uses a 50 Hz grid → 100 Hz ripple, which is the physical case of a single-phase bridge.
-- With C = 1 mF (value from the *Pre-charge* sheet) the 4QC second-harmonic ripple is large at full power;
-  real trains use a larger capacitance and a 2f resonant filter.
-
-The train and motor data (200 t, 120 kN, 1.2 MW, gear ratio) are typical values, not from the Excel file;
-they live in `Config` in `sim/engine.py` (and `newConfig` in `static/js/engine.js`).
+Vehicle, motor and converter ratings are **typical engineering values**, not data from a specific product.
+They are defined in `static/js/engine.js` (`VEHICLES` and `makeDesign`).
 
 ## Structure
 
 ```
-app.py                 Flask server + API (/api/state, /api/command, /api/lab/*)
-sim/excel_models.py    faithful port of the Excel formulas
-sim/engine.py          state machine, DC link, inverter, motor and train dynamics
-static/                user interface (SVG + uPlot)
-static/js/engine.js    JS port of the engine (single-file version)
+static/js/engine.js    simulation engine (systems, modules, motor, PWM, train dynamics)
+static/js/schematic.js modular single-line diagram
+static/js/scene.js     animated train view
+static/js/app.js       user interface
+static/js/data.js      "System data" tab (modules, EN 50163, effort curves, energy meters)
+app.py                 local web server (standard library only)
 build_standalone.py    builds dist/traction_simulator.html
-tests/                 validation against Excel and JS × Python
+tests/                 engine regression tests (Node.js)
 ```
 
 ---

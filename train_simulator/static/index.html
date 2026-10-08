@@ -27,17 +27,18 @@
       </symbol>
     </defs>
   </svg>
+
   <header class="topbar">
     <div class="brand">
       <span class="abb-badge" title="ABB"><svg class="abb-logo" viewBox="0 0 280 100" role="img" aria-label="ABB"><use href="#abb-logo"/></svg></span>
       <div>
         <h1>Traction Converter Simulator</h1>
-        <p class="sub"><span id="topo-label">3 kV DC · 2-level inverter</span> · <span class="author">by Rafael Tavares</span></p>
+        <p class="sub"><span id="topo-label">—</span> · <span class="author">by Rafael Tavares</span></p>
       </div>
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sim">Simulator</button>
-      <button class="tab" data-tab="lab">Excel Lab</button>
+      <button class="tab" data-tab="data">System data</button>
     </nav>
     <div class="status">
       <span class="pill" id="phase-pill">OFF</span>
@@ -60,13 +61,14 @@
         <div class="card-head">
           <h2>Electrical diagram</h2>
           <div class="legend">
-            <span><i style="background:var(--c-line)"></i>Catenary</span>
+            <span><i style="background:var(--c-line)"></i>Supply</span>
             <span><i style="background:var(--c-dc)"></i>DC link</span>
             <span><i style="background:var(--c-ac)"></i>AC output</span>
+            <span><i style="background:var(--c-ess)"></i>Storage</span>
             <span class="hint" id="schem-hint">Automatic mode</span>
           </div>
         </div>
-        <svg id="schem" viewBox="0 0 1100 400"></svg>
+        <svg id="schem" viewBox="0 0 1400 500"></svg>
       </div>
 
       <aside class="card side">
@@ -82,24 +84,24 @@
         </div>
 
         <div class="topo">
-          <label>Power supply
-            <select id="sel-supply">
-              <option value="DC">3 kV DC catenary</option>
-              <option value="AC">25 kV 50 Hz AC (transformer + 4QC)</option>
-            </select>
-          </label>
-          <label>Inverter
-            <select id="sel-levels">
-              <option value="2">2-level</option>
-              <option value="3">3-level (NPC)</option>
-            </select>
-          </label>
-          <label>Modulation
-            <select id="sel-pwm">
-              <option value="excel">Excel (spreadsheet formulas)</option>
-              <option value="classic">Classic (2L bipolar / 3L NPC-PD)</option>
-            </select>
-          </label>
+          <label>System<select id="sel-system"></select></label>
+          <label id="lbl-supply">Supply (EN 50163)<select id="sel-supply"></select><small id="supply-where" class="where"></small></label>
+          <label id="lbl-vehicle">Vehicle<select id="sel-vehicle"></select></label>
+          <div class="topo-row">
+            <label>Motor converter
+              <select id="sel-levels">
+                <option value="2">2-level</option>
+                <option value="3">3-level NPC</option>
+              </select>
+            </label>
+            <label>Modulation
+              <select id="sel-pwm">
+                <option value="traction">Async → sync → block</option>
+                <option value="svpwm">Async SVPWM only</option>
+              </select>
+            </label>
+          </div>
+          <label class="check" id="lbl-ess"><input type="checkbox" id="in-ess"> Energy storage (ESC + battery)</label>
         </div>
 
         <h3>Start-up sequence</h3>
@@ -112,55 +114,68 @@
       <div class="card gauge-card"><svg id="g-freq"></svg></div>
       <div class="card gauge-card"><svg id="g-vdc"></svg></div>
       <div class="card gauge-card"><svg id="g-power"></svg></div>
-      <div class="card tiles">
-        <div class="tile"><span>Tractive effort</span><b class="mono" id="k-force">0 kN</b></div>
-        <div class="tile"><span>Phase current</span><b class="mono" id="k-iph">0 A</b></div>
-        <div class="tile"><span>DC link current</span><b class="mono" id="k-idc">0 A</b></div>
-        <div class="tile"><span>Modulation index</span><b class="mono" id="k-m">0.00</b></div>
-        <div class="tile"><span>THD U–V</span><b class="mono" id="k-thd">—</b></div>
-        <div class="tile"><span>Mechanical brake</span><b class="mono" id="k-mech">0 kN</b></div>
-      </div>
+      <div class="card tiles" id="tiles"></div>
     </section>
 
-    <section class="card drive">
-      <div class="drive-auto" id="drive-auto">
-        <label class="slider">Target speed <b class="mono" id="v-target">100 km/h</b>
-          <input type="range" id="in-target" min="0" max="140" step="5" value="100"></label>
+    <section class="row-ctrl">
+      <div class="card drive">
+        <h3 class="inline">Driving</h3>
+        <div class="drive-auto" id="drive-auto">
+          <label class="slider">Target speed <b class="mono" id="v-target">100 km/h</b>
+            <input type="range" id="in-target" min="0" max="160" step="5" value="100"></label>
+        </div>
+        <div class="drive-manual" id="drive-manual" hidden>
+          <div class="seg small" id="ctrl-seg">
+            <button data-ctrl="throttle" class="on">Master controller</button>
+            <button data-ctrl="freq">Direct V/f (test)</button>
+          </div>
+          <div id="ctrl-throttle" class="ctrl-group">
+            <label class="slider throttle">Traction / brake <b class="mono" id="v-thr">0 %</b>
+              <input type="range" id="in-thr" min="-100" max="100" step="5" value="0">
+              <span class="scale"><em>BRAKE</em><em>0</em><em>TRACTION</em></span></label>
+            <button class="btn ghost small" id="btn-thr0">Neutral</button>
+          </div>
+          <div id="ctrl-freq" class="ctrl-group" hidden>
+            <label class="slider">Stator frequency <b class="mono" id="v-fcmd">0.0 Hz</b>
+              <input type="range" id="in-fcmd" min="0" max="250" step="0.5" value="0"></label>
+            <label class="slider">Modulation index m <b class="mono" id="v-mcmd">0.50</b>
+              <input type="range" id="in-mcmd" min="0" max="1.27" step="0.01" value="0.5"></label>
+            <label class="check"><input type="checkbox" id="in-vf" checked> Automatic V/f</label>
+          </div>
+        </div>
         <label class="slider">Time scale <b class="mono" id="v-ts">1×</b>
           <input type="range" id="in-ts" min="0" max="5" step="1" value="0"></label>
+        <label class="slider">Switching frequency <b class="mono" id="v-fsw">100 %</b>
+          <input type="range" id="in-fsw" min="50" max="160" step="10" value="100"></label>
       </div>
-      <div class="drive-manual" id="drive-manual" hidden>
-        <div class="seg small" id="ctrl-seg">
-          <button data-ctrl="throttle" class="on">Throttle / brake</button>
-          <button data-ctrl="freq">Frequency + amplitude (V/f)</button>
-        </div>
-        <div id="ctrl-throttle" class="ctrl-group">
-          <label class="slider throttle">Master controller <b class="mono" id="v-thr">0 %</b>
-            <input type="range" id="in-thr" min="-100" max="100" step="5" value="0">
-            <span class="scale"><em>BRAKE</em><em>0</em><em>TRACTION</em></span></label>
-          <button class="btn ghost small" id="btn-thr0">Neutral</button>
-        </div>
-        <div id="ctrl-freq" class="ctrl-group" hidden>
-          <label class="slider">Motor frequency <b class="mono" id="v-fcmd">0.0 Hz</b>
-            <input type="range" id="in-fcmd" min="0" max="160" step="0.5" value="0"></label>
-          <label class="slider">Amplitude (index m) <b class="mono" id="v-mcmd">0.50</b>
-            <input type="range" id="in-mcmd" min="0" max="1.15" step="0.01" value="0.5"></label>
-          <label class="check"><input type="checkbox" id="in-vf" checked> Automatic V/f</label>
-        </div>
-        <label class="slider">Time scale <b class="mono" id="v-ts2">1×</b>
-          <input type="range" id="in-ts2" min="0" max="5" step="1" value="0"></label>
+      <div class="card drive">
+        <h3 class="inline">Line &amp; environment</h3>
+        <label class="slider" id="row-linev">Line voltage (no-load) <b class="mono" id="v-linev">—</b>
+          <input type="range" id="in-linev" min="0" max="1" step="10" value="0">
+          <span class="scale mono" id="linev-scale"></span></label>
+        <label class="slider" id="row-recept">Line receptivity (regeneration) <b class="mono" id="v-recept">50 %</b>
+          <input type="range" id="in-recept" min="0" max="100" step="5" value="50"></label>
+        <label class="slider">Gradient <b class="mono" id="v-grade">0 ‰</b>
+          <input type="range" id="in-grade" min="-30" max="30" step="1" value="0"></label>
+        <label class="slider">Ambient temperature <b class="mono" id="v-tamb">28 °C</b>
+          <input type="range" id="in-tamb" min="-25" max="40" step="1" value="28"></label>
+        <label class="field">Rail condition
+          <select id="sel-rail"><option value="dry">Dry</option><option value="wet">Wet</option><option value="leaves">Leaves / contaminated</option></select>
+        </label>
       </div>
-      <label class="slider">Carrier (freq port) <b class="mono" id="v-fc">400 Hz</b>
-        <input type="range" id="in-fc" min="200" max="2000" step="50" value="400"></label>
+      <div class="card flow-card">
+        <h3 class="inline">Power flow</h3>
+        <div id="flow"></div>
+      </div>
     </section>
 
     <section class="charts">
-      <div class="card chart-card"><div class="card-head"><h2>DC link — voltage and current</h2><span class="note">last 60 s</span></div><div class="chart" id="c-dc"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>PWM — phase U</h2><span class="note" id="pwm-note">reference × carrier</span></div><div class="chart" id="c-pwm"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Line voltage U–V and motor currents</h2></div><div class="chart" id="c-uab"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>DC link &amp; supply</h2><span class="note">last 60 s</span></div><div class="chart" id="c-dc"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Motor converter PWM — phase U</h2><span class="note" id="pwm-note">—</span></div><div class="chart" id="c-pwm"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Motor phase voltage &amp; currents</h2><span class="note" id="mot-note">—</span></div><div class="chart" id="c-mot"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Harmonic spectrum U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Train dynamics</h2><span class="note">last 120 s</span></div><div class="chart" id="c-train"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>DC link — zoom 40 ms (ripple)</h2><span class="note" id="rip-note">—</span></div><div class="chart" id="c-zoom"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>DC link &amp; line side — 100 ms</h2><span class="note" id="zoom-note">—</span></div><div class="chart" id="c-zoom"></div></div>
     </section>
 
     <section class="card log-card">
@@ -169,54 +184,25 @@
     </section>
   </main>
 
-  <main id="tab-lab" class="tabpane" hidden>
-    <p class="lab-intro">Direct reproduction of the hidden sheets of <b>simulator.xlsm</b>, computed with the same formulas. The controls use the same limits as the spreadsheet scroll bars.</p>
-    <section class="lab-grid">
-      <div class="card lab-card">
-        <div class="card-head"><h2>PWM Level 2 / Level 3</h2>
-          <div class="seg small" id="lab-level"><button data-l="2" class="on">Level 2</button><button data-l="3">Level 3</button></div></div>
-        <div class="lab-ctrls">
-          <label class="slider">freq sen — B2 <b class="mono" id="lv-freq">21 Hz</b><input type="range" id="li-freq" min="10" max="25" step="1" value="21"></label>
-          <label class="slider">Amp — C2 <b class="mono" id="lv-amp">1500 V</b><input type="range" id="li-amp" min="1" max="1500" step="20" value="1500"></label>
-          <label class="slider">freq port — D2 <b class="mono" id="lv-fc">400 Hz</b><input type="range" id="li-fc" min="100" max="2000" step="50" value="400"></label>
-          <label class="slider">amp port — E2 <b class="mono" id="lv-ca">1500 V</b><input type="range" id="li-ca" min="100" max="3000" step="50" value="1500"></label>
-        </div>
-        <div class="chart" id="lc-pwm"></div>
-        <div class="formula mono" id="lf-pwm"></div>
-      </div>
-      <div class="card lab-card">
-        <div class="card-head"><h2>Pre-charge</h2></div>
-        <div class="lab-ctrls">
-          <label class="slider">Maximum Voltage — H1 <b class="mono" id="lv-pvmax">3000 V</b><input type="range" id="li-pvmax" min="500" max="4000" step="100" value="3000"></label>
-          <label class="slider">Resistance R — H2 <b class="mono" id="lv-pr">1000 Ω</b><input type="range" id="li-pr" min="50" max="3000" step="50" value="1000"></label>
-          <label class="slider">Capacitance C — H3 <b class="mono" id="lv-pc">1.0 mF</b><input type="range" id="li-pc" min="0.1" max="5" step="0.1" value="1"></label>
-          <label class="slider">Percentage — H4 <b class="mono" id="lv-pp">95 %</b><input type="range" id="li-pp" min="0" max="100" step="1" value="95"></label>
-        </div>
-        <div class="chart" id="lc-pre"></div>
-        <div class="formula mono" id="lf-pre"></div>
-      </div>
-      <div class="card lab-card">
-        <div class="card-head"><h2>Ripple Simulator</h2></div>
-        <div class="lab-ctrls">
-          <label class="slider">Resistance — G2 <b class="mono" id="lv-rr">325 Ω</b><input type="range" id="li-rr" min="200" max="1000" step="5" value="325"></label>
-          <label class="slider">Capacitance — H3 (×10 µF) <b class="mono" id="lv-rc">4</b><input type="range" id="li-rc" min="1" max="10" step="1" value="4"></label>
-          <label class="slider">Max Voltage — G4 <b class="mono" id="lv-rv">3000 V</b><input type="range" id="li-rv" min="0" max="3000" step="10" value="3000"></label>
-          <label class="slider">Time Δt — H5 (×0.1 µs) <b class="mono" id="lv-rd">7</b><input type="range" id="li-rd" min="1" max="10" step="1" value="7"></label>
-        </div>
-        <div class="chart" id="lc-rip"></div>
-        <div class="formula mono" id="lf-rip"></div>
-      </div>
+  <main id="tab-data" class="tabpane" hidden>
+    <section class="data-grid">
+      <div class="card"><div class="card-head"><h2>System configuration</h2></div><div id="d-summary" class="dtext"></div></div>
+      <div class="card"><div class="card-head"><h2>Converter modules</h2></div><table class="dtable" id="d-modules"></table></div>
+      <div class="card wide"><div class="card-head"><h2>Tractive and braking effort vs speed</h2><span class="note">computed from the motor and converter model</span></div><div class="chart" id="c-fv"></div></div>
+      <div class="card"><div class="card-head"><h2>Supply voltages — EN 50163</h2></div><table class="dtable" id="d-supplies"></table></div>
+      <div class="card"><div class="card-head"><h2>Energy meters</h2></div><table class="dtable" id="d-energy"></table></div>
     </section>
   </main>
 
   <footer class="credits">Traction Converter Simulator · developed by <b>Rafael Tavares</b></footer>
 
   <script src="/static/js/util.js"></script>
+  <script src="/static/js/engine.js"></script>
   <script src="/static/js/gauges.js"></script>
   <script src="/static/js/scene.js"></script>
   <script src="/static/js/schematic.js"></script>
   <script src="/static/js/charts.js"></script>
-  <script src="/static/js/lab.js"></script>
+  <script src="/static/js/data.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

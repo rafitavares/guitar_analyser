@@ -1,4 +1,4 @@
-// Shared utilities
+// Shared utilities. Author: Rafael Tavares
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -11,29 +11,15 @@ function svgEl(tag, attrs = {}, parent) {
   return el;
 }
 
-async function apiGet(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`${url}: ${r.status}`);
-  return r.json();
-}
-
-function apiCmd(cmd, value) {
-  return fetch("/api/command", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cmd, value }),
-  });
-}
-
 function fmt(x, d = 0) {
   return Number.isFinite(x) ? x.toFixed(d) : "—";
 }
 
-// Formats with automatic unit prefix (k/M)
+// Formats with an automatic unit prefix (k/M)
 function fmtSI(x, unit, d = 1) {
   const a = Math.abs(x);
   if (a >= 1e6) return (x / 1e6).toFixed(d) + " M" + unit;
-  if (a >= 1e3) return (x / 1e3).toFixed(d) + " k" + unit;
+  if (a >= 1e3) return (x / 1e3).toFixed(a >= 1e5 ? 0 : d) + " k" + unit;
   return x.toFixed(0) + " " + unit;
 }
 
@@ -41,6 +27,3 @@ function debounce(fn, ms) {
   let t;
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
-
-// Reads the colors defined in :root
-const CSSV = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();

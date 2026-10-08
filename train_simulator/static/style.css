@@ -10,6 +10,7 @@
   --c-line: #FF7300;   /* catenary / supply */
   --c-dc: #3D85FF;     /* DC link */
   --c-ac: #FFD800;     /* AC output */
+  --c-ess: #1EC337;    /* energy storage */
   --c-ok: #1EC337;
   --c-warn: #FFD800;
   --c-bad: #F03040;
@@ -69,7 +70,7 @@ button, select, input { font: inherit; color: inherit; }
   background: rgba(240, 48, 64, .18); border: 1px solid rgba(240, 48, 64, .6); color: #ffd2da; font-size: 12px; }
 
 /* ---------- main row ---------- */
-.row-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
+.row-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .schem-card #schem { width: 100%; height: auto; display: block; }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); align-items: center; flex-wrap: wrap; }
 .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
@@ -112,13 +113,14 @@ select { background: var(--bg2); border: 1px solid var(--border); border-radius:
 .steps li.done .bar i { background: var(--c-ok); }
 
 /* ---------- KPIs ---------- */
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr); gap: 16px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 2.2fr); gap: 16px; }
 .gauge-card { padding: 6px; display: grid; place-items: center; }
 .gauge-card svg { width: 100%; max-width: 240px; height: auto; display: block; }
-.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: center; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-content: center; }
 .tile { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
 .tile span { font-size: 11px; color: var(--muted); }
-.tile b { font-size: 17px; }
+.tile b { font-size: 15px; }
+.tile small { font-size: 10.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- driving controls ---------- */
 .drive { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
@@ -208,3 +210,57 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .brand .author { color: #fff; font-weight: 600; }
 .credits { text-align: center; color: var(--muted); font-size: 12px; padding: 4px 16px 24px; }
 .credits b { color: var(--text); font-weight: 600; }
+
+/* ---------- modular diagram ---------- */
+#schem text.small { font-size: 10.5px; fill: var(--dim); }
+#schem text.symt { font-size: 18px; fill: #dedede; font-family: var(--mono); }
+#schem text.val.big { font-size: 13px; fill: var(--c-dc); font-weight: 600; }
+#schem .wire.ess { stroke: var(--c-ess); }
+#schem .box.liveg { stroke: var(--c-ess); filter: drop-shadow(0 0 6px rgba(30, 195, 55, .5)); }
+#schem .box.warm { stroke: var(--c-line); stroke-dasharray: 5 3; }
+#schem .box.hot { stroke: var(--c-bad); fill: rgba(240, 48, 64, .15); filter: drop-shadow(0 0 8px rgba(240, 48, 64, .8)); }
+#schem.manual .clickable:hover .box { stroke: var(--accent); }
+
+/* ---------- configuration ---------- */
+.topo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.topo .check { text-transform: none; letter-spacing: 0; font-size: 12px; display: flex; gap: 8px; align-items: center; color: var(--text); }
+.field { display: grid; gap: 6px; font-size: 12px; color: var(--muted); min-width: 200px; }
+h3.inline { margin: 0 0 4px; width: 100%; }
+
+/* ---------- controls row ---------- */
+.row-ctrl { display: grid; grid-template-columns: 1fr 1fr minmax(320px, 0.9fr); gap: 16px; }
+.row-ctrl .drive { align-content: flex-start; }
+.row-ctrl .slider { min-width: 220px; flex: 1; }
+.row-ctrl .slider.throttle { min-width: 300px; }
+.slider .scale.mono em { color: var(--dim) !important; font-size: 10px; }
+.flow-card .fl { display: grid; grid-template-columns: 120px 1fr 80px; align-items: center; gap: 8px; font-size: 12px; margin: 6px 0; }
+.flow-card .fl span { color: var(--muted); }
+.flow-card .fl b { text-align: right; font-size: 12px; }
+.fbar { position: relative; height: 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.fbar::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--dim); }
+.fbar i { position: absolute; top: 0; bottom: 0; transition: width .2s; }
+.fbar i.in { background: var(--c-ok); }
+.fbar i.out { background: var(--c-line); }
+
+/* ---------- system data ---------- */
+.data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.data-grid .wide { grid-column: 1 / -1; }
+.dtext div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.dtext span { color: var(--muted); }
+.dtext b { font-weight: 500; }
+.dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dtable th { text-align: left; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); padding: 6px; }
+.dtable td { padding: 6px; border-bottom: 1px solid #262626; vertical-align: top; }
+.dtable tr.sel td { background: rgba(255, 0, 15, .1); }
+.dtable td:first-child { white-space: nowrap; }
+
+@media (max-width: 1200px) {
+  .row-ctrl { grid-template-columns: 1fr; }
+  .data-grid { grid-template-columns: 1fr; }
+}
+
+select { width: 100%; min-width: 0; max-width: 100%; }
+.topo label { min-width: 0; }
+.where { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--dim); }
+.side { min-width: 0; overflow: hidden; }
+#schem { max-height: 560px; }
