@@ -268,3 +268,17 @@ select { width: 100%; min-width: 0; max-width: 100%; }
 .mods { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; padding: 8px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; }
 .mods-title { grid-column: 1 / -1; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .mods .check { font-size: 12px; padding: 0; }
+
+/* ---------- how to use ---------- */
+.guide-intro p { color: var(--muted); max-width: 900px; margin: 8px 0 12px; }
+.guide .quick { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.guide h3 { margin: 0 0 10px; color: var(--text); font-size: 13px; }
+.guide dl { margin: 0; display: grid; grid-template-columns: 170px 1fr; gap: 6px 14px; font-size: 13px; }
+.guide dt { color: var(--text); font-weight: 600; }
+.guide dd { margin: 0; color: var(--muted); }
+.guide ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.guide ul b, .guide dd b { color: var(--text); }
+.guide .hint { margin: 10px 0 0; font-size: 12px; color: var(--dim); }
+.sw-l { color: var(--c-line); } .sw-d { color: var(--c-dc); } .sw-a { color: var(--c-ac); } .sw-e { color: var(--c-ess); }
+@media (max-width: 1000px) { .guide-grid { grid-template-columns: 1fr; } .guide dl { grid-template-columns: 1fr; } }

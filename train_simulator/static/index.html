@@ -39,6 +39,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sim">Simulator</button>
       <button class="tab" data-tab="data">System data</button>
+      <button class="tab" data-tab="guide">How to use</button>
     </nav>
     <div class="status">
       <span class="pill" id="phase-pill">OFF</span>
@@ -87,20 +88,12 @@
           <label>System<select id="sel-system"></select></label>
           <label id="lbl-supply">Supply (EN 50163)<select id="sel-supply"></select><small id="supply-where" class="where"></small></label>
           <label id="lbl-vehicle">Vehicle<select id="sel-vehicle"></select></label>
-          <div class="topo-row">
-            <label>Motor converter
-              <select id="sel-levels">
-                <option value="2">2-level</option>
-                <option value="3">3-level NPC</option>
-              </select>
-            </label>
-            <label>Modulation
-              <select id="sel-pwm">
-                <option value="traction">Async → sync → block</option>
-                <option value="svpwm">Async SVPWM only</option>
-              </select>
-            </label>
-          </div>
+          <label>Motor converter
+            <select id="sel-levels">
+              <option value="2">2-level</option>
+              <option value="3">3-level NPC</option>
+            </select>
+          </label>
           <div class="mods">
             <span class="mods-title">Optional modules</span>
             <label class="check" id="lbl-hf" title="Line filter (DC) or 2f resonant filter (AC)"><input type="checkbox" data-mod="hf"> HF — harmonic filter</label>
@@ -179,9 +172,7 @@
     <section class="charts">
       <div class="card chart-card"><div class="card-head"><h2>DC link &amp; supply</h2><span class="note">last 60 s</span></div><div class="chart" id="c-dc"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Motor converter PWM — phase U</h2><span class="note" id="pwm-note">—</span></div><div class="chart" id="c-pwm"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Converter output voltage &amp; motor currents</h2>
-        <div class="seg small" id="vsel"><button data-v="pole">Leg U–0</button><button data-v="uab">Line U–V</button><button data-v="van" class="on">Phase U–N</button></div></div>
-        <div class="note vnote" id="mot-note">—</div><div class="chart" id="c-mot"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Motor modulation</h2><span class="note" id="mot-note">—</span></div><div class="chart" id="c-mot"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Harmonic spectrum U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Train dynamics</h2><span class="note">last 120 s</span></div><div class="chart" id="c-train"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>DC link &amp; line side — 100 ms</h2><span class="note" id="zoom-note">—</span></div><div class="chart" id="c-zoom"></div></div>
@@ -201,6 +192,115 @@
       <div class="card"><div class="card-head"><h2>Supply voltages — EN 50163</h2></div><table class="dtable" id="d-supplies"></table></div>
       <div class="card"><div class="card-head"><h2>Energy meters</h2></div><table class="dtable" id="d-energy"></table></div>
     </section>
+  </main>
+
+  <main id="tab-guide" class="tabpane guide" hidden>
+    <section class="card guide-intro">
+      <h2>How to use the simulator</h2>
+      <p>The simulator models a complete railway traction converter — from the supply (catenary, third rail, generator, battery or fuel cell)
+        through the DC link to the traction motors and the train. Everything runs inside this page; nothing is sent anywhere.</p>
+      <ol class="quick">
+        <li>Choose a <b>System</b> and <b>Supply</b> in the side panel.</li>
+        <li>Press <b>▶ START</b> and watch the start-up sequence.</li>
+        <li>When the status shows <b>READY</b>, the train accelerates to the target speed.</li>
+        <li>Press <b>■ STOP</b> to brake and switch the system off.</li>
+      </ol>
+    </section>
+
+    <div class="guide-grid">
+      <section class="card">
+        <h3>1 · Configuration (side panel)</h3>
+        <dl>
+          <dt>System</dt><dd>Type of energy supply: DC overhead line, third rail DC, AC overhead line, diesel-electric, battery, hydrogen fuel cell, or auxiliary converter only.</dd>
+          <dt>Supply (EN 50163)</dt><dd>Nominal line voltage. The countries that use it are shown below the selector.</dd>
+          <dt>Vehicle</dt><dd>Metro, EMU, locomotive or regional unit. Sets mass, power, motors and maximum speed.</dd>
+          <dt>Motor converter</dt><dd>2-level or 3-level NPC inverter.</dd>
+          <dt>Optional modules</dt><dd>Tick or untick HF (harmonic filter), VLU (brake chopper), HBU (auxiliary converter), HWR (cooling inverter) and ESC (energy storage) to build your own configuration. The diagram, the sequence and the calculations follow your choice.</dd>
+        </dl>
+        <p class="hint">Configuration can only be changed with the train at standstill.</p>
+      </section>
+
+      <section class="card">
+        <h3>2 · Buttons and operating modes</h3>
+        <dl>
+          <dt>▶ START</dt><dd>Runs the automatic start-up sequence step by step (shown in <i>Start-up sequence</i> with a progress bar per step).</dd>
+          <dt>■ STOP</dt><dd>Brakes the train to a stop, then opens contactors and breakers and lowers the collector.</dd>
+          <dt>⚠ EMERGENCY</dt><dd>Opens everything immediately and applies the emergency brake.</dd>
+          <dt>↺ RESET</dt><dd>Clears faults. Only possible with the train stopped.</dd>
+          <dt>Automatic</dt><dd>The sequence and the speed control are done for you.</dd>
+          <dt>Manual</dt><dd>You operate the equipment yourself by <b>clicking the diagram</b>: pantograph / collector shoes, breaker (HSCB/VCB), ChCt, CtL, line converter, ESC, fuel cell, diesel engine, HBU, HWR and motor converter. Wrong sequences have real consequences — for example, closing CtL without pre-charge trips the breaker.</dd>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h3>3 · Driving and line conditions</h3>
+        <dl>
+          <dt>Target speed</dt><dd>(Automatic) speed the train accelerates to and holds.</dd>
+          <dt>Traction / brake</dt><dd>(Manual) master controller from −100 % (brake) to +100 % (traction). Keyboard ↑ / ↓ also work.</dd>
+          <dt>Direct V/f (test)</dt><dd>(Manual) set the motor frequency and voltage yourself to see slip, torque and current limits.</dd>
+          <dt>Time scale</dt><dd>Speeds up the simulation (1× to 10×).</dd>
+          <dt>Switching frequency</dt><dd>Scales the IGBT switching frequency (50–160 %).</dd>
+          <dt>Line voltage</dt><dd>No-load voltage of the supply, with the EN 50163 limits marked. Low voltage reduces the available power.</dd>
+          <dt>Line receptivity</dt><dd>(DC lines) how much regenerated braking energy the line can take. At 0 % the energy goes to the VLU.</dd>
+          <dt>Gradient, ambient temperature, rail condition</dt><dd>Affect running resistance, HVAC load and adhesion.</dd>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h3>4 · Electrical diagram</h3>
+        <ul>
+          <li>Line colours: <span class="sw-l">orange</span> supply, <span class="sw-d">blue</span> DC link, <span class="sw-a">yellow</span> AC output, <span class="sw-e">green</span> energy storage. Grey means de-energized.</li>
+          <li>Moving dashes show the direction of power flow; the speed of the dashes follows the power.</li>
+          <li>Boxes light up when a converter is running; the VLU turns red when it dissipates energy.</li>
+          <li>The bar next to the DC link capacitor shows its charge; the battery symbol shows the state of charge.</li>
+          <li>Values next to each module show voltages, currents, powers and temperatures.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h3>5 · Indicators</h3>
+        <ul>
+          <li><b>Gauges</b>: train speed, motor frequency, DC link voltage (red zone = VLU / overvoltage) and motor converter power (orange = traction, green = regeneration).</li>
+          <li><b>Tiles</b>: tractive effort and the limit that is active (max effort, power, adhesion, breakdown, current), converter current, pulse pattern, THD, motor power factor and efficiency, temperatures, line or battery data, auxiliaries and VLU.</li>
+          <li><b>Power flow</b>: bars pointing right feed the DC link, bars pointing left take power out of it.</li>
+          <li><b>Event log</b>: every switching action, warning and fault with its time.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h3>6 · Charts</h3>
+        <dl>
+          <dt>DC link &amp; supply</dt><dd>Last 60 s of DC link voltage, supply voltage, supply current and motor converter current.</dd>
+          <dt>Motor converter PWM — phase U</dt><dd>How the switching is generated: reference signal compared with the carrier(s). The note shows the pulse pattern in use (asynchronous, synchronous N-pulse or block).</dd>
+          <dt>Motor modulation</dt><dd>Output voltage of one inverter leg (Leg U–0) with the three motor currents. 2-level: two levels (±Vdc/2). 3-level NPC: three levels (+Vdc/2, 0, −Vdc/2).</dd>
+          <dt>Harmonic spectrum U–V</dt><dd>Frequency content of the line-to-line voltage, with voltage and current THD.</dd>
+          <dt>Train dynamics</dt><dd>Last 120 s of speed, electric effort, mechanical brake and motor converter power.</dd>
+          <dt>DC link &amp; line side — 100 ms</dt><dd>High-resolution view of the DC link: ripple, line filter oscillations, and the AC line voltage and current on AC systems.</dd>
+        </dl>
+        <p class="hint">Drag horizontally on a chart to zoom; double-click to reset. Click a legend item to hide or show a curve.</p>
+      </section>
+
+      <section class="card">
+        <h3>7 · System data tab</h3>
+        <ul>
+          <li><b>System configuration</b> and <b>Converter modules</b>: ratings of every part of the selected system.</li>
+          <li><b>Tractive and braking effort vs speed</b>: maximum effort curves calculated from the model, with the current operating point.</li>
+          <li><b>Supply voltages — EN 50163</b>: voltage limits of all European systems; the selected one is highlighted.</li>
+          <li><b>Energy meters</b>: energy taken from the supply, regenerated, dissipated, used by auxiliaries, battery, hydrogen or diesel consumption, and kWh/km.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h3>8 · Tips</h3>
+        <ul>
+          <li>A red <b>FAULT</b> status and a banner on the train view explain what tripped. Stop the train and press RESET.</li>
+          <li>To see regeneration go to the VLU, set <i>Line receptivity</i> to 0 % and brake.</li>
+          <li>With <b>ESC</b> fitted, switch to Manual and lower the pantograph while running: the battery keeps the train going.</li>
+          <li>Compare 2-level and 3-level in the <i>Motor modulation</i> and <i>Harmonic spectrum</i> charts.</li>
+          <li>The file works offline and can be shared as a single HTML file.</li>
+        </ul>
+      </section>
+    </div>
   </main>
 
   <footer class="credits">Traction Converter Simulator · developed by <b>Rafael Tavares</b></footer>

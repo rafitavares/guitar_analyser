@@ -17,13 +17,7 @@ const data = initData(SIM);
 let G = {};
 const hDC = new History(5, 60);
 const hTrain = new History(5, 120);
-let S = null, lastEvent = 0, lastFrame = performance.now(), cfgKey = "", vSel = "van";
-// which converter voltage the motor chart shows, with the number of levels it has
-const VSEL = {
-  pole: { label: "Leg U–0", desc: "phase leg to DC-link midpoint", levels: (L) => (L === 3 ? "3 levels: +Vdc/2, 0, −Vdc/2" : "2 levels: ±Vdc/2") },
-  uab: { label: "Line U–V", desc: "between two phases", levels: (L) => (L === 3 ? "5 levels: 0, ±Vdc/2, ±Vdc" : "3 levels: 0, ±Vdc") },
-  van: { label: "Phase U–N", desc: "phase to motor star point", levels: (L) => (L === 3 ? "9 levels: 0, ±Vdc/6 … ±2Vdc/3" : "5 levels: 0, ±Vdc/3, ±2Vdc/3") },
-};
+let S = null, lastEvent = 0, lastFrame = performance.now(), cfgKey = "";
 
 // ------------------------------------------------------------ configuration
 function fillSelect(sel, items, value) {
@@ -41,7 +35,6 @@ function buildConfigUI(s) {
   $("#lbl-vehicle").hidden = !sys.vehicles.length;
   if (sys.vehicles.length) fillSelect($("#sel-vehicle"), sys.vehicles.map((k) => [k, TractionSim.VEHICLES[k].label]), c.vehicle);
   $("#sel-levels").value = String(c.levels);
-  $("#sel-pwm").value = c.pwm;
   $("#lbl-ess").hidden = sys.ess !== "optional";
   $$(".mods [data-mod]").forEach((el) => { el.checked = c.mods[el.dataset.mod]; });
   $("#lbl-hf").hidden = !(D.src === "dcline" || (D.src === "acline" && !D.aux));
@@ -78,6 +71,7 @@ function bindControls() {
     $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
     $("#tab-sim").hidden = b.dataset.tab !== "sim";
     $("#tab-data").hidden = b.dataset.tab !== "data";
+    $("#tab-guide").hidden = b.dataset.tab !== "guide";
     window.dispatchEvent(new Event("resize"));
   }));
   $$("#mode-seg button").forEach((b) => b.addEventListener("click", () => cmd("mode", b.dataset.mode)));
@@ -89,7 +83,6 @@ function bindControls() {
   $("#sel-supply").onchange = (e) => cmd("config", { supply: e.target.value });
   $("#sel-vehicle").onchange = (e) => cmd("config", { vehicle: e.target.value });
   $("#sel-levels").onchange = (e) => cmd("config", { levels: +e.target.value });
-  $("#sel-pwm").onchange = (e) => cmd("config", { pwm: e.target.value });
   $("#in-ess").onchange = (e) => cmd("config", { ess: e.target.checked });
   $$(".mods [data-mod]").forEach((el) => (el.onchange = () => {
     cmd("config", { mods: { [el.dataset.mod]: el.checked } });
@@ -114,11 +107,6 @@ function bindControls() {
   $("#in-vf").onchange = (e) => cmd("set", { vf_auto: e.target.checked });
   $("#btn-thr0").onclick = () => { $("#in-thr").value = 0; $("#v-thr").textContent = "0 %"; cmd("set", { throttle: 0 }); };
   $$("#ctrl-seg button").forEach((b) => b.addEventListener("click", () => cmd("set", { ctrl: b.dataset.ctrl })));
-  $$("#vsel button").forEach((b) => b.addEventListener("click", () => {
-    vSel = b.dataset.v;
-    $$("#vsel button").forEach((x) => x.classList.toggle("on", x === b));
-    if (S) renderState(S);
-  }));
   window.addEventListener("keydown", (e) => {
     if (!S || S.mode !== "manual" || ["INPUT", "SELECT"].includes(e.target.tagName)) return;
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -244,10 +232,8 @@ function renderState(s) {
   if (w) {
     charts.pwm.set([w.t, w.pole, w.ref, w.cu, w.cl]);
     $("#pwm-note").textContent = s.mc ? `${D.levels}L · ${s.pulse.label} · f = ${s.fs.toFixed(1)} Hz · m = ${s.m.toFixed(3)}` : "pulses blocked";
-    const vs = VSEL[vSel];
-    charts.mot.u.series[1].label = vs.label;
-    charts.mot.set([w.t, w[vSel], w.ia, w.ib, w.ic]);
-    $("#mot-note").textContent = `${vs.label} (${vs.desc}) — ${D.levels}-level inverter: ${vs.levels(D.levels)}` + (s.mc ? ` · ${s.Is.toFixed(0)} A rms · PF ${s.pf.toFixed(2)}` : "");
+    charts.mot.set([w.t, w.pole, w.ia, w.ib, w.ic]);
+    $("#mot-note").textContent = `Leg U–0 · ${D.levels === 3 ? "3 levels: +Vdc/2, 0, −Vdc/2" : "2 levels: ±Vdc/2"}` + (s.mc ? ` · ${s.Is.toFixed(0)} A rms` : "");
     if (w.spec) {
       charts.spec.set([w.spec.f, w.spec.a]);
       $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD ${w.spec.thd_uab.toFixed(1)} %` + (w.spec.thd_i != null ? ` · current THD ${w.spec.thd_i.toFixed(1)} %` : "");
