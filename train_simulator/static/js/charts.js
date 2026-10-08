@@ -51,7 +51,7 @@ function makeCharts() {
     scales: { x: { time: false }, V: { auto: true }, A: { auto: true } },
     axes: [axisX("t [ms]"), axisY("V", "V"), axisY("A", "A", 1)],
     series: [{ label: "t" },
-      { label: "Phase U–N", stroke: "rgba(61,133,255,.6)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
+      { label: "Voltage", stroke: "rgba(61,133,255,.6)", width: 1, scale: "V", paths: uPlot.paths.stepped({ align: 1 }) },
       { label: "iU", stroke: COL.ia, width: 2, scale: "A" },
       { label: "iV", stroke: COL.ib, width: 2, scale: "A" },
       { label: "iW", stroke: COL.ic, width: 2, scale: "A" }],

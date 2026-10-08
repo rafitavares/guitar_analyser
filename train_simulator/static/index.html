@@ -172,7 +172,9 @@
     <section class="charts">
       <div class="card chart-card"><div class="card-head"><h2>DC link &amp; supply</h2><span class="note">last 60 s</span></div><div class="chart" id="c-dc"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Motor converter PWM — phase U</h2><span class="note" id="pwm-note">—</span></div><div class="chart" id="c-pwm"></div></div>
-      <div class="card chart-card"><div class="card-head"><h2>Motor phase voltage &amp; currents</h2><span class="note" id="mot-note">—</span></div><div class="chart" id="c-mot"></div></div>
+      <div class="card chart-card"><div class="card-head"><h2>Converter output voltage &amp; motor currents</h2>
+        <div class="seg small" id="vsel"><button data-v="pole">Leg U–0</button><button data-v="uab">Line U–V</button><button data-v="van" class="on">Phase U–N</button></div></div>
+        <div class="note vnote" id="mot-note">—</div><div class="chart" id="c-mot"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Harmonic spectrum U–V</h2><span class="note" id="spec-note">—</span></div><div class="chart" id="c-spec"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>Train dynamics</h2><span class="note">last 120 s</span></div><div class="chart" id="c-train"></div></div>
       <div class="card chart-card"><div class="card-head"><h2>DC link &amp; line side — 100 ms</h2><span class="note" id="zoom-note">—</span></div><div class="chart" id="c-zoom"></div></div>

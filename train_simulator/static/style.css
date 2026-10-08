@@ -264,3 +264,4 @@ select { width: 100%; min-width: 0; max-width: 100%; }
 .where { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--dim); }
 .side { min-width: 0; overflow: hidden; }
 #schem { max-height: 560px; }
+.vnote { margin: -2px 0 6px; }

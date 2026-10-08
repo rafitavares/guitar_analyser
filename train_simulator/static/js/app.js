@@ -17,7 +17,13 @@ const data = initData(SIM);
 let G = {};
 const hDC = new History(5, 60);
 const hTrain = new History(5, 120);
-let S = null, lastEvent = 0, lastFrame = performance.now(), cfgKey = "";
+let S = null, lastEvent = 0, lastFrame = performance.now(), cfgKey = "", vSel = "van";
+// which converter voltage the motor chart shows, with the number of levels it has
+const VSEL = {
+  pole: { label: "Leg U–0", desc: "phase leg to DC-link midpoint", levels: (L) => (L === 3 ? "3 levels: +Vdc/2, 0, −Vdc/2" : "2 levels: ±Vdc/2") },
+  uab: { label: "Line U–V", desc: "between two phases", levels: (L) => (L === 3 ? "5 levels: 0, ±Vdc/2, ±Vdc" : "3 levels: 0, ±Vdc") },
+  van: { label: "Phase U–N", desc: "phase to motor star point", levels: (L) => (L === 3 ? "9 levels: 0, ±Vdc/6 … ±2Vdc/3" : "5 levels: 0, ±Vdc/3, ±2Vdc/3") },
+};
 
 // ------------------------------------------------------------ configuration
 function fillSelect(sel, items, value) {
@@ -101,6 +107,11 @@ function bindControls() {
   $("#in-vf").onchange = (e) => cmd("set", { vf_auto: e.target.checked });
   $("#btn-thr0").onclick = () => { $("#in-thr").value = 0; $("#v-thr").textContent = "0 %"; cmd("set", { throttle: 0 }); };
   $$("#ctrl-seg button").forEach((b) => b.addEventListener("click", () => cmd("set", { ctrl: b.dataset.ctrl })));
+  $$("#vsel button").forEach((b) => b.addEventListener("click", () => {
+    vSel = b.dataset.v;
+    $$("#vsel button").forEach((x) => x.classList.toggle("on", x === b));
+    if (S) renderState(S);
+  }));
   window.addEventListener("keydown", (e) => {
     if (!S || S.mode !== "manual" || ["INPUT", "SELECT"].includes(e.target.tagName)) return;
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -226,8 +237,10 @@ function renderState(s) {
   if (w) {
     charts.pwm.set([w.t, w.pole, w.ref, w.cu, w.cl]);
     $("#pwm-note").textContent = s.mc ? `${D.levels}L · ${s.pulse.label} · f = ${s.fs.toFixed(1)} Hz · m = ${s.m.toFixed(3)}` : "pulses blocked";
-    charts.mot.set([w.t, w.van, w.ia, w.ib, w.ic]);
-    $("#mot-note").textContent = s.mc ? `${s.Is.toFixed(0)} A rms · PF ${s.pf.toFixed(2)} · slip ${s.fsl.toFixed(2)} Hz` : "—";
+    const vs = VSEL[vSel];
+    charts.mot.u.series[1].label = vs.label;
+    charts.mot.set([w.t, w[vSel], w.ia, w.ib, w.ic]);
+    $("#mot-note").textContent = `${vs.label} (${vs.desc}) — ${D.levels}-level inverter: ${vs.levels(D.levels)}` + (s.mc ? ` · ${s.Is.toFixed(0)} A rms · PF ${s.pf.toFixed(2)}` : "");
     if (w.spec) {
       charts.spec.set([w.spec.f, w.spec.a]);
       $("#spec-note").textContent = `fundamental ${w.spec.fund_uab.toFixed(0)} V · THD ${w.spec.thd_uab.toFixed(1)} %` + (w.spec.thd_i != null ? ` · current THD ${w.spec.thd_i.toFixed(1)} %` : "");
