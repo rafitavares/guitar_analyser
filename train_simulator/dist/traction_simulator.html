@@ -325,55 +325,54 @@ select { width: 100%; min-width: 0; max-width: 100%; }
 #schem .led.on { fill: var(--c-ok); }
 #schem .led.bad { fill: var(--c-bad); }
 
-/* ---------- Trip Lab ---------- */
-.lab-top { display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.lab-top .lab-intro { max-width: 900px; margin-top: 6px; font-size: 12.5px; }
-.lab-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
-.lab-cat { display: grid; gap: 16px; min-width: 0; }
-.lab-side { display: grid; gap: 16px; position: sticky; top: 76px; }
-.lab-row { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1.6fr) 150px; gap: 12px; align-items: center; padding: 10px 6px; border-top: 1px solid #2c2c2c; }
-.lab-row:first-of-type { border-top: 0; }
-.lab-row.off { opacity: .45; }
-.lab-row.armed { background: rgba(255, 115, 0, .07); border-radius: 10px; }
-.lab-row.active { background: rgba(240, 48, 64, .1); border-radius: 10px; }
-.lab-info { display: grid; gap: 2px; min-width: 0; }
-.lab-info b { font-size: 13px; }
-.lab-info small { font-size: 11.5px; color: var(--muted); }
-.lab-info small.dim { color: var(--dim); }
-.lab-info small.why { color: var(--c-line); }
-.lab-info .star { color: var(--c-ac); font-size: 11px; }
-.lab-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 8px; }
-.lab-opts label { display: grid; gap: 2px; font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; min-width: 0; }
-.lab-opts select { padding: 5px 7px; font-size: 12px; }
-.lab-act { display: grid; gap: 5px; justify-items: stretch; }
-.lab-act .inject { background: linear-gradient(180deg, #F03040, #B0000A); border-color: #F03040; color: #fff; }
-.lab-st { font-size: 10.5px; color: var(--c-line); text-align: center; }
-.lab-row.active .lab-st { color: #ff8a95; }
-.lv { display: grid; grid-template-columns: 110px 1fr 108px; gap: 10px; align-items: center; font-size: 12px; margin: 7px 0; }
-.lv span { color: var(--muted); }
-.lv b { text-align: right; font-size: 12px; }
+/* ---------- Trip Lab (below the diagram) ---------- */
+.lab { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+.lab .al-head h3 { color: var(--c-ac); }
+.lab-shut { margin-left: auto; padding: 0; color: var(--text); }
+.lab-form { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)) auto auto; gap: 8px; align-items: end; }
+.lab-form label { display: grid; gap: 3px; font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; min-width: 0; }
+.lab-form select { padding: 6px 8px; font-size: 12.5px; }
+.lab-form .inject { background: linear-gradient(180deg, #F03040, #B0000A); border-color: #F03040; color: #fff; white-space: nowrap; }
+.lab-desc { margin: 8px 0; font-size: 12px; color: var(--muted); }
+.lab-desc .dim { color: var(--dim); }
+.lab-inj { display: grid; grid-template-columns: minmax(180px, 1.3fr) 150px minmax(120px, 2fr) 190px auto; gap: 12px; align-items: center; padding: 6px 10px; border-radius: 10px; margin: 5px 0;
+  background: rgba(255, 115, 0, .08); border: 1px solid rgba(255, 115, 0, .35); font-size: 12px; }
+.lab-inj.active { background: rgba(240, 48, 64, .08); border-color: rgba(240, 48, 64, .4); }
+.lab-inj.trip { background: rgba(240, 48, 64, .18); border-color: var(--c-bad); }
+.lab-inj .st { color: var(--c-line); font-size: 11px; }
+.lab-inj.active .st, .lab-inj.trip .st { color: #ff8a95; font-weight: 700; }
+.lab-inj .val { text-align: right; }
+.lab-more { margin-top: 8px; }
+.lab-more summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 0; }
+.lab-more[open] summary { margin-bottom: 8px; }
 .lvbar { position: relative; height: 9px; border-radius: 5px; background: var(--bg2); border: 1px solid var(--border); }
-.lvbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--c-dc); transition: width .15s; }
+.lvbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--c-line); transition: width .15s; }
 .lvbar.hot i { background: var(--c-bad); }
-.lvbar em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--c-ac); border-radius: 1px; }
-.lv-state { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; }
-.lv-state span { color: var(--muted); }
-.lv-box { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--bg2); border: 1px solid var(--border); }
-.ebst.ok { color: var(--c-ok); } .ebst.bad { color: var(--c-bad); }
-table.ct { width: 100%; border-collapse: collapse; font-size: 12px; margin: 4px 0; }
-table.ct th { color: var(--dim); font-weight: 500; font-size: 10.5px; text-align: center; }
-table.ct td { text-align: center; padding: 3px; }
-table.ct td:first-child { text-align: left; font-weight: 600; }
-i.led { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #3a3a3a; border: 1px solid #555; }
-i.led.on { background: var(--c-ok); border-color: #6BE07A; box-shadow: 0 0 6px rgba(30, 195, 55, .6); }
-i.led.bad { background: var(--c-bad); border-color: #ff8a95; box-shadow: 0 0 6px rgba(240, 48, 64, .7); }
-.lab-bottom { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
-.tbl-wrap { max-height: 420px; overflow: auto; }
+.lvbar em { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -2px; background: var(--c-bad); border-radius: 1px; }
+.lab-bottom { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; margin-top: 10px; }
+.tbl-wrap { max-height: 360px; overflow: auto; }
 .dtable td.dim { color: var(--dim); }
-@media (max-width: 1300px) {
-  .lab-main, .lab-bottom { grid-template-columns: 1fr; }
-  .lab-side { position: static; }
+/* fault markers in the diagram */
+#schem .markers { pointer-events: none; }
+#schem .mk .ring { fill: none; stroke-width: 3; }
+#schem .mk .pulse { fill: none; stroke-width: 2; transform-origin: 0 0; }
+#schem .mk.armed .ring { stroke: var(--c-line); stroke-dasharray: 6 4; }
+#schem .mk.armed .pulse { display: none; }
+#schem .mk.active .ring, #schem .mk.trip .ring { stroke: var(--c-bad); }
+#schem .mk.active .pulse { stroke: var(--c-bad); animation: mkpulse 1s ease-out infinite; }
+#schem .mk.trip .ring { fill: rgba(240, 48, 64, .18); stroke-width: 4; }
+#schem .mk.trip .pulse { display: none; }
+#schem .mk .tag { fill: rgba(20, 20, 20, .92); stroke: var(--c-bad); stroke-width: 1.2; }
+#schem .mk.armed .tag { stroke: var(--c-line); }
+#schem .mk.trip .tag { fill: #7a0010; }
+#schem .mk text.t1 { fill: #fff; font: 700 11px system-ui, sans-serif; }
+#schem .mk text.t2 { fill: #ffd2da; font: 11px var(--mono); }
+#schem .mk.armed text.t2 { fill: #ffc999; }
+@keyframes mkpulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.8); opacity: 0; } }
+@media (max-width: 1100px) {
+  .lab-form { grid-template-columns: 1fr 1fr; }
+  .lab-form .lab-trip { grid-column: 1 / -1; }
+  .lab-inj, .lab-bottom { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
   .al-row { grid-template-columns: 96px minmax(0, 1fr); }
@@ -421,7 +420,6 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sim">Simulator</button>
       <button class="tab" data-tab="data">System data</button>
-      <button class="tab" data-tab="lab">Trip Lab</button>
       <button class="tab" data-tab="guide">How to use</button>
     </nav>
     <div class="status">
@@ -452,6 +450,33 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
           </div>
         </div>
         <svg id="schem" viewBox="0 0 1400 500"></svg>
+        <div class="lab">
+          <div class="al-head">
+            <h3>⚡ Trip Lab</h3>
+            <span class="note" id="lab-count"></span>
+            <label class="check lab-shut"><input type="checkbox" id="lab-shut" checked> Protective shutdown of the whole system on trip</label>
+          </div>
+          <div class="lab-form">
+            <label class="lab-trip">Fault to force<select id="lab-trip"></select></label>
+            <label id="lab-unit-l">Location<select id="lab-unit"></select></label>
+            <label id="lab-form-l">Form<select id="lab-form"></select></label>
+            <label>When<select id="lab-trig"></select></label>
+            <label>Trip class<select id="lab-cls"></select></label>
+            <button class="btn small inject" id="lab-go">⚡ Force fault</button>
+            <button class="btn ghost small" id="lab-clear">✕ Remove all</button>
+          </div>
+          <p class="lab-desc" id="lab-desc"></p>
+          <div id="lab-active"></div>
+          <details class="lab-more">
+            <summary>Trip recorder, trip history and trip classes</summary>
+            <div class="card-head"><h2>Trip recorder</h2><span class="note" id="rec-note">waiting for a trip — 4 s before and 2 s after are frozen</span></div>
+            <div class="chart" id="c-rec"></div>
+            <div class="lab-bottom">
+              <div><div class="card-head"><h2>Trip history</h2><span class="note">newest first</span></div><div class="tbl-wrap"><table class="dtable" id="lab-hist"></table></div></div>
+              <div><div class="card-head"><h2>Trip classes and reactions</h2></div><div class="tbl-wrap"><table class="dtable" id="lab-classes"></table></div></div>
+            </div>
+          </details>
+        </div>
         <div class="alarms">
           <div class="al-head">
             <h3>Trips &amp; warnings</h3>
@@ -584,55 +609,6 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
     </section>
   </main>
 
-  <main id="tab-lab" class="tabpane" hidden>
-    <section class="card lab-top">
-      <div>
-        <h2>Trip Lab</h2>
-        <p class="note lab-intro">Inject faults into the running system and watch how the protection detects them, which trip class is raised and how the converter reacts.
-          Choose <b>when</b> the fault appears, <b>how</b> it develops (step, slow ramp or intermittent bursts) and which <b>class</b> it is mapped to.
-          <span id="lab-sys"></span></p>
-      </div>
-      <div class="lab-btns">
-        <button class="btn start small" id="lab-start">▶ START</button>
-        <button class="btn stop small" id="lab-stop">■ STOP</button>
-        <button class="btn ghost small" id="lab-reset">↺ RESET</button>
-        <button class="btn ghost small" id="lab-ess-on">ESS connect</button>
-        <button class="btn ghost small" id="lab-ess-off">ESS disconnect</button>
-        <button class="btn ghost small" id="lab-clear">✕ Remove all faults</button>
-      </div>
-    </section>
-
-    <section class="lab-main">
-      <div class="lab-cat" id="lab-cat"></div>
-      <aside class="lab-side">
-        <div class="card">
-          <div class="card-head"><h2>Live status</h2><span class="pill" id="lab-phase">OFF</span></div>
-          <div id="lab-live"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Active trips &amp; warnings</h2></div>
-          <div class="al-list compact" id="lab-alarms"></div>
-        </div>
-      </aside>
-    </section>
-
-    <section class="card">
-      <div class="card-head"><h2>Trip recorder</h2><span class="note" id="rec-note">waiting for a trip — 4 s before and 2 s after are frozen</span></div>
-      <div class="chart" id="c-rec"></div>
-    </section>
-
-    <section class="lab-bottom">
-      <div class="card">
-        <div class="card-head"><h2>Trip history</h2><span class="note">newest first</span></div>
-        <div class="tbl-wrap"><table class="dtable" id="lab-hist"></table></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>Trip classes and reactions</h2><span class="note">generic protection concept used by the simulator</span></div>
-        <div class="tbl-wrap"><table class="dtable" id="lab-classes"></table></div>
-      </div>
-    </section>
-  </main>
-
   <main id="tab-guide" class="tabpane guide" hidden>
     <section class="card guide-intro">
       <h2>How to use the simulator</h2>
@@ -730,13 +706,15 @@ var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="heigh
       </section>
 
       <section class="card">
-        <h3>8 · Trips &amp; warnings, Trip Lab</h3>
+        <h3>8 · Trip Lab, trips &amp; warnings</h3>
         <ul>
-          <li>The panel below the electrical diagram lists every active <b>trip</b> (class badge, fault, time, operating state, how to reset) and every active <b>warning</b>. Faulty modules are outlined in red in the diagram.</li>
-          <li>The <b>Trip Lab</b> tab injects faults: ESS connection box (CtPos, CtNeg, CtCh, welded contactor, pre-charge, tripline, BMS), converters (overcurrent, IGBT desaturation, earth fault, DC-link over/undervoltage and short circuit, MC and LC/GC faults) and auxiliaries (overload, overtemperature, fan).</li>
-          <li>For each fault choose <b>when</b> it appears (immediately, after a delay, during traction or braking, in an ESS state), <b>how</b> it develops (step, ramp with a warning first, or short bursts that are filtered and counted) and the <b>trip class</b>.</li>
-          <li>Contactor and pre-charge defects are <b>latent</b>: they are detected at the next command — start the system, or press STOP / ESS disconnect.</li>
-          <li>The <b>trip recorder</b> freezes 4 s before and 2 s after the latest trip; the <b>trip history</b> keeps the last 40 events.</li>
+          <li>The <b>Trip Lab</b> box below the electrical diagram forces a fault. The list only contains faults that can happen in the selected configuration (ESS faults only with an ESS, line converter faults only on AC or diesel, and so on).</li>
+          <li>Choose <b>when</b> the fault appears, <b>how</b> it develops (step, slow ramp, or short bursts that are filtered and counted) and the <b>trip class</b>, then press <b>⚡ Force fault</b>.</li>
+          <li>The fault is marked in the diagram where it happens (orange = armed, red pulsing = active) with its live value against the trip threshold; the same bar is shown in the Trip Lab box.</li>
+          <li>When the threshold is reached the protection trips. With <b>Protective shutdown</b> ticked (default) the whole system is switched off: pulses blocked, breakers and contactors opened, collector lowered, train braked to standstill. Untick it to see the individual reaction of each trip class instead.</li>
+          <li>Contactor and pre-charge defects are latent: they are detected at the next command — press START, STOP or disconnect the ESS.</li>
+          <li><b>Trips &amp; warnings</b> lists the active trips (class, fault, time, operating state, how to reset) and warnings. Remove the fault, stop the train and press RESET to restart.</li>
+          <li>Open <i>Trip recorder, trip history and trip classes</i> for the 4 s before / 2 s after recording, the event history and the reaction of each class.</li>
         </ul>
       </section>
 
@@ -1175,7 +1153,7 @@ function debounce(fn, ms) {
       throttle: 0, ctrl: "throttle", f_cmd: 0, m_cmd: 0.5, vf_auto: true,
       t_hs: 25, t_j: 25, t_mot: 25, t_vlu: 25, f_hwr: 0, p_air: 9.5, comp: false, uv_t: 0,
       faults: [], warns: {}, spark: 0, emergency: false, imax: 0,
-      sys3: null, keepCol: false, fastDis: false, vdc_prev: 0, i_mc_meas: 0, i_earth: 0, aux_pu: 0, aux_i2t: 0, t_aux: 25, f_hwr_cmd: 0, fan_t: 0,
+      sys3: null, keepCol: false, protShut: false, fastDis: false, vdc_prev: 0, i_mc_meas: 0, i_earth: 0, aux_pu: 0, aux_i2t: 0, t_aux: 25, f_hwr_cmd: 0, fan_t: 0,
       eb: newBox(),
       E: { src: 0, regen: 0, vlu: 0, aux: 0, trac: 0, brake: 0, batOut: 0, batIn: 0, h2: 0, fuel: 0, dist: 0 },
     };
@@ -1203,6 +1181,7 @@ function debounce(fn, ms) {
       this.restarts = [];
       this.an = {};
       this.rec = { buf: [], frozen: null, ver: 0, pending: null };
+      this.labShutdown = true; // any trip → protective shutdown of the whole system
       this.rebuild();
     }
 
@@ -1262,6 +1241,7 @@ function debounce(fn, ms) {
       this.log(`${cls} · ${msg}`, "fault");
       this.record(code, cls, msg, unit, f.state);
       this.react(cls, unit, code);
+      if (this.labShutdown && cls !== "EMERGENCY") this.protShutdown(f);
       if (!this.rec.pending) this.rec.pending = { f, tEnd: s.t + 2 };
     }
     fault(msg, code = "fault", cls = "Trip_SYS_2", unit = "sys") { this.trip(code, msg, unit, cls); }
@@ -1323,6 +1303,22 @@ function debounce(fn, ms) {
       }
     }
 
+    // protective shutdown: the whole system is switched off after a trip (Trip Lab option)
+    protShutdown(f) {
+      const s = this.s, D = this.D;
+      if (s.protShut) return;
+      s.protShut = true;
+      s.mc = s.lc = s.esc = s.hbu = s.hbu_out = s.hwr = false;
+      if (s.fc !== "off") s.fc = "off";
+      if (!(D.src === "battery" || D.src === "fuelcell")) s.brk = false;
+      s.ctl = false; s.chct = false; s.iL = 0; s.i2 = 0;
+      this.essOpen(true);
+      s.col_cmd = false; s.sys3 = null; s.keepCol = false;
+      if (s.eng !== "off") s.eng = "off";
+      if (s.mode === "auto") { s.phase = "TRIPPED"; s.pt = 0; }
+      this.log(`Protective shutdown after ${f.cls} — all converters blocked, breakers and contactors open, collector lowered`, "fault");
+    }
+
     // controlled shutdown (OFF classes): brake electrically if moving, then the normal shutdown sequence
     offSeq(lowerCol) {
       const s = this.s;
@@ -1375,6 +1371,7 @@ function debounce(fn, ms) {
       } else if (cmd === "inject") this.inject(value || {});
       else if (cmd === "clear_inj") this.clearInj(value);
       else if (cmd === "ess") this.essRequest(!!value);
+      else if (cmd === "lab_shutdown") { this.labShutdown = !!value; this.log(`Trip Lab: protective shutdown ${value ? "ON" : "OFF (class reactions only)"}`); }
       else if (cmd === "toggle") this.toggle(String(value));
       else if (cmd === "set") this.set(value || {});
       else if (cmd === "config") this.config(value || {});
@@ -1715,7 +1712,7 @@ function debounce(fn, ms) {
     reset() {
       const s = this.s, D = this.D;
       // unit-level trips: acknowledge and restart only the affected units
-      const sysLevel = s.faults.some((f) => SYS_LEVEL.includes(f.cls) || (f.cls === "Trip_LC" && D.src === "acline")) || s.phase === "EMERGENCY" || s.phase === "TRIPPED";
+      const sysLevel = s.protShut || s.faults.some((f) => SYS_LEVEL.includes(f.cls) || (f.cls === "Trip_LC" && D.src === "acline")) || s.phase === "EMERGENCY" || s.phase === "TRIPPED";
       if (s.faults.length && !sysLevel) {
         const run = s.mode === "auto" && s.phase === "RUN";
         for (const f of s.faults) {
@@ -2322,6 +2319,7 @@ function debounce(fn, ms) {
       d.hist = this.hist.slice(-40);
       d.inj = Object.values(this.inj);
       d.recVer = this.rec.ver;
+      d.labShutdown = this.labShutdown;
       d.sysState = this.stateOf("sys");
       if (wave) { d.wave = this.waves(); d.zoom = this.zoom(); }
       return d;
@@ -2894,7 +2892,7 @@ class Schematic {
     this.key = D.key;
     const svg = this.svg;
     svg.innerHTML = "";
-    this.w = {}; this.sw = {}; this.t = {}; this.box = {};
+    this.w = {}; this.sw = {}; this.t = {}; this.box = {}; this.anchor = {};
     const YP = 170, YN = 340, BY0 = 205, BY1 = 305;
     const g = svgEl("g", {}, svg);
     const defs = svgEl("defs", {}, svg);
@@ -2917,6 +2915,7 @@ class Schematic {
       text(x + 28, below ? y + 24 : y - 22, label, "ttl", "middle", grp);
       if (sub) text(x + 28, y + (below ? 38 : 24), sub, "small", "middle", grp);
       this.sw[id] = { grp, lev };
+      this.anchor[id] = [x + 28, y];
     };
     // converter box: diagonal + symbols (sa top-left, sb bottom-right)
     const conv = (id, x, y, w, h, title, sa, sb, toggleId) => {
@@ -2928,6 +2927,7 @@ class Schematic {
       text(x + w - 14, y + h - 10, sb, "symt", "middle", grp);
       text(x + w / 2, y - 8, title, "ttl", "middle", grp);
       this.box[id] = r;
+      this.anchor[id] = [x + w / 2, y + h / 2];
       return grp;
     };
     const ground = (x, y) => svgEl("path", { d: `M${x - 14},${y} L${x + 14},${y} M${x - 9},${y + 6} L${x + 9},${y + 6} M${x - 4},${y + 12} L${x + 4},${y + 12}`, class: "sym" }, g);
@@ -3025,6 +3025,7 @@ class Schematic {
     } else {
       // battery (main ESS) feeding the DC link through the ESC
       this.batFill = this.battery(g, 26, 200, "bat");
+      this.anchor.bat = [48, 245];
       text(70, 190, D.bat.chem + " battery", "ttl");
       text(14, 318, `${(D.bat.E / 1e3).toFixed(0)} kWh`, "small", "start");
       this.t.bat = text(14, 334, "", "val", "start");
@@ -3085,6 +3086,7 @@ class Schematic {
         svgEl("rect", { x: cx + 26, y: 210, width: 10, height: 92, rx: 3, fill: "#1a1a1a", stroke: "#444" }, g);
         this.capFill = svgEl("rect", { x: cx + 26, y: 302, width: 10, height: 0, rx: 3, fill: "url(#capgrad)", class: "capfill" }, g);
         text(cx, BY0 - 8, "DC link", "ttl");
+        this.anchor.dcl = [cx, 255]; this.anchor.earth = [cx + 64, YN];
         text(cx, YN + 20, `${(D.C * 1e3).toFixed(1)} mF`, "small");
       } else if (m === "vlu") {
         leg("vlu", cx);
@@ -3120,7 +3122,9 @@ class Schematic {
         text(cx - 22 + i * 22, 398, l, "small", "middle", eg);
       });
       this.t.ebox = text(cx + 46, 382, "", "val", "start");
+      this.anchor.ebox = [cx, 378];
       this.batFill = this.battery(g, cx - 22, 414, "bat");
+      this.anchor.bat = [cx, 459];
       text(cx, 524, `${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh`, "small");
       this.t.bat = text(cx, 540, "", "val");
     }
@@ -3149,6 +3153,7 @@ class Schematic {
       this.fanG = svgEl("g", { transform: `translate(${cx + 62},${yOut - 30})` }, g);
       for (let k = 0; k < 3; k++) svgEl("path", { d: "M0,0 C6,-6 6,-14 0,-16 C-4,-12 -4,-6 0,0", fill: "#9a9a9a", transform: `rotate(${k * 120})` }, this.fanG);
       text(cx + 62, yOut + 8, "cooling fans", "small");
+      this.anchor.fan = [cx + 62, yOut - 30];
       this.t.hwr = text(cx + 62, yOut + 24, "", "val");
     }
     if (xs.mc) {
@@ -3175,6 +3180,48 @@ class Schematic {
     // fit the view box to the drawing so it uses the full card width
     const bb = g.getBBox();
     svg.setAttribute("viewBox", `${bb.x - 10} ${bb.y - 10} ${bb.width + 150} ${bb.height + 40}`);
+    this.mk = svgEl("g", { class: "markers" }, g); // fault location markers (Trip Lab)
+  }
+
+  // where a fault is located in the diagram
+  anchorFor(code, unit, D) {
+    const A = this.anchor, bm = D.src === "battery" || D.src === "fuelcell";
+    switch (code) {
+      case "ctpos_noclose": case "ctpos_noopen": case "welded": case "ctpos_unexp_open": case "ctpos_unexp_close": return bm ? A.ctpos : A.ebox;
+      case "ctneg_noclose": case "ctneg_noopen": case "ctneg_unexp_open": case "ctneg_unexp_close": return bm ? A.ctneg : A.ebox;
+      case "ctch_unexp_close": case "ctch_unexp_open": case "ctch_noclose": case "ctch_noopen": return bm ? A.chct : A.ebox;
+      case "precharge_timeout": case "voltage_no_rise": return unit === "pre" || bm ? A.chct : A.ebox;
+      case "ess_tripline": case "bms_fault": case "bat_empty": return A.bat;
+      case "mc_oc": case "mc_fault": return A.mc;
+      case "igbt_desat": return { mc: A.mc, lc: A.lc, ess: A.esc, hbu: A.hbu, hwr: A.hwr }[unit] || A.mc;
+      case "earth_fault": return A.earth;
+      case "dcl_ov": case "dcl_uv": case "dcl_short": return A.dcl;
+      case "lc_fault": return A.lc;
+      case "aux_ovl": case "aux_ot": return A.hbu || A.hwr;
+      case "fan_fail": return A.fan || A.hwr;
+      case "line_oc": return A.brk;
+      default: return null;
+    }
+  }
+
+  markers(s) {
+    if (!this.mk) return;
+    const D = s.D, seen = new Set(), out = [];
+    const put = (code, unit, cls, label, sub) => {
+      const a = this.anchorFor(code, unit, D);
+      if (!a || seen.has(a)) return;
+      seen.add(a);
+      const [x, y] = a;
+      out.push(`<g class="mk ${cls}" transform="translate(${x},${y})"><circle r="26" class="ring"/><circle r="26" class="pulse"/>
+        <g transform="translate(30,-30)"><rect x="0" y="-13" rx="5" height="${sub ? 34 : 19}" width="${Math.max(label.length, (sub || "").length) * 6.6 + 14}" class="tag"/>
+        <text x="7" y="1" class="t1">${label}</text>${sub ? `<text x="7" y="16" class="t2">${sub}</text>` : ""}</g></g>`);
+    };
+    for (const f of s.faults) put(f.code, f.unit, "trip", "TRIP · " + (f.cls === "Trip_LC" && D.src === "genset" ? "Trip_GC" : f.cls), tripName(f.code));
+    for (const j of s.inj) {
+      const m = labMeasure(j.id, s);
+      put(j.id, j.unit, j.st === "active" ? "active" : "armed", "⚡ " + tripName(j.id), j.st === "active" ? (m ? m.txt : "fault active") : "armed · " + TractionSim.TRIGGERS[j.trig].toLowerCase());
+    }
+    this.mk.innerHTML = out.join("");
   }
 
   battery(g, x, y, id) {
@@ -3314,6 +3361,7 @@ class Schematic {
     }
     this.rotor = (this.rotor + 360 * (s.rpm / 60) * dt * 0.05) % 360;
     if (this.rotors) for (const r of this.rotors) r.setAttribute("transform", r.getAttribute("transform").replace(/rotate\([^)]*\)|$/, ` rotate(${this.rotor})`).trim());
+    this.markers(s);
     this.fan = (this.fan + 360 * s.f_hwr * dt * 0.05) % 360;
     if (this.fanG) this.fanG.setAttribute("transform", this.fanG.getAttribute("transform").replace(/rotate\([^)]*\)|$/, ` rotate(${this.fan})`).trim());
   }
@@ -3556,10 +3604,30 @@ function renderAlarms(el, s) {
   return { trips: faults.length, warns: Object.keys(s.warns).length };
 }
 
+// live value of an injected fault against its trip threshold (frac 1 = trip)
+function labMeasure(id, s) {
+  const D = s.D, f0 = (x) => x.toFixed(0), f2 = (x) => x.toFixed(2);
+  const r = (v, lim, u, fmt = f0) => ({ frac: v / lim, txt: `${fmt(v)} / ${fmt(lim)} ${u}` });
+  switch (id) {
+    case "mc_oc": return r(s.i_mc_meas, D.Imc_trip, "A");
+    case "earth_fault": return r(s.i_earth, 2, "A", f2);
+    case "dcl_ov": return r(s.vdc, D.Vovp, "V");
+    case "dcl_uv": return { frac: Math.max(0, (D.vdc - s.vdc) / Math.max(1, D.vdc - D.Vuv)), txt: `${f0(s.vdc)} V → limit ${f0(D.Vuv)} V` };
+    case "aux_ovl": return { frac: s.aux_i2t / 2.5, txt: `load ${f0(s.aux_pu * 100)} % · curve ${f0(s.aux_i2t / 2.5 * 100)} %` };
+    case "aux_ot": return r(s.t_aux, 95, "°C");
+    case "fan_fail": return { frac: s.fan_t / 2, txt: `${s.f_hwr.toFixed(1)} / ${s.f_hwr_cmd.toFixed(1)} Hz` };
+    case "precharge_timeout": case "voltage_no_rise": return { frac: 0, txt: "latent — detected at the next pre-charge" };
+    case "ctpos_noclose": case "ctneg_noclose": return { frac: 0, txt: "latent — detected at the next close command" };
+    case "ctpos_noopen": case "ctneg_noopen": case "welded": return { frac: 0, txt: "latent — detected at the next opening" };
+    default: return null;
+  }
+}
+
 </script>
   <script>
-// Trip Lab: fault injection, live protection status, trip recorder and history. Author: Rafael Tavares
-const LAB_GROUPS = { ess: "ESS / connection box", conv: "Traction converter — MC / LC / GC", aux: "Auxiliary converter — AUX" };
+// Trip Lab panel below the electrical diagram: force a fault, follow it in the diagram until it trips.
+// Author: Rafael Tavares
+const LAB_GROUPS = { ess: "Pre-charge / ESS connection box", conv: "Traction converter — MC / LC / GC", aux: "Auxiliary converter — AUX" };
 const LAB_FORMS = { step: "Step", ramp: "Ramp (slow rise)", intermittent: "Intermittent bursts" };
 
 class TripLab {
@@ -3567,10 +3635,9 @@ class TripLab {
     this.sim = sim;
     this.key = "";
     this.recVer = -1;
-    this.histN = -1;
-    this.rows = {};
+    this.histSig = "";
     this.chart = new Chart($("#c-rec"), {
-      height: 260,
+      height: 240,
       scales: { x: { time: false }, V: { auto: true }, A: { auto: true }, E: { auto: true, range: (u, a, b) => [0, Math.max(3, b * 1.1)] } },
       axes: [axisX("time from trip [s]"), axisY("V", "V"), axisY("A", "A", 1), axisY("earth A", "E", 1, { size: 50 })],
       series: [{ label: "t", value: val("s", 2) },
@@ -3587,126 +3654,70 @@ class TripLab {
         c.beginPath(); c.moveTo(x, u.bbox.top); c.lineTo(x, u.bbox.top + u.bbox.height); c.stroke(); c.restore();
       }] },
     }, 6);
-    this.classTable();
-    const cmd = (c, v) => this.sim.command(c, v);
-    $("#lab-start").onclick = () => cmd("start");
-    $("#lab-stop").onclick = () => cmd("stop");
-    $("#lab-reset").onclick = () => cmd("reset");
-    $("#lab-ess-on").onclick = () => cmd("ess", true);
-    $("#lab-ess-off").onclick = () => cmd("ess", false);
-    $("#lab-clear").onclick = () => cmd("clear_inj", "all");
-  }
-
-  classTable() {
-    const C = TractionSim.TRIP_CLASSES;
-    const rs = { standstill: "RESET at standstill", reset: "RESET (unit restarts)", auto: "automatic" };
-    $("#lab-classes").innerHTML = "<tr><th>Class</th><th>Typical condition</th><th>Reaction</th><th>Reset</th></tr>" +
+    const C = TractionSim.TRIP_CLASSES, rs = { standstill: "RESET at standstill", reset: "RESET (unit restarts)", auto: "automatic" };
+    $("#lab-classes").innerHTML = "<tr><th>Class</th><th>Typical condition</th><th>Reaction (protective shutdown off)</th><th>Reset</th></tr>" +
       Object.entries(C).map(([k, c]) => `<tr><td><span class="badge ${TRIP_BADGE[k]}">${k === "Trip_LC" ? "Trip_LC / GC" : k}</span></td><td>${c.cond}</td><td>${c.react}</td><td>${rs[c.reset]}</td></tr>`).join("");
+    $("#lab-trip").onchange = () => this.fill();
+    $("#lab-unit").onchange = () => { if ($("#lab-trip").value === "igbt_desat") $("#lab-cls").value = TractionSim.UNIT_CLS[$("#lab-unit").value]; };
+    $("#lab-go").onclick = () => {
+      const id = $("#lab-trip").value, T = TRIP_INDEX[id];
+      this.sim.command("inject", { id, unit: T.units ? $("#lab-unit").value : undefined, form: T.forms ? $("#lab-form").value : undefined, trig: $("#lab-trig").value, cls: $("#lab-cls").value });
+    };
+    $("#lab-clear").onclick = () => this.sim.command("clear_inj", "all");
+    $("#lab-shut").onchange = (e) => this.sim.command("lab_shutdown", e.target.checked);
   }
 
-  // catalog of injectable faults for the current system
+  // only the faults that exist in the selected configuration are offered
   build(S) {
-    const D = S.D;
-    if (D.key === this.key) return;
-    this.key = D.key;
-    const Dfull = this.sim.D;
-    const root = $("#lab-cat");
-    root.innerHTML = "";
-    this.rows = {};
-    for (const [g, title] of Object.entries(LAB_GROUPS)) {
-      const card = document.createElement("div");
-      card.className = "card lab-group";
-      card.innerHTML = `<div class="card-head"><h2>${title}</h2></div>`;
-      for (const T of TractionSim.TRIPS.filter((x) => x.group === g)) card.appendChild(this.row(T, Dfull));
-      root.appendChild(card);
-    }
-    $("#lab-sys").textContent = `System: ${D.system}${D.supply ? " " + D.supply.label : ""}${D.ess ? " · ESS" : ""}.`;
+    if (S.D.key === this.key) return;
+    this.key = S.D.key;
+    const D = this.sim.D, prev = $("#lab-trip").value;
+    const ok = TractionSim.TRIPS.filter((t) => !t.need(D));
+    $("#lab-trip").innerHTML = Object.entries(LAB_GROUPS).map(([g, title]) => {
+      const items = ok.filter((t) => t.group === g);
+      return items.length ? `<optgroup label="${title}">${items.map((t) => `<option value="${t.id}">${t.top ? "★ " : ""}${t.name}</option>`).join("")}</optgroup>` : "";
+    }).join("");
+    if (ok.some((t) => t.id === prev)) $("#lab-trip").value = prev;
+    $("#lab-count").textContent = `${ok.length} faults possible in this configuration`;
+    this.fill();
   }
 
-  row(T, D) {
-    const why = T.need(D);
-    const el = document.createElement("div");
-    el.className = "lab-row" + (why ? " off" : "");
+  fill() {
+    const D = this.sim.D, T = TRIP_INDEX[$("#lab-trip").value];
+    if (!T) return;
     const opt = (pairs, v) => pairs.map(([k, t]) => `<option value="${k}"${k === v ? " selected" : ""}>${t}</option>`).join("");
     const units = T.units ? T.units(D) : null;
-    const cls0 = T.id === "igbt_desat" && units && units.length ? TractionSim.UNIT_CLS[units[0][0]] : T.cls;
-    const clsList = [...new Set([cls0, T.cls, ...T.alt])];
+    $("#lab-unit-l").hidden = !units;
+    if (units) $("#lab-unit").innerHTML = opt(units);
+    $("#lab-form-l").hidden = !T.forms;
+    if (T.forms) $("#lab-form").innerHTML = opt(T.forms.map((f) => [f, LAB_FORMS[f]]));
+    $("#lab-trig").innerHTML = opt(T.trig.map((t) => [t, TractionSim.TRIGGERS[t]]));
+    const cls0 = T.id === "igbt_desat" && units ? TractionSim.UNIT_CLS[units[0][0]] : T.cls;
     const lc = (k) => (k === "Trip_LC" && D.src === "genset" ? "Trip_GC" : k);
-    el.innerHTML = `
-      <div class="lab-info">
-        <b>${T.name}${T.top ? ' <span class="star" title="Most common in projects">★</span>' : ""}</b>
-        <small>${T.cond}</small>
-        <small class="dim">Typical state: ${T.states}${T.kind === "latent" ? " · latent defect, detected at the next command" : ""}</small>
-        ${why ? `<small class="why">Not available: ${why}</small>` : ""}
-      </div>
-      <div class="lab-opts">
-        ${units ? `<label>Converter / circuit<select data-k="unit">${opt(units)}</select></label>` : ""}
-        ${T.forms ? `<label>Form<select data-k="form">${opt(T.forms.map((f) => [f, LAB_FORMS[f]]))}</select></label>` : ""}
-        <label>When<select data-k="trig">${opt(T.trig.map((t) => [t, TractionSim.TRIGGERS[t]]))}</select></label>
-        <label>Trip class<select data-k="cls">${opt(clsList.map((c) => [c, lc(c) + (c === cls0 ? " (default)" : "")]), cls0)}</select></label>
-      </div>
-      <div class="lab-act">
-        <button class="btn small inject"${why ? " disabled" : ""}>Inject</button>
-        <span class="lab-st mono"></span>
-        <button class="btn ghost small clear" hidden>Remove</button>
-      </div>`;
-    const get = (k) => { const s = el.querySelector(`[data-k=${k}]`); return s ? s.value : undefined; };
-    if (T.id === "igbt_desat") {
-      const u = el.querySelector("[data-k=unit]");
-      if (u) u.onchange = () => { el.querySelector("[data-k=cls]").value = TractionSim.UNIT_CLS[u.value]; };
-    }
-    el.querySelector(".inject").onclick = () => this.sim.command("inject", { id: T.id, unit: get("unit"), form: get("form"), trig: get("trig"), cls: get("cls") });
-    el.querySelector(".clear").onclick = () => this.sim.command("clear_inj", T.id);
-    this.rows[T.id] = { el, st: el.querySelector(".lab-st"), clear: el.querySelector(".clear") };
-    return el;
-  }
-
-  live(S) {
-    const D = S.D, s = S, out = [];
-    const bar = (label, v, max, txt, marks = [], cls = "") => {
-      const pct = (x) => Math.max(0, Math.min(100, (x / max) * 100));
-      out.push(`<div class="lv"><span>${label}</span><div class="lvbar ${cls}"><i style="width:${pct(v)}%"></i>${marks.map(([m, t]) => `<em style="left:${pct(m)}%" title="${t}"></em>`).join("")}</div><b class="mono">${txt}</b></div>`);
-    };
-    out.push(`<div class="lv-state"><span>Operating state</span><b>${S.sysState}</b></div>`);
-    bar("DC link", s.vdc, D.Vovp * 1.1, `${s.vdc.toFixed(0)} V`, [[D.Vuv, "undervoltage"], [D.Von, "VLU on"], [D.Vovp, "overvoltage trip"]], s.vdc > D.Von ? "hot" : "");
-    if (D.motor) bar("MC current", s.i_mc_meas, D.Imc_trip * 1.3, `${s.i_mc_meas.toFixed(0)} A`, [[0.85 * D.Imc_trip, "warning"], [D.Imc_trip, "trip"]], s.i_mc_meas > 0.85 * D.Imc_trip ? "hot" : "");
-    bar("Earth current", s.i_earth, 3, `${s.i_earth.toFixed(2)} A`, [[0.5, "warning"], [2, "trip"]], s.i_earth > 0.5 ? "hot" : "");
-    if (D.hasHBU) bar("AUX load", s.aux_pu * 100, 200, `${(s.aux_pu * 100).toFixed(0)} %`, [[100, "rated"]], s.aux_pu > 1 ? "hot" : "");
-    if (D.hasHBU || D.hasHWR) bar("AUX temperature", s.t_aux, 110, `${s.t_aux.toFixed(0)} °C`, [[85, "warning"], [95, "trip"]], s.t_aux > 85 ? "hot" : "");
-    if (D.hasHWR) bar("Fan speed", s.f_hwr, 55, `${s.f_hwr.toFixed(1)} / ${s.f_hwr_cmd.toFixed(1)} Hz`, [[s.f_hwr_cmd * 0.5, "50 % of command"]], s.hwr && s.f_hwr < 0.5 * s.f_hwr_cmd ? "hot" : "");
-    if (D.bat) {
-      const b = s.eb, led = (on, bad) => `<i class="led${on ? " on" : ""}${bad ? " bad" : ""}"></i>`;
-      const rows = ["neg", "ch", "pos"].map((k) => {
-        const c = b.c[k], bad = c.cmd !== c.fb || c.act !== c.fb;
-        return `<tr><td>${{ pos: "CtPos", neg: "CtNeg", ch: "CtCh" }[k]}</td><td>${led(c.cmd)}</td><td>${led(c.fb, bad)}</td><td>${led(c.act, c.act !== c.fb)}</td></tr>`;
-      }).join("");
-      out.push(`<div class="lv-box"><div class="lv-state"><span>ESS connection box</span><b class="ebst ${b.st === "Trip" ? "bad" : b.st === "Connected" ? "ok" : ""}">${b.st}${b.lock ? " · locked" : ""}</b></div>
-        <table class="ct"><tr><th></th><th>command</th><th>feedback</th><th>contacts</th></tr>${rows}</table>
-        <div class="lv-state"><span>ESC input / battery</span><b class="mono">${b.vec.toFixed(0)} V / ${s.v_bat.toFixed(0)} V</b></div></div>`);
-    }
-    $("#lab-live").innerHTML = out.join("");
+    $("#lab-cls").innerHTML = opt([...new Set([cls0, T.cls, ...T.alt])].map((c) => [c, lc(c) + (c === cls0 ? " (default)" : "")]), cls0);
+    $("#lab-desc").innerHTML = `<b>${T.name}</b> — ${T.cond}. <span class="dim">Typical state: ${T.states}.${T.kind === "latent" ? " Latent defect: it shows up at the next command (START, STOP or ESS disconnect)." : ""}</span>`;
   }
 
   update(S) {
     this.build(S);
-    const [ptxt, pcls] = PHASES[S.phase] || [S.phase, ""];
-    const pill = $("#lab-phase");
-    pill.textContent = S.faults.length ? "FAULT" : ptxt;
-    pill.className = "pill " + (S.faults.length ? "bad" : pcls);
-    $("#lab-start").disabled = S.mode !== "auto";
-    $("#lab-ess-on").hidden = $("#lab-ess-off").hidden = !S.D.bat;
-    const inj = Object.fromEntries(S.inj.map((j) => [j.id, j]));
-    for (const [id, r] of Object.entries(this.rows)) {
-      const j = inj[id];
-      r.el.classList.toggle("armed", !!j && j.st === "armed");
-      r.el.classList.toggle("active", !!j && j.st === "active");
-      r.clear.hidden = !j;
-      r.st.textContent = !j ? "" : j.st === "armed" ? `armed · ${TractionSim.TRIGGERS[j.trig].toLowerCase()}` : `active since ${j.ta.toFixed(1)} s → ${clsLabel(j.cls, S.D)}`;
-    }
-    this.live(S);
-    renderAlarms($("#lab-alarms"), S);
-    if (S.hist.length !== this.histN || (S.hist.length && S.hist[S.hist.length - 1].t !== this.histT)) {
-      this.histN = S.hist.length; this.histT = S.hist.length ? S.hist[S.hist.length - 1].t : null;
+    const shut = $("#lab-shut");
+    if (document.activeElement !== shut) shut.checked = S.labShutdown;
+    // active and armed faults with their value against the trip threshold
+    $("#lab-active").innerHTML = S.inj.map((j) => {
+      const m = j.st === "active" ? labMeasure(j.id, S) : null;
+      const tf = S.faults.find((f) => f.code === j.id), tripped = !!tf;
+      const frac = tripped ? 1 : m ? Math.max(0, Math.min(1, m.frac)) : 0;
+      const st = tripped ? `TRIPPED · ${clsLabel(tf.cls, S.D)}` : j.st === "armed" ? `armed · ${TractionSim.TRIGGERS[j.trig].toLowerCase()}` : "active";
+      return `<div class="lab-inj ${tripped ? "trip" : j.st}"><b>⚡ ${tripName(j.id)}</b><span class="mono st">${st}</span>
+        <div class="lvbar ${frac > 0.85 ? "hot" : ""}"><i style="width:${(frac * 100).toFixed(0)}%"></i><em style="left:100%"></em></div>
+        <span class="mono val">${tripped ? (S.protShut ? "system shut down" : "class reaction") : m ? m.txt : j.st === "active" ? "event" : ""}</span>
+        <button class="btn ghost small" data-rm="${j.id}">Remove</button></div>`;
+    }).join("");
+    $$("#lab-active [data-rm]").forEach((b) => (b.onclick = () => this.sim.command("clear_inj", b.dataset.rm)));
+    // history and recorder (inside the collapsible section)
+    const sig = S.hist.length + ":" + (S.hist.length ? S.hist[S.hist.length - 1].t : "");
+    if (sig !== this.histSig) {
+      this.histSig = sig;
       $("#lab-hist").innerHTML = "<tr><th>t [s]</th><th>Class</th><th>Fault</th><th>Message</th><th>State</th></tr>" +
         (S.hist.length ? [...S.hist].reverse().map((h) => `<tr><td class="mono">${h.t.toFixed(2)}</td><td><span class="badge ${TRIP_BADGE[h.cls] || "c2"}">${clsLabel(h.cls, S.D)}</span></td><td>${esc(h.name)}</td><td>${esc(h.msg)}</td><td>${esc(h.state)}</td></tr>`).join("")
           : `<tr><td colspan="5" class="dim">No trips yet</td></tr>`);
@@ -3717,7 +3728,7 @@ class TripLab {
       if (R) {
         this.chart.set(R.cols);
         $("#rec-note").textContent = `${clsLabel(R.f.cls, S.D)} · ${tripName(R.f.code)} at t = ${R.f.t.toFixed(2)} s (${R.f.state}) — red line = trip`;
-      } else { this.chart.set([[], [], [], [], [], []]); }
+      } else { this.chart.set([[], [], [], [], [], []]); $("#rec-note").textContent = "waiting for a trip — 4 s before and 2 s after are frozen"; }
     }
   }
 }
@@ -3975,7 +3986,7 @@ function renderState(s) {
     $("#zoom-note").textContent = `simulated at 0.25 ms · DC link ripple ${(vmax - vmin).toFixed(0)} V p-p` + (D.f2 ? ` · 2f = ${D.f2.toFixed(1)} Hz` : D.f0 ? ` · line filter f0 = ${D.f0.toFixed(1)} Hz` : "");
   }
   data.update(s);
-  if (!$("#tab-lab").hidden) lab.update(s);
+  lab.update(s);
 }
 
 function frame(now) {

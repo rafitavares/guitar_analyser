@@ -385,7 +385,7 @@
       throttle: 0, ctrl: "throttle", f_cmd: 0, m_cmd: 0.5, vf_auto: true,
       t_hs: 25, t_j: 25, t_mot: 25, t_vlu: 25, f_hwr: 0, p_air: 9.5, comp: false, uv_t: 0,
       faults: [], warns: {}, spark: 0, emergency: false, imax: 0,
-      sys3: null, keepCol: false, fastDis: false, vdc_prev: 0, i_mc_meas: 0, i_earth: 0, aux_pu: 0, aux_i2t: 0, t_aux: 25, f_hwr_cmd: 0, fan_t: 0,
+      sys3: null, keepCol: false, protShut: false, fastDis: false, vdc_prev: 0, i_mc_meas: 0, i_earth: 0, aux_pu: 0, aux_i2t: 0, t_aux: 25, f_hwr_cmd: 0, fan_t: 0,
       eb: newBox(),
       E: { src: 0, regen: 0, vlu: 0, aux: 0, trac: 0, brake: 0, batOut: 0, batIn: 0, h2: 0, fuel: 0, dist: 0 },
     };
@@ -413,6 +413,7 @@
       this.restarts = [];
       this.an = {};
       this.rec = { buf: [], frozen: null, ver: 0, pending: null };
+      this.labShutdown = true; // any trip → protective shutdown of the whole system
       this.rebuild();
     }
 
@@ -472,6 +473,7 @@
       this.log(`${cls} · ${msg}`, "fault");
       this.record(code, cls, msg, unit, f.state);
       this.react(cls, unit, code);
+      if (this.labShutdown && cls !== "EMERGENCY") this.protShutdown(f);
       if (!this.rec.pending) this.rec.pending = { f, tEnd: s.t + 2 };
     }
     fault(msg, code = "fault", cls = "Trip_SYS_2", unit = "sys") { this.trip(code, msg, unit, cls); }
@@ -533,6 +535,22 @@
       }
     }
 
+    // protective shutdown: the whole system is switched off after a trip (Trip Lab option)
+    protShutdown(f) {
+      const s = this.s, D = this.D;
+      if (s.protShut) return;
+      s.protShut = true;
+      s.mc = s.lc = s.esc = s.hbu = s.hbu_out = s.hwr = false;
+      if (s.fc !== "off") s.fc = "off";
+      if (!(D.src === "battery" || D.src === "fuelcell")) s.brk = false;
+      s.ctl = false; s.chct = false; s.iL = 0; s.i2 = 0;
+      this.essOpen(true);
+      s.col_cmd = false; s.sys3 = null; s.keepCol = false;
+      if (s.eng !== "off") s.eng = "off";
+      if (s.mode === "auto") { s.phase = "TRIPPED"; s.pt = 0; }
+      this.log(`Protective shutdown after ${f.cls} — all converters blocked, breakers and contactors open, collector lowered`, "fault");
+    }
+
     // controlled shutdown (OFF classes): brake electrically if moving, then the normal shutdown sequence
     offSeq(lowerCol) {
       const s = this.s;
@@ -585,6 +603,7 @@
       } else if (cmd === "inject") this.inject(value || {});
       else if (cmd === "clear_inj") this.clearInj(value);
       else if (cmd === "ess") this.essRequest(!!value);
+      else if (cmd === "lab_shutdown") { this.labShutdown = !!value; this.log(`Trip Lab: protective shutdown ${value ? "ON" : "OFF (class reactions only)"}`); }
       else if (cmd === "toggle") this.toggle(String(value));
       else if (cmd === "set") this.set(value || {});
       else if (cmd === "config") this.config(value || {});
@@ -925,7 +944,7 @@
     reset() {
       const s = this.s, D = this.D;
       // unit-level trips: acknowledge and restart only the affected units
-      const sysLevel = s.faults.some((f) => SYS_LEVEL.includes(f.cls) || (f.cls === "Trip_LC" && D.src === "acline")) || s.phase === "EMERGENCY" || s.phase === "TRIPPED";
+      const sysLevel = s.protShut || s.faults.some((f) => SYS_LEVEL.includes(f.cls) || (f.cls === "Trip_LC" && D.src === "acline")) || s.phase === "EMERGENCY" || s.phase === "TRIPPED";
       if (s.faults.length && !sysLevel) {
         const run = s.mode === "auto" && s.phase === "RUN";
         for (const f of s.faults) {
@@ -1532,6 +1551,7 @@
       d.hist = this.hist.slice(-40);
       d.inj = Object.values(this.inj);
       d.recVer = this.rec.ver;
+      d.labShutdown = this.labShutdown;
       d.sysState = this.stateOf("sys");
       if (wave) { d.wave = this.waves(); d.zoom = this.zoom(); }
       return d;

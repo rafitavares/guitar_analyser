@@ -41,3 +41,22 @@ function renderAlarms(el, s) {
   el.innerHTML = rows.length ? rows.join("") : `<div class="al-ok">● No active trips or warnings</div>`;
   return { trips: faults.length, warns: Object.keys(s.warns).length };
 }
+
+// live value of an injected fault against its trip threshold (frac 1 = trip)
+function labMeasure(id, s) {
+  const D = s.D, f0 = (x) => x.toFixed(0), f2 = (x) => x.toFixed(2);
+  const r = (v, lim, u, fmt = f0) => ({ frac: v / lim, txt: `${fmt(v)} / ${fmt(lim)} ${u}` });
+  switch (id) {
+    case "mc_oc": return r(s.i_mc_meas, D.Imc_trip, "A");
+    case "earth_fault": return r(s.i_earth, 2, "A", f2);
+    case "dcl_ov": return r(s.vdc, D.Vovp, "V");
+    case "dcl_uv": return { frac: Math.max(0, (D.vdc - s.vdc) / Math.max(1, D.vdc - D.Vuv)), txt: `${f0(s.vdc)} V → limit ${f0(D.Vuv)} V` };
+    case "aux_ovl": return { frac: s.aux_i2t / 2.5, txt: `load ${f0(s.aux_pu * 100)} % · curve ${f0(s.aux_i2t / 2.5 * 100)} %` };
+    case "aux_ot": return r(s.t_aux, 95, "°C");
+    case "fan_fail": return { frac: s.fan_t / 2, txt: `${s.f_hwr.toFixed(1)} / ${s.f_hwr_cmd.toFixed(1)} Hz` };
+    case "precharge_timeout": case "voltage_no_rise": return { frac: 0, txt: "latent — detected at the next pre-charge" };
+    case "ctpos_noclose": case "ctneg_noclose": return { frac: 0, txt: "latent — detected at the next close command" };
+    case "ctpos_noopen": case "ctneg_noopen": case "welded": return { frac: 0, txt: "latent — detected at the next opening" };
+    default: return null;
+  }
+}

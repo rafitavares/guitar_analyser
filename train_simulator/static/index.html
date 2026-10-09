@@ -39,7 +39,6 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sim">Simulator</button>
       <button class="tab" data-tab="data">System data</button>
-      <button class="tab" data-tab="lab">Trip Lab</button>
       <button class="tab" data-tab="guide">How to use</button>
     </nav>
     <div class="status">
@@ -70,6 +69,33 @@
           </div>
         </div>
         <svg id="schem" viewBox="0 0 1400 500"></svg>
+        <div class="lab">
+          <div class="al-head">
+            <h3>⚡ Trip Lab</h3>
+            <span class="note" id="lab-count"></span>
+            <label class="check lab-shut"><input type="checkbox" id="lab-shut" checked> Protective shutdown of the whole system on trip</label>
+          </div>
+          <div class="lab-form">
+            <label class="lab-trip">Fault to force<select id="lab-trip"></select></label>
+            <label id="lab-unit-l">Location<select id="lab-unit"></select></label>
+            <label id="lab-form-l">Form<select id="lab-form"></select></label>
+            <label>When<select id="lab-trig"></select></label>
+            <label>Trip class<select id="lab-cls"></select></label>
+            <button class="btn small inject" id="lab-go">⚡ Force fault</button>
+            <button class="btn ghost small" id="lab-clear">✕ Remove all</button>
+          </div>
+          <p class="lab-desc" id="lab-desc"></p>
+          <div id="lab-active"></div>
+          <details class="lab-more">
+            <summary>Trip recorder, trip history and trip classes</summary>
+            <div class="card-head"><h2>Trip recorder</h2><span class="note" id="rec-note">waiting for a trip — 4 s before and 2 s after are frozen</span></div>
+            <div class="chart" id="c-rec"></div>
+            <div class="lab-bottom">
+              <div><div class="card-head"><h2>Trip history</h2><span class="note">newest first</span></div><div class="tbl-wrap"><table class="dtable" id="lab-hist"></table></div></div>
+              <div><div class="card-head"><h2>Trip classes and reactions</h2></div><div class="tbl-wrap"><table class="dtable" id="lab-classes"></table></div></div>
+            </div>
+          </details>
+        </div>
         <div class="alarms">
           <div class="al-head">
             <h3>Trips &amp; warnings</h3>
@@ -202,55 +228,6 @@
     </section>
   </main>
 
-  <main id="tab-lab" class="tabpane" hidden>
-    <section class="card lab-top">
-      <div>
-        <h2>Trip Lab</h2>
-        <p class="note lab-intro">Inject faults into the running system and watch how the protection detects them, which trip class is raised and how the converter reacts.
-          Choose <b>when</b> the fault appears, <b>how</b> it develops (step, slow ramp or intermittent bursts) and which <b>class</b> it is mapped to.
-          <span id="lab-sys"></span></p>
-      </div>
-      <div class="lab-btns">
-        <button class="btn start small" id="lab-start">▶ START</button>
-        <button class="btn stop small" id="lab-stop">■ STOP</button>
-        <button class="btn ghost small" id="lab-reset">↺ RESET</button>
-        <button class="btn ghost small" id="lab-ess-on">ESS connect</button>
-        <button class="btn ghost small" id="lab-ess-off">ESS disconnect</button>
-        <button class="btn ghost small" id="lab-clear">✕ Remove all faults</button>
-      </div>
-    </section>
-
-    <section class="lab-main">
-      <div class="lab-cat" id="lab-cat"></div>
-      <aside class="lab-side">
-        <div class="card">
-          <div class="card-head"><h2>Live status</h2><span class="pill" id="lab-phase">OFF</span></div>
-          <div id="lab-live"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Active trips &amp; warnings</h2></div>
-          <div class="al-list compact" id="lab-alarms"></div>
-        </div>
-      </aside>
-    </section>
-
-    <section class="card">
-      <div class="card-head"><h2>Trip recorder</h2><span class="note" id="rec-note">waiting for a trip — 4 s before and 2 s after are frozen</span></div>
-      <div class="chart" id="c-rec"></div>
-    </section>
-
-    <section class="lab-bottom">
-      <div class="card">
-        <div class="card-head"><h2>Trip history</h2><span class="note">newest first</span></div>
-        <div class="tbl-wrap"><table class="dtable" id="lab-hist"></table></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>Trip classes and reactions</h2><span class="note">generic protection concept used by the simulator</span></div>
-        <div class="tbl-wrap"><table class="dtable" id="lab-classes"></table></div>
-      </div>
-    </section>
-  </main>
-
   <main id="tab-guide" class="tabpane guide" hidden>
     <section class="card guide-intro">
       <h2>How to use the simulator</h2>
@@ -348,13 +325,15 @@
       </section>
 
       <section class="card">
-        <h3>8 · Trips &amp; warnings, Trip Lab</h3>
+        <h3>8 · Trip Lab, trips &amp; warnings</h3>
         <ul>
-          <li>The panel below the electrical diagram lists every active <b>trip</b> (class badge, fault, time, operating state, how to reset) and every active <b>warning</b>. Faulty modules are outlined in red in the diagram.</li>
-          <li>The <b>Trip Lab</b> tab injects faults: ESS connection box (CtPos, CtNeg, CtCh, welded contactor, pre-charge, tripline, BMS), converters (overcurrent, IGBT desaturation, earth fault, DC-link over/undervoltage and short circuit, MC and LC/GC faults) and auxiliaries (overload, overtemperature, fan).</li>
-          <li>For each fault choose <b>when</b> it appears (immediately, after a delay, during traction or braking, in an ESS state), <b>how</b> it develops (step, ramp with a warning first, or short bursts that are filtered and counted) and the <b>trip class</b>.</li>
-          <li>Contactor and pre-charge defects are <b>latent</b>: they are detected at the next command — start the system, or press STOP / ESS disconnect.</li>
-          <li>The <b>trip recorder</b> freezes 4 s before and 2 s after the latest trip; the <b>trip history</b> keeps the last 40 events.</li>
+          <li>The <b>Trip Lab</b> box below the electrical diagram forces a fault. The list only contains faults that can happen in the selected configuration (ESS faults only with an ESS, line converter faults only on AC or diesel, and so on).</li>
+          <li>Choose <b>when</b> the fault appears, <b>how</b> it develops (step, slow ramp, or short bursts that are filtered and counted) and the <b>trip class</b>, then press <b>⚡ Force fault</b>.</li>
+          <li>The fault is marked in the diagram where it happens (orange = armed, red pulsing = active) with its live value against the trip threshold; the same bar is shown in the Trip Lab box.</li>
+          <li>When the threshold is reached the protection trips. With <b>Protective shutdown</b> ticked (default) the whole system is switched off: pulses blocked, breakers and contactors opened, collector lowered, train braked to standstill. Untick it to see the individual reaction of each trip class instead.</li>
+          <li>Contactor and pre-charge defects are latent: they are detected at the next command — press START, STOP or disconnect the ESS.</li>
+          <li><b>Trips &amp; warnings</b> lists the active trips (class, fault, time, operating state, how to reset) and warnings. Remove the fault, stop the train and press RESET to restart.</li>
+          <li>Open <i>Trip recorder, trip history and trip classes</i> for the 4 s before / 2 s after recording, the event history and the reaction of each class.</li>
         </ul>
       </section>
 

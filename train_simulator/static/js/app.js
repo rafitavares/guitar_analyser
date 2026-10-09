@@ -249,7 +249,7 @@ function renderState(s) {
     $("#zoom-note").textContent = `simulated at 0.25 ms · DC link ripple ${(vmax - vmin).toFixed(0)} V p-p` + (D.f2 ? ` · 2f = ${D.f2.toFixed(1)} Hz` : D.f0 ? ` · line filter f0 = ${D.f0.toFixed(1)} Hz` : "");
   }
   data.update(s);
-  if (!$("#tab-lab").hidden) lab.update(s);
+  lab.update(s);
 }
 
 function frame(now) {

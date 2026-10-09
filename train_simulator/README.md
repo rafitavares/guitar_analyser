@@ -64,14 +64,16 @@ Every detected fault is assigned a **trip class**, and the class decides the rea
 | Trip_ESS / Trip_AUX / Trip_MC / Trip_LC (GC) | fault confined to one converter | only that converter is blocked; RESET restarts it |
 | Warning | limit exceeded | indication only |
 
-The **Trip Lab** tab injects 22 faults — ESS connection box (CtPos / CtNeg / CtCh do not close / open / move unexpectedly,
+The **Trip Lab** box below the electrical diagram forces one of 22 faults (only those possible in the selected configuration are listed) — ESS connection box (CtPos / CtNeg / CtCh do not close / open / move unexpectedly,
 welded contactor, precharge timeout, voltage does not rise, tripline, BMS), converters (overcurrent, IGBT desaturation,
 earth fault, DC-link over/undervoltage and short circuit, MC and LC/GC faults) and auxiliaries (overload, overtemperature, fan).
 Each fault can be triggered immediately, after a delay, during traction or braking or in an ESS state; analog faults can be a step,
 a slow ramp (warning first) or short bursts that are filtered and counted. The class of every fault can be changed.
 Faults are detected physically: contactors have command, auxiliary feedback and real main contacts, the ESS pre-charge and the
 DC link are simulated, and the trip recorder freezes 4 s before and 2 s after each trip.
-The ESS contactor scenarios follow common practice in ESS protection concepts; the class names and reactions are a generic model, not a specific product.
+The fault is marked in the diagram where it occurs, with its live value against the trip threshold. With *protective shutdown*
+(default) any trip switches the whole system off — pulses blocked, breakers and contactors open, collector lowered; untick it to see
+the reaction of each class. The ESS contactor scenarios follow common practice in ESS protection concepts; the class names and reactions are a generic model, not a specific product.
 
 ## Physics and data sources
 

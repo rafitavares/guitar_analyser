@@ -7,7 +7,8 @@ const fs = require("fs"), path = require("path");
 require("vm").runInThisContext(fs.readFileSync(path.join(__dirname, "../static/js/engine.js"), "utf8"));
 const { Simulator, TRIPS } = globalThis.TractionSim;
 
-const make = (cfg) => { const m = new Simulator(); m.command("config", cfg); return m; };
+// class reactions are tested with the protective shutdown switched off
+const make = (cfg) => { const m = new Simulator(); m.labShutdown = false; m.command("config", cfg); return m; };
 const DT = +(process.env.DT || 0.02);
 const run = (m, T, until) => { for (let i = 0; i < T / DT; i++) { m.step(DT); if (until && until(m)) return true; } return false; };
 const ready = (m) => { m.command("start"); assert.ok(run(m, 60, (x) => x.s.phase === "RUN"), "reaches RUN"); run(m, 6); };
@@ -232,4 +233,17 @@ test("trip recorder freezes 4 s before and 2 s after the first trip", () => {
   assert.strictEqual(r.frozen.f.code, "dcl_short");
   const t = r.frozen.cols[0];
   assert.ok(t[0] < -3.5 && t[t.length - 1] > 1.9);
+});
+
+test("protective shutdown (default): any trip switches the whole system off", () => {
+  const m = new Simulator(); m.command("config", { system: "dc_ohl", ess: true }); ready(m);
+  m.command("inject", { id: "aux_ovl" });
+  expectTrip(m, "aux_ovl", "Trip_AUX", 10);
+  run(m, 0.5);
+  assert.ok(!m.s.mc && !m.s.brk && !m.s.col_cmd && !m.s.esc && m.s.phase === "TRIPPED");
+  assert.ok(run(m, 60, (x) => x.s.speed < 0.01), "train brought to standstill");
+  m.command("clear_inj", "all"); m.command("reset");
+  assert.strictEqual(m.s.faults.length, 0);
+  m.command("start");
+  assert.ok(run(m, 60, (x) => x.s.phase === "RUN"), "restarts after RESET");
 });

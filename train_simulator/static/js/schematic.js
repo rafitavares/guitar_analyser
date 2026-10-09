@@ -14,7 +14,7 @@ class Schematic {
     this.key = D.key;
     const svg = this.svg;
     svg.innerHTML = "";
-    this.w = {}; this.sw = {}; this.t = {}; this.box = {};
+    this.w = {}; this.sw = {}; this.t = {}; this.box = {}; this.anchor = {};
     const YP = 170, YN = 340, BY0 = 205, BY1 = 305;
     const g = svgEl("g", {}, svg);
     const defs = svgEl("defs", {}, svg);
@@ -37,6 +37,7 @@ class Schematic {
       text(x + 28, below ? y + 24 : y - 22, label, "ttl", "middle", grp);
       if (sub) text(x + 28, y + (below ? 38 : 24), sub, "small", "middle", grp);
       this.sw[id] = { grp, lev };
+      this.anchor[id] = [x + 28, y];
     };
     // converter box: diagonal + symbols (sa top-left, sb bottom-right)
     const conv = (id, x, y, w, h, title, sa, sb, toggleId) => {
@@ -48,6 +49,7 @@ class Schematic {
       text(x + w - 14, y + h - 10, sb, "symt", "middle", grp);
       text(x + w / 2, y - 8, title, "ttl", "middle", grp);
       this.box[id] = r;
+      this.anchor[id] = [x + w / 2, y + h / 2];
       return grp;
     };
     const ground = (x, y) => svgEl("path", { d: `M${x - 14},${y} L${x + 14},${y} M${x - 9},${y + 6} L${x + 9},${y + 6} M${x - 4},${y + 12} L${x + 4},${y + 12}`, class: "sym" }, g);
@@ -145,6 +147,7 @@ class Schematic {
     } else {
       // battery (main ESS) feeding the DC link through the ESC
       this.batFill = this.battery(g, 26, 200, "bat");
+      this.anchor.bat = [48, 245];
       text(70, 190, D.bat.chem + " battery", "ttl");
       text(14, 318, `${(D.bat.E / 1e3).toFixed(0)} kWh`, "small", "start");
       this.t.bat = text(14, 334, "", "val", "start");
@@ -205,6 +208,7 @@ class Schematic {
         svgEl("rect", { x: cx + 26, y: 210, width: 10, height: 92, rx: 3, fill: "#1a1a1a", stroke: "#444" }, g);
         this.capFill = svgEl("rect", { x: cx + 26, y: 302, width: 10, height: 0, rx: 3, fill: "url(#capgrad)", class: "capfill" }, g);
         text(cx, BY0 - 8, "DC link", "ttl");
+        this.anchor.dcl = [cx, 255]; this.anchor.earth = [cx + 64, YN];
         text(cx, YN + 20, `${(D.C * 1e3).toFixed(1)} mF`, "small");
       } else if (m === "vlu") {
         leg("vlu", cx);
@@ -240,7 +244,9 @@ class Schematic {
         text(cx - 22 + i * 22, 398, l, "small", "middle", eg);
       });
       this.t.ebox = text(cx + 46, 382, "", "val", "start");
+      this.anchor.ebox = [cx, 378];
       this.batFill = this.battery(g, cx - 22, 414, "bat");
+      this.anchor.bat = [cx, 459];
       text(cx, 524, `${D.bat.chem} ${(D.bat.E / 1e3).toFixed(0)} kWh`, "small");
       this.t.bat = text(cx, 540, "", "val");
     }
@@ -269,6 +275,7 @@ class Schematic {
       this.fanG = svgEl("g", { transform: `translate(${cx + 62},${yOut - 30})` }, g);
       for (let k = 0; k < 3; k++) svgEl("path", { d: "M0,0 C6,-6 6,-14 0,-16 C-4,-12 -4,-6 0,0", fill: "#9a9a9a", transform: `rotate(${k * 120})` }, this.fanG);
       text(cx + 62, yOut + 8, "cooling fans", "small");
+      this.anchor.fan = [cx + 62, yOut - 30];
       this.t.hwr = text(cx + 62, yOut + 24, "", "val");
     }
     if (xs.mc) {
@@ -295,6 +302,48 @@ class Schematic {
     // fit the view box to the drawing so it uses the full card width
     const bb = g.getBBox();
     svg.setAttribute("viewBox", `${bb.x - 10} ${bb.y - 10} ${bb.width + 150} ${bb.height + 40}`);
+    this.mk = svgEl("g", { class: "markers" }, g); // fault location markers (Trip Lab)
+  }
+
+  // where a fault is located in the diagram
+  anchorFor(code, unit, D) {
+    const A = this.anchor, bm = D.src === "battery" || D.src === "fuelcell";
+    switch (code) {
+      case "ctpos_noclose": case "ctpos_noopen": case "welded": case "ctpos_unexp_open": case "ctpos_unexp_close": return bm ? A.ctpos : A.ebox;
+      case "ctneg_noclose": case "ctneg_noopen": case "ctneg_unexp_open": case "ctneg_unexp_close": return bm ? A.ctneg : A.ebox;
+      case "ctch_unexp_close": case "ctch_unexp_open": case "ctch_noclose": case "ctch_noopen": return bm ? A.chct : A.ebox;
+      case "precharge_timeout": case "voltage_no_rise": return unit === "pre" || bm ? A.chct : A.ebox;
+      case "ess_tripline": case "bms_fault": case "bat_empty": return A.bat;
+      case "mc_oc": case "mc_fault": return A.mc;
+      case "igbt_desat": return { mc: A.mc, lc: A.lc, ess: A.esc, hbu: A.hbu, hwr: A.hwr }[unit] || A.mc;
+      case "earth_fault": return A.earth;
+      case "dcl_ov": case "dcl_uv": case "dcl_short": return A.dcl;
+      case "lc_fault": return A.lc;
+      case "aux_ovl": case "aux_ot": return A.hbu || A.hwr;
+      case "fan_fail": return A.fan || A.hwr;
+      case "line_oc": return A.brk;
+      default: return null;
+    }
+  }
+
+  markers(s) {
+    if (!this.mk) return;
+    const D = s.D, seen = new Set(), out = [];
+    const put = (code, unit, cls, label, sub) => {
+      const a = this.anchorFor(code, unit, D);
+      if (!a || seen.has(a)) return;
+      seen.add(a);
+      const [x, y] = a;
+      out.push(`<g class="mk ${cls}" transform="translate(${x},${y})"><circle r="26" class="ring"/><circle r="26" class="pulse"/>
+        <g transform="translate(30,-30)"><rect x="0" y="-13" rx="5" height="${sub ? 34 : 19}" width="${Math.max(label.length, (sub || "").length) * 6.6 + 14}" class="tag"/>
+        <text x="7" y="1" class="t1">${label}</text>${sub ? `<text x="7" y="16" class="t2">${sub}</text>` : ""}</g></g>`);
+    };
+    for (const f of s.faults) put(f.code, f.unit, "trip", "TRIP · " + (f.cls === "Trip_LC" && D.src === "genset" ? "Trip_GC" : f.cls), tripName(f.code));
+    for (const j of s.inj) {
+      const m = labMeasure(j.id, s);
+      put(j.id, j.unit, j.st === "active" ? "active" : "armed", "⚡ " + tripName(j.id), j.st === "active" ? (m ? m.txt : "fault active") : "armed · " + TractionSim.TRIGGERS[j.trig].toLowerCase());
+    }
+    this.mk.innerHTML = out.join("");
   }
 
   battery(g, x, y, id) {
@@ -434,6 +483,7 @@ class Schematic {
     }
     this.rotor = (this.rotor + 360 * (s.rpm / 60) * dt * 0.05) % 360;
     if (this.rotors) for (const r of this.rotors) r.setAttribute("transform", r.getAttribute("transform").replace(/rotate\([^)]*\)|$/, ` rotate(${this.rotor})`).trim());
+    this.markers(s);
     this.fan = (this.fan + 360 * s.f_hwr * dt * 0.05) % 360;
     if (this.fanG) this.fanG.setAttribute("transform", this.fanG.getAttribute("transform").replace(/rotate\([^)]*\)|$/, ` rotate(${this.fan})`).trim());
   }
